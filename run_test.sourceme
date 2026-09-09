@@ -1,0 +1,19 @@
+cd tests/test1*/scripts
+tclsh8.6 run_test.tcl
+cd ../../..
+
+
+cd tests/test2*/scripts
+tclsh8.6 run_test.tcl
+cd ../../..
+
+
+cd tests/test3*/scripts
+tclsh8.6 run_test.tcl
+cd ../../..
+
+
+cd tests/test4*/scripts
+tclsh8.6 run_test.tcl
+cd ../../..
+
