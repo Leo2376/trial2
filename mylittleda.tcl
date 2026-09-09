@@ -1604,13 +1604,89 @@ proc list_all_pins { } {
   
 }
 
-#core0/w0/trelb/ebo_ggdin_0__60_
+# Build a net connectivity map for report_path:
+#   netdriver(net) = list of {instname pin} that drive the net (output pins)
+#   netload(net)   = list of {instname pin} that read the net (input pins)
+# Top input ports act as net drivers; top output ports act as net sinks.
+proc build_net_conn { } {
+ variable topname
+ variable topnameid
+ variable instindex
+ variable hinstindex
+ variable _instlist
+ variable _hinstlist
+ variable _instpinconn1
+ variable _instpinconn2
+ variable _hinstpinconn1
+ variable _hinstpinconn2
+ variable _libcell
+ variable _libcellpindir
+ variable portindex
+ variable _portlist
+ variable _porttype
+ variable _portmaster
+ global netdriver netload
 
-#core0/w0/trelb/ebo_gg_3_468/i1
- 
-#############################################################
-#
-# EXPORT FILES
+ array unset netdriver
+ array unset netload
+
+ # Top ports of the top module are net drivers (inputs) or sinks (outputs).
+ for {set p 1} {$p <= $portindex} {incr p} {
+  if { [lindex $_portmaster($p) 0] ne $topname } { continue }
+  set ports [lindex [array get _portlist $p] 1]
+  if { $ports eq "" } { continue }
+  for {set k 0} {$k < [llength $ports]} {incr k} {
+   set pn [lindex $ports $k]
+   set pt [lindex [lindex [array get _porttype $p] 1] $k]
+   if { $pt eq "in" } {
+     lappend netdriver($pn) "<port> $pn"
+   } elseif { $pt eq "out" } {
+     lappend netload($pn) "<port> $pn"
+   }
+  }
+ }
+
+ # Lib-cell instances: classify each pin by LEF direction.
+ for {set i 1} {$i <= $instindex} {incr i} {
+  set inst $_instlist($i)
+  set iname [lindex $inst 0]
+  set ishier [lindex $inst 3]
+  set refid [lindex $inst 8]
+  if { $ishier != 0 } { continue }
+  set pins $_instpinconn1($i)
+  set nets $_instpinconn2($i)
+  set dirs [lindex [array get _libcellpindir $refid] 1]
+  for {set j 0} {$j < [llength $pins]} {incr j} {
+   set pn [lindex $pins $j]
+   set wn [lindex $nets $j]
+   set dr [lindex $dirs $j]
+   if { $dr eq "OUTPUT" } {
+     lappend netdriver($wn) "$iname $pn"
+   } else {
+     lappend netload($wn) "$iname $pn"
+   }
+  }
+ }
+
+ # Hierarchical instances: pins are treated as pass-through for now (both
+ # directions recorded so paths can cross hierarchy boundaries).
+ for {set i 1} {$i <= $hinstindex} {incr i} {
+  set inst $_hinstlist($i)
+  set iname [lindex $inst 0]
+  if { ! [info exists _hinstpinconn1($i)] } { continue }
+  set pins $_hinstpinconn1($i)
+  set nets $_hinstpinconn2($i)
+  for {set j 0} {$j < [llength $pins]} {incr j} {
+   set pn [lindex $pins $j]
+   set wn [lindex $nets $j]
+   lappend netdriver($wn) "$iname $pn"
+   lappend netload($wn) "$iname $pn"
+  }
+ }
+
+ puts "Info : built net connectivity ([llength [array names netdriver]] driver nets, [llength [array names netload]] load nets)"
+}
+
 #
 #############################################################
 
