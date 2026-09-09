@@ -1,8 +1,10 @@
 // Structural Netlist for Test 2: Small Design
-// Only instantiates cells from LEF libraries (std_cell.lef + tcbn07_bwph300l8p64pd_baseat_lvt.lef)
-// Uses same format as cpu_syn.v (Synopsys DC output)
+// Cells and pin names match std_cell.lef (corrected to the cpu_syn.v golden
+// reference):
+//   SDFQD1BWP300H8P64PDLVT  D(in) CP(in) SE(in) SI(in) Q(out)
+//   INVD1BWP300H8P64PDLVT   I(in) ZN(out)
+//   BUFFD1BWP300H8P64PDLVT  I(in) Z(out)
 
-// Top module - simple counter-like structure
 module simple_counter (
     input clk,
     input reset,
@@ -14,20 +16,19 @@ module simple_counter (
 );
 
     wire net1, net2, net3, net4;
-    wire net5, net6, net7, net8;
-    wire net9, net10, net11, net12;
+    wire n_resetb;
+    wire n_reset;
 
-    // Flip-flop chain using D flip-flops from std cell library
-    SDFQD1BWP300H8P64PDLVT ff0 ( .D(enable), .CLK(clk), .Q(net1), .QN(net9), .CE(net5), .R(net6) );
-    SDFQD1BWP300H8P64PDLVT ff1 ( .D(net1), .CLK(clk), .Q(net2), .QN(net10), .CE(net5), .R(net6) );
-    SDFQD1BWP300H8P64PDLVT ff2 ( .D(net2), .CLK(clk), .Q(net3), .QN(net11), .CE(net5), .R(net6) );
-    SDFQD1BWP300H8P64PDLVT ff3 ( .D(net3), .CLK(clk), .Q(net4), .QN(net12), .CE(net5), .R(net6) );
+    // Flip-flop chain (D flip-flops). SE tied to the reset-bar enable so the
+    // scan-enable is held; SI held to reset.
+    SDFQD1BWP300H8P64PDLVT ff0 ( .D(enable), .CP(clk), .Q(net1), .SE(n_resetb), .SI(n_reset) );
+    SDFQD1BWP300H8P64PDLVT ff1 ( .D(net1), .CP(clk), .Q(net2), .SE(n_resetb), .SI(n_reset) );
+    SDFQD1BWP300H8P64PDLVT ff2 ( .D(net2), .CP(clk), .Q(net3), .SE(n_resetb), .SI(n_reset) );
+    SDFQD1BWP300H8P64PDLVT ff3 ( .D(net3), .CP(clk), .Q(net4), .SE(n_resetb), .SI(n_reset) );
 
-    // Clock enable logic
-    INVX1BWP300H8P64PDLVT inv_reset ( .I(reset), .ZN(net5) );
-
-    // Reset logic
-    BUFFD1BWP300H8P64PDLVT buf_reset ( .I(reset), .Z(net6) );
+    // Reset-bar and reset buffer
+    INVD1BWP300H8P64PDLVT  inv_reset ( .I(reset), .ZN(n_resetb) );
+    BUFFD1BWP300H8P64PDLVT buf_reset ( .I(reset), .Z(n_reset) );
 
     // Output buffers
     BUFFD1BWP300H8P64PDLVT buf0 ( .I(net1), .Z(out0) );
@@ -37,7 +38,6 @@ module simple_counter (
 
 endmodule
 
-// Wrapper module for hierarchy testing
 module counter_wrapper (
     input clk,
     input reset,
