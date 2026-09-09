@@ -90,8 +90,30 @@ set fontsize 6
 set targetutilz 65
 
 
+proc _require { level } {
+ variable topname
+ variable topnameid
+ variable instindex
+ variable hierindex
+ variable cellindex
+ variable corebox
+ if { $level >= 1 && $topname eq "" } {
+  puts "Error : no top design set, call 'set_top_design' before this command"
+  return -code return
+ }
+ if { $level >= 2 && $hierindex == 0 } {
+  puts "Error : design hierarchy not built, call 'build_design' before this command"
+  return -code return
+ }
+ if { $level >= 3 && [lindex $corebox 2] == [lindex $corebox 0] } {
+  puts "Error : no floorplan defined, call 'make_floorplan' before this command"
+  return -code return
+ }
+}
+
 proc build_design { } {
  variable topname
+ _require 1
  variable topnameidt
  variable hierindex
  variable instindex
@@ -180,6 +202,7 @@ proc report_hierarchy_tree { } {
  variable topname
  variable hierindex
  variable instindex
+ _require 1
  variable cellindex
  variable hinstindex
  variable _libcell
@@ -373,6 +396,7 @@ proc add_bump { nbump bx by {cbump "yellow"} } {
 
 proc make_floorplan { widthx widthy corex corey } {
  variable topname
+ _require 1
  variable corebox
  variable topbox
 
@@ -394,6 +418,7 @@ proc make_floorplan { widthx widthy corex corey } {
 
 proc place_instance { cellinst posx posy orientation } {
  variable topname
+ _require 2
  variable hierindex
  variable instindex
  variable cellindex
@@ -446,6 +471,7 @@ proc remove_all_blockage { } {
 
 proc add_halo { marginx marginy } {
  variable topname
+ _require 2
  variable topnameid
  variable hierindex
  variable instindex
@@ -548,6 +574,7 @@ proc add_halo { marginx marginy } {
 
 proc unplace_stdcell { } {
  variable topname
+ _require 2
  variable topnameid
  variable hierindex
  variable instindex
@@ -586,6 +613,7 @@ proc unplace_stdcell { } {
 
 proc unplace_pad { } {
  variable topname
+ _require 2
  variable topnameid
  variable hierindex
  variable instindex
@@ -635,6 +663,7 @@ set targetutilz $utilz
 
 proc make_placement { {opt "-full"} } {
  variable topname
+ _require 3
  variable topnameid
  variable hierindex
  variable instindex
@@ -857,6 +886,8 @@ proc create_region { hmodule blx bly trx try } {
  variable _libcell
  variable _instlist
 
+ _require 2
+
  puts "Info : Create region $hmodule "
  puts ""
 
@@ -930,6 +961,7 @@ proc report_unplaced { } {
  variable instindex
  variable _instlist
  variable _libcell
+ _require 2
 
   for { set i 1} { $i<= $instindex } { incr i } {
    set inst $_instlist($i)
@@ -1013,6 +1045,7 @@ proc report_all_macro { } {
  variable corebox
  variable topbox
  variable pathlist
+ _require 2
  
  set macrolist [ list ]
  
@@ -1066,6 +1099,7 @@ proc all_pad { } {
 proc report_cell_properties { instname } {
  variable topname
  variable topnameid
+ _require 2
  variable hierindex
  variable instindex
  variable cellindex
@@ -1121,6 +1155,7 @@ proc report_cell_properties { instname } {
 proc report_area_stats { } {
  variable topname
  variable topnameid
+ _require 2
  variable hierindex
  variable instindex
  variable cellindex
@@ -1332,6 +1367,7 @@ proc list_all_pins { } {
 proc make_lef { filename } {
  variable topname
  variable topbox
+ _require 2
  variable topnameid
  variable hierindex
  variable instindex
@@ -1423,6 +1459,7 @@ proc make_lef { filename } {
 proc make_lib { filename } {
  variable topname
  variable topbox
+ _require 2
  variable topnameid
  variable hierindex
  variable instindexu
@@ -1531,6 +1568,7 @@ proc export_def { filename } {
 
  variable topname
  variable topbox
+ _require 2
  variable topnameid
  variable hierindex
  variable instindex
@@ -1610,6 +1648,7 @@ proc export_dc_floorplan { filename } {
 
  variable topname
  variable topbox
+ _require 2
  variable topnameid
  variable hierindex
  variable instindex
