@@ -1,7 +1,10 @@
 #!/usr/bin/tclsh
 package require Tcl
 
-if { ! [info exists _gui_mode] } { set _gui_mode 0 }
+# GUI mode is enabled with the -gui command-line option; otherwise batch mode.
+# Usage: tclsh mylittleda.tcl -gui
+set _gui_mode 0
+if { [lsearch -exact $argv "-gui"] >= 0 } { set _gui_mode 1 }
 if { $_gui_mode } {
   package require Tk
 }

@@ -1,5 +1,4 @@
 #!/usr/bin/tclsh
-set _gui_mode 0
 source ../../../mylittleda.tcl
 
 puts "=========================================="

@@ -2,7 +2,6 @@
 # Test Case 3: Medium Design
 # Medium complexity design with hierarchy, multiple blocks
 
-set _gui_mode 0
 source ../../../mylittleda.tcl
 
 puts "=========================================="
