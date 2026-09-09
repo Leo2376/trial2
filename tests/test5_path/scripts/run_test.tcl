@@ -12,15 +12,16 @@ read_netlist ../inputs/path_design.v
 set_top_design path_top
 build_design
 update_wire_db
+build_net_conn
 
 puts "=========================================="
 puts "report_path queries"
 puts "=========================================="
 # Top-input to top-output path through the leaf cells.
 report_path -from in_a -to out_y
-# Net-to-pin path (driver net to a sink pin).
-report_path -from n_and -to out_y
+# Net-to-pin path (driver net to an output pin).
+report_path -from n_and -to g_buf/Z
 # Pin-to-pin path.
-report_path -from g_and/Y -to g_buf/Y
+report_path -from g_and/Z -to g_inv/ZN
 
 exit

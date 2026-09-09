@@ -45,6 +45,7 @@ array set _libcell {}
 array set _libcellpindir {}
 array set _instlist {}
 array set _hinstlist {}
+set _assignlist [ list ]
 array set _blockagelist {}
 array set _regionlist {}
 array set _portlist {}
@@ -1630,6 +1631,14 @@ proc build_net_conn { } {
  array unset netdriver
  array unset netload
 
+ # Continuous assignments: assign lhs = rhs makes rhs a driver of lhs.
+ variable _assignlist
+ foreach a $_assignlist {
+  lassign $a alhs arhs
+  lappend netdriver($alhs) "<assign> $arhs"
+  lappend netload($arhs) "<assign> $alhs"
+ }
+
  # Top ports of the top module are net drivers (inputs) or sinks (outputs).
  for {set p 1} {$p <= $portindex} {incr p} {
   if { [lindex $_portmaster($p) 0] ne $topname } { continue }
@@ -1685,6 +1694,207 @@ proc build_net_conn { } {
  }
 
  puts "Info : built net connectivity ([llength [array names netdriver]] driver nets, [llength [array names netload]] load nets)"
+}
+
+# report_path -from <pin|net> -to <pin|net>
+# Text-only connectivity report (report_timing-style, no timing). Traces a path
+# from a source point to a sink point across the net connectivity map built by
+# build_net_conn. A point is either a net name or a pin "inst/pin".
+proc report_path { args } {
+ variable topname
+ variable _libcell
+ variable _instlist
+ variable _hinstlist
+ variable instindex
+ variable hinstindex
+ global netdriver netload
+
+ set from ""
+ set to ""
+ for {set i 0} {$i < [llength $args]} {incr i} {
+  set a [lindex $args $i]
+  if { $a eq "-from" } { set from [lindex $args [incr i]] ; continue }
+  if { $a eq "-to" }   { set to [lindex $args [incr i]] ; continue }
+  puts "Error : unknown option '$a'"
+  puts "Usage: report_path -from <pin|net> -to <pin|net>"
+  return
+ }
+ if { $from eq "" || $to eq "" } {
+  puts "Error : report_path requires -from and -to"
+  puts "Usage: report_path -from <pin|net> -to <pin|net>"
+  return
+ }
+
+ # Resolve the -from point into a starting (net, inst, pin).
+ # If from is a pin "inst/pin", the net is the one that pin drives/reads.
+ # If from is a net, start from its driver.
+ set cur_net ""
+ set start_point ""
+ if { [regexp {^(.*)/([^/]+)$} $from -> inst pin] } {
+  set start_point "$inst $pin"
+  set cur_net [_pin_net $inst $pin]
+  if { $cur_net eq "" } { puts "Error : pin $from not found" ; return }
+ } else {
+  set cur_net $from
+  set d [lindex [array get netdriver $from] 1]
+  if { [llength $d] } { set start_point [lindex $d 0] }
+ }
+
+ # Resolve the -to point similarly.
+ set end_net ""
+ set end_point ""
+ if { [regexp {^(.*)/([^/]+)$} $to -> inst pin] } {
+  set end_point "$inst $pin"
+  set end_net [_pin_net $inst $pin]
+ } else {
+  set end_net $to
+  set l [lindex [array get netload $to] 1]
+  if { [llength $l] } { set end_point [lindex $l 0] }
+  if { $end_point eq "" } { set end_point "<net> $to" }
+  }
+
+ puts "************************************************************"
+ puts " report_path : -from $from -to $to"
+ puts "************************************************************"
+ if { $start_point eq "" } {
+  puts "Startpoint : <net> $cur_net"
+ } else {
+  puts "Startpoint : [_fmt_pin $start_point]"
+ }
+ if { $end_point eq "" } {
+  puts "Endpoint   : <net> $end_net"
+ } else {
+  puts "Endpoint   : [_fmt_pin $end_point]"
+ }
+ puts "Path type  : functional (no timing)"
+ puts ""
+ puts "  Point                                   Fanout   Net"
+ puts "  -------------------------------------------------------"
+
+ # BFS/trace from cur_net toward end_net via loads, following the unique
+ # driver through each cell encountered.
+ set path [list]
+ set seen_net [list]
+ set found 0
+ set net $cur_net
+ while {1} {
+  if { $net eq $end_net } { set found 1 ; break }
+  if { [lsearch -exact $seen_net $net] >= 0 } { break }
+  lappend seen_net $net
+  set loads [lindex [array get netload $net] 1]
+  set fanout [llength $loads]
+  # advance to the next net via the first load pin's cell output
+  set next ""
+  foreach lp $loads {
+   set ln [lindex $lp 0]
+   set lpin [lindex $lp 1]
+   if { $ln eq "<port>" } { continue }
+   if { $ln eq "<assign>" } {
+    lappend path [list $net $fanout $ln $lpin $lpin]
+    set next $lpin
+    break
+   }
+   set out_net [_cell_out_net $ln $lpin]
+   if { $out_net ne "" } {
+    lappend path [list $net $fanout $ln $lpin $out_net]
+    set next $out_net
+    break
+   }
+  }
+  if { $next eq "" } { break }
+  set net $next
+ }
+
+ # Emit the report.
+ if { $start_point ne "" } {
+  puts "  [_fmt_pin $start_point]"
+ }
+ foreach seg $path {
+  lassign $seg net fanout ln lpin out_net
+  puts "  $net                                   $fanout"
+  puts "  [_fmt_pin "$ln $lpin"]"
+ }
+ if { $found } {
+  puts "  $end_net"
+ }
+ puts "  -------------------------------------------------------"
+ if { $found } {
+  puts "1 path found."
+ } else {
+  puts "No path found between $from and $to."
+ }
+ puts ""
+}
+
+# Helper: net connected to a given instance pin (inst pin).
+proc _pin_net { inst pin } {
+ variable _instlist
+ variable _hinstlist
+ variable _instpinconn1
+ variable _instpinconn2
+ variable _hinstpinconn1
+ variable _hinstpinconn2
+ variable instindex
+ variable hinstindex
+ variable pathlist
+ variable hpathlist
+ set iid [lsearch -exact $pathlist $inst]
+ if { $iid >= 0 } {
+  incr iid
+  if { [info exists _instpinconn1($iid)] } {
+   set k [lsearch -exact $_instpinconn1($iid) $pin]
+   if { $k >= 0 } { return [lindex $_instpinconn2($iid) $k] }
+  }
+ }
+ set hid [lsearch -exact $hpathlist $inst]
+ if { $hid >= 0 } {
+  incr hid
+  if { [info exists _hinstpinconn1($hid)] } {
+   set k [lsearch -exact $_hinstpinconn1($hid) $pin]
+   if { $k >= 0 } { return [lindex $_hinstpinconn2($hid) $k] }
+  }
+ }
+ return ""
+}
+
+# Helper: output net of a cell given one of its (input) pins.
+proc _cell_out_net { inst pin } {
+ variable _instlist
+ variable _instpinconn1
+ variable _instpinconn2
+ variable _libcell
+ variable _libcellpindir
+ variable pathlist
+ set iid [lsearch -exact $pathlist $inst]
+ if { $iid < 0 } { return "" }
+  incr iid
+ if { ! [info exists _instpinconn1($iid)] } { return "" }
+ set pins $_instpinconn1($iid)
+ set nets $_instpinconn2($iid)
+ set refid [lindex $_instlist($iid) 8]
+ set dirs [lindex [array get _libcellpindir $refid] 1]
+ for {set j 0} {$j < [llength $pins]} {incr j} {
+  if { [lindex $dirs $j] eq "OUTPUT" } { return [lindex $nets $j] }
+ }
+ return ""
+}
+
+# Helper: format a pin "inst pin" as "inst/pin (cell, pin dir)".
+proc _fmt_pin { p } {
+ variable _instlist
+ variable _libcell
+ variable _libcellpindir
+ variable pathlist
+ set iname [lindex $p 0]
+ set pin [lindex $p 1]
+ if { $iname eq "<port>" } { return "$pin (port)" }
+ if { $iname eq "<assign>" } { return "assign $pin" }
+ set iid [lsearch -exact $pathlist $iname]
+ if { $iid < 0 } { return "$iname/$pin" }
+ incr iid
+ set refid [lindex $_instlist($iid) 8]
+ set cname [lindex $_libcell($refid) 0]
+ return "$iname/$pin ($cname)"
 }
 
 #
@@ -2182,7 +2392,8 @@ proc read_netlist { filename } {
  variable _hinstpinconn1
  variable _hinstpinconn2
  variable hinstrefsearch
- variable instrefsearch 
+ variable instrefsearch
+ variable _assignlist 
   
  # read module definition
  puts "Info : VERILOG import, module definition.."
@@ -2203,6 +2414,13 @@ proc read_netlist { filename } {
     
  while { [gets $fp line] >=0 } {
   
+  if { [regexp {^[ \t]*assign[ \t]+([A-Za-z0-9_\[\]]+)[ \t]*=[ \t]*([^;]+);[ \t]*$} $line -> alhs arhs] } {
+     set alhs [string trim $alhs]
+     foreach r [split [string trim $arhs] " "] {
+       set r [string trim $r]
+       if { $r ne "" && $r ne "+" && $r ne "^" && $r ne "&" && $r ne "~" } { lappend _assignlist [list $alhs $r] }
+     }
+  }
   set rline1  [string map {";" " ; "} $line   ]
   set rline2  [string map {")" " ) "} $rline1 ]
   set rline3  [string map {"(" " ( "} $rline2 ]
