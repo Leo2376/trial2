@@ -41,3 +41,30 @@ bash -c 'source run_test.sourceme'
 
 Each test writes `.lef` / `.def` / `.lib` / `.dc_floorplan.tcl` artifacts into
 its own `tests/<test>/outputs/` folder (these are gitignored).
+
+## Upgrade roadmap
+
+Proposed upgrades for the tool. Status starts at `proposal` and moves to
+`started` -> `implemented` -> `verified` as work progresses.
+
+| ID  | Area        | Description                                                                 | Status     |
+|-----|-------------|-----------------------------------------------------------------------------|------------|
+| P1  | Path tracing| Capture pin directions (INPUT/OUTPUT/INOUT) from LEF in `add_lef`           | proposal   |
+| P2  | Path tracing| Build a net driver/receiver map (per net: driver pin(s), receiver pins)     | proposal   |
+| P3  | Path tracing| `report_path -from <pin/net> -to <pin/net>`: text-only connectivity report  | proposal   |
+|     |             | (report_timing-style listing of crossed cells/pins/nets, no timing)         |            |
+| S1  | Performance | Convert `wiresearch` list to an array/dict map for O(1) net lookup          | proposal   |
+|     |             | (replaces O(n) `lsearch` in `update_wire_db` / `list_all_pins`)            |            |
+| S2  | Performance | Convert `pathlist` / `hpathlist` to index maps for O(1) instance lookup    | proposal   |
+| S3  | Performance | Convert `hierlist` / `cataloglist` to refname->index maps                  | proposal   |
+| S4  | Performance | Pair `_instpinconn1/2` into single per-instance lists for direct `foreach` | proposal   |
+| G1  | Robustness  | Add consistent `_require` guards to all state-touching commands            | proposal   |
+| G4  | Reporting   | `report_net` / `report_pin` helper (driver, receivers, connected insts)    | proposal   |
+| G5  | Robustness  | Harden `read_netlist` `/`-skip parsing                                       | proposal   |
+
+Notes:
+- P1 enables P2, which enables P3. S1 also produces the indexed net map P3
+  traverses, so P1 -> S1 -> P2 -> P3 is a sensible execution order.
+- Performance items (S*) must preserve exact `lsearch` semantics (first match,
+  duplicate handling, rebuild-on-mutation) and be verified by the regression
+  suite before their status moves to `verified`.
