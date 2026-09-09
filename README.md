@@ -10,7 +10,7 @@ available):
 
 ```sh
 sudo apt-get update
-sudo apt-get install -y tcl tk-dev tcl-dev
+sudo apt-get install -y tcl tk-dev tcl-dev xvfb
 ```
 
 Verify the install (note: Tk needs a display, so it only loads with an X server
@@ -24,6 +24,14 @@ echo 'puts "Tcl [info patchlevel]"; exit' | tclsh
 
 `mylittleda.tcl` runs in batch mode by default. GUI mode is opt-in via the
 `-gui` flag (`tclsh mylittleda.tcl -gui`) and requires a display.
+
+For a quick headless GUI smoke test, run under the X virtual framebuffer
+(`xvfb` provides a fake `$DISPLAY` so Tk can initialize without a physical
+screen):
+
+```sh
+xvfb-run -a tclsh mylittleda.tcl -gui
+```
 
 Run the full regression suite:
 
