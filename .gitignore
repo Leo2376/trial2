@@ -1,0 +1,5 @@
+# Generated EDA outputs from the test runs (source run_test.sourceme)
+tests/*/outputs/*.lef
+tests/*/outputs/*.def
+tests/*/outputs/*.lib
+tests/*/outputs/*.dc_floorplan.tcl
