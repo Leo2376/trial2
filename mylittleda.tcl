@@ -86,6 +86,7 @@ set topbox [ list 0 0 0 0 ]
 set instrefsearch [ list ]
 set hinstrefsearch [ list ]
 set wiresearch [ list ]
+array set wiresearch_map {}
 
 
 set scale_f 0
@@ -1484,10 +1485,13 @@ proc update_wire_db { } {
  variable _wirelist
  variable _wireinst
  variable wiresearch
+ variable wiresearch_map
  variable hinstrefsearch
  variable instrefsearch 
   
  puts "Info : update nets dbase"
+ array unset wiresearch_map
+ set wiresearch [ list ]
  
  set adv 0
   
@@ -1520,6 +1524,7 @@ for { set j 1 } { $j <= $wireindex } { incr j } {
  if {$j > [expr 8* $wireindex /10] && $adv==9 } { puts "..80%.." ; set adv 10}
  if {$j > [expr 9* $wireindex /10] && $adv==10} { puts "..90%.." ; set adv 11}
  lappend wiresearch $_wireinst($j)
+ if { ! [info exists wiresearch_map($_wireinst($j))] } { set wiresearch_map($_wireinst($j)) [expr {[llength $wiresearch]-1}] }
  
  }
  
@@ -1543,6 +1548,7 @@ proc list_all_pins { } {
  variable _libcell
  variable topname
  variable wiresearch
+ variable wiresearch_map
 
  puts "************************************************************"
  puts " List pins and connections"
@@ -1563,7 +1569,7 @@ proc list_all_pins { } {
      
      set hwire "$full_path/$wwire"
      
-     set s  [lsearch -exact $wiresearch $hwire]
+     set s [expr {[info exists wiresearch_map($hwire)] ? $wiresearch_map($hwire) : -1}]
      
      ##if {$s>-1} {puts "$full_path/$inst_name/$ppin $full_path/$wwire   $i $ref_name"}
      if {$s==-1} {puts "$full_path/$inst_name/$ppin $full_path/$wwire   $i $i $ref_name"}
@@ -1586,7 +1592,7 @@ proc list_all_pins { } {
      
      set hwire "$full_path/$wwire"
      
-     set s  [lsearch -exact $wiresearch $hwire]
+     set s [expr {[info exists wiresearch_map($hwire)] ? $wiresearch_map($hwire) : -1}]
      
      if {$s>-1} {puts "$full_path/$inst_name/$ppin $full_path/$wwire   $i"}
      
