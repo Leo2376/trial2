@@ -1,6 +1,10 @@
 #!/usr/bin/tclsh
 package require Tcl
-package require Tk
+
+if { ! [info exists _gui_mode] } { set _gui_mode 0 }
+if { $_gui_mode } {
+  package require Tk
+}
 
 set tcl_prompt1 { puts -nonewline "mylittleda> "}
 
@@ -18,13 +22,17 @@ set app_width  1000
 set app_height 1200
 set app_dimension 1000x1200
 
-wm title . "Layout " 
-wm geometry . $app_dimension
+if { $_gui_mode } {
+  wm title . "Layout "
+  wm geometry . $app_dimension
+}
 
-if { [winfo exist .can] == 0} {
-   canvas .can -background black -height $app_height -width $app_width
-   pack .can
-   }
+if { $_gui_mode } {
+  if { [winfo exist .can] == 0} {
+     canvas .can -background black -height $app_height -width $app_width
+     pack .can
+  }
+}
 
 # Initialize path tracing functionality (will be called after Tk mainloop starts)
 # The tracing UI will be added when the user first uses tracing features
@@ -90,8 +98,30 @@ set fontsize 6
 set targetutilz 65
 
 
+proc _require { level } {
+ variable topname
+ variable topnameid
+ variable instindex
+ variable hierindex
+ variable cellindex
+ variable corebox
+ if { $level >= 1 && $topname eq "" } {
+  puts "Error : no top design set, call 'set_top_design' before this command"
+  return -code return
+ }
+ if { $level >= 2 && $hierindex == 0 } {
+  puts "Error : design hierarchy not built, call 'build_design' before this command"
+  return -code return
+ }
+ if { $level >= 3 && [lindex $corebox 2] == [lindex $corebox 0] } {
+  puts "Error : no floorplan defined, call 'make_floorplan' before this command"
+  return -code return
+ }
+}
+
 proc build_design { } {
  variable topname
+ _require 1
  variable topnameidt
  variable hierindex
  variable instindex
@@ -180,6 +210,7 @@ proc report_hierarchy_tree { } {
  variable topname
  variable hierindex
  variable instindex
+ _require 1
  variable cellindex
  variable hinstindex
  variable _libcell
@@ -315,11 +346,12 @@ proc set_top_design { name } {
  variable _hinstlist
  variable cataloglist
  variable hierlist
+ variable _gui_mode
  
 
  set topname $name
 
- wm title . "Layout : $name" 
+if { $_gui_mode } { wm title . "Layout : $name" }
 
  puts -nonewline "Info : top design cell is now "
  puts -nonewline "\033\[33;1;4m"
@@ -359,7 +391,13 @@ proc scalepy { sy } {
  }
 
 
-proc redraw {  } {
+
+proc redraw { } {
+ variable _gui_mode
+ if { ! $_gui_mode } {
+    puts "Info: REDRAW (batch mode - no GUI)"
+    return
+ }
  variable topname
  variable hierindex
  variable instindex
@@ -534,7 +572,7 @@ proc redraw {  } {
 
 
 	#text
-         if {$class == "BLOCK" && $szx<$szy} {		 
+         if {$class == "BLOCK" && $szx<$szy}		 
          set text [lindex $_libcell($refid) 0]
          set tx_y [expr $bl_y+($tr_y-$bl_y)/20 ]
          set tx_x [expr $tr_x-($tr_x-$bl_x)/4 ]
@@ -542,21 +580,22 @@ proc redraw {  } {
         .can create line      $bl_x $tx_y $tx_x $bl_y -width 1 -fill $outline	 
 	
 				 if { [expr $bl_y-$tr_y] > 300                              } { .can create text $tx_x $tx_y -text $text -fill $outline -angle 90 -justify left -anchor w -font {Helvetica -14 bold}}
-  				 if { [expr $bl_y-$tr_y] >  70 && [expr $bl_y-$tr_y] <= 300 } { .can create text $tx_x $tx_y -text $text -fill $outline -angle 90 -justify left -anchor w -font {Helvetica -7 bold}}
+ 				 if { [expr $bl_y-$tr_y] >  70 && [expr $bl_y-$tr_y] <= 300 } { .can create text $tx_x $tx_y -text $text -fill $outline -angle 90 -justify left -anchor w -font {Helvetica -7 bold}}
 				 if { [expr $bl_y-$tr_y] >  40 && [expr $bl_y-$tr_y] <=  70 } { .can create text $tx_x $tx_y -text $text -fill $outline -angle 90 -justify left -anchor w -font {Helvetica -5 bold}}
-	                        }
+	                        
 				
-         if {$class == "BLOCK" && $szx>=$szy} {
+
+         if {$class == "BLOCK" && $szx>=$szy}
          set text [lindex $_libcell($refid) 0]
          set tx_y [expr $bl_y+($tr_y-$bl_y)/4 ]
          set tx_x [expr $bl_x+($tr_x-$bl_x)/20 ]
 
         .can create line      $bl_x $tx_y $tx_x $bl_y -width 1 -fill $outline	 
 
-				 if { [expr $tr_x-$bl_x] > 300  			    } {  .can create text $tx_x $tx_y -text $text -fill $outline -angle 0 -justify left -anchor w -font {Helvetica -24 bold}}
+				 if { [expr $tr_x-$bl_x] > 300 			    } {  .can create text $tx_x $tx_y -text $text -fill $outline -angle 0 -justify left -anchor w -font {Helvetica -24 bold}}
 				 if { [expr $tr_x-$bl_x] >  70 && [expr $tr_x-$bl_x] <= 300 } {  .can create text $tx_x $tx_y -text $text -fill $outline -angle 0 -justify left -anchor w -font {Helvetica -14 bold}}
 				 if { [expr $tr_x-$bl_x] >  40 && [expr $tr_x-$bl_x] <=  70 } {  .can create text $tx_x $tx_y -text $text -fill $outline -angle 0 -justify left -anchor w -font {Helvetica -9 bold}}
-	                        }
+	                        
 	 }
  }
 
@@ -587,13 +626,6 @@ proc redraw {  } {
  pack .can
  
 }
-
-###############################################################
-#
-# CELL PLACEMENT PROCS RELATED
-#
-###############################################################
-
 proc add_bump { nbump bx by {cbump "yellow"} } {
  variable bumpindex 
  variable _bumplist
@@ -604,6 +636,7 @@ proc add_bump { nbump bx by {cbump "yellow"} } {
 
 proc make_floorplan { widthx widthy corex corey } {
  variable topname
+ _require 1
  variable corebox
  variable topbox
 
@@ -625,6 +658,7 @@ proc make_floorplan { widthx widthy corex corey } {
 
 proc place_instance { cellinst posx posy orientation } {
  variable topname
+ _require 2
  variable hierindex
  variable instindex
  variable cellindex
@@ -677,6 +711,7 @@ proc remove_all_blockage { } {
 
 proc add_halo { marginx marginy } {
  variable topname
+ _require 2
  variable topnameid
  variable hierindex
  variable instindex
@@ -779,6 +814,7 @@ proc add_halo { marginx marginy } {
 
 proc unplace_stdcell { } {
  variable topname
+ _require 2
  variable topnameid
  variable hierindex
  variable instindex
@@ -817,6 +853,7 @@ proc unplace_stdcell { } {
 
 proc unplace_pad { } {
  variable topname
+ _require 2
  variable topnameid
  variable hierindex
  variable instindex
@@ -866,6 +903,7 @@ set targetutilz $utilz
 
 proc make_placement { {opt "-full"} } {
  variable topname
+ _require 3
  variable topnameid
  variable hierindex
  variable instindex
@@ -1088,6 +1126,8 @@ proc create_region { hmodule blx bly trx try } {
  variable _libcell
  variable _instlist
 
+ _require 2
+
  puts "Info : Create region $hmodule "
  puts ""
 
@@ -1161,6 +1201,7 @@ proc report_unplaced { } {
  variable instindex
  variable _instlist
  variable _libcell
+ _require 2
 
   for { set i 1} { $i<= $instindex } { incr i } {
    set inst $_instlist($i)
@@ -1244,6 +1285,7 @@ proc report_all_macro { } {
  variable corebox
  variable topbox
  variable pathlist
+ _require 2
  
  set macrolist [ list ]
  
@@ -1297,6 +1339,7 @@ proc all_pad { } {
 proc report_cell_properties { instname } {
  variable topname
  variable topnameid
+ _require 2
  variable hierindex
  variable instindex
  variable cellindex
@@ -1352,6 +1395,7 @@ proc report_cell_properties { instname } {
 proc report_area_stats { } {
  variable topname
  variable topnameid
+ _require 2
  variable hierindex
  variable instindex
  variable cellindex
@@ -1563,6 +1607,7 @@ proc list_all_pins { } {
 proc make_lef { filename } {
  variable topname
  variable topbox
+ _require 2
  variable topnameid
  variable hierindex
  variable instindex
@@ -1654,6 +1699,7 @@ proc make_lef { filename } {
 proc make_lib { filename } {
  variable topname
  variable topbox
+ _require 2
  variable topnameid
  variable hierindex
  variable instindexu
@@ -1762,6 +1808,7 @@ proc export_def { filename } {
 
  variable topname
  variable topbox
+ _require 2
  variable topnameid
  variable hierindex
  variable instindex
@@ -1820,7 +1867,7 @@ proc export_def { filename } {
   
   set nami "${fullname}/${instname}"
   if {$fullname =="-1"} { set nami "${instname}" }
-  if { $class == "BLOCK" || $class == "PAD"} { lappend macrolist "- $nami $refname + FIXED ( [expr $unit*$psx] [expr $unit*$psy] ) $ori ;" }
+  if { $class == "BLOCK" || $class == "PAD" || $class == "CORE" } { lappend macrolist "- $nami $refname + FIXED ( [expr $unit*$psx] [expr $unit*$psy] ) $ori ;" }
  }
  
  puts $fo "COMPONENTS [llength $macrolist] ;"  
@@ -1841,6 +1888,7 @@ proc export_dc_floorplan { filename } {
 
  variable topname
  variable topbox
+ _require 2
  variable topnameid
  variable hierindex
  variable instindex

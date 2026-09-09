@@ -2,7 +2,8 @@
 # Test Case 3: Medium Design
 # Medium complexity design with hierarchy, multiple blocks
 
-source ../../../mylittleda_nogui.tcl
+set _gui_mode 0
+source ../../../mylittleda.tcl
 
 puts "=========================================="
 puts "Test 3: Medium Design"

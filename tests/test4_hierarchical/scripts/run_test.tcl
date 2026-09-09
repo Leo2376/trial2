@@ -1,5 +1,6 @@
 #!/usr/bin/tclsh
-source ../../../mylittleda_nogui.tcl
+set _gui_mode 0
+source ../../../mylittleda.tcl
 
 puts "=========================================="
 puts "Test 4: Hierarchical Design (RAM + Std Cells)"
