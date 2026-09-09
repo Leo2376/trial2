@@ -1,5 +1,0 @@
-library(hierarchical_top) {
-  delay_model : table_lookup;
-  cell(hierarchical_top) {
-   }
-}
