@@ -42,6 +42,27 @@ bash -c 'source run_test.sourceme'
 Each test writes `.lef` / `.def` / `.lib` / `.dc_floorplan.tcl` artifacts into
 its own `tests/<test>/outputs/` folder (these are gitignored).
 
+## Technology Liberty (`.lib`)
+
+The technology library file `liberty_files/n7_tech.lib` is a static,
+minimal Liberty file covering every std cell and SRAM defined in `lef_files/`.
+It carries no real timing tables (all scalar `0.1`, units ns / pf / uW). The
+only timing intent it encodes is the set of synchronous (clock) pins of
+sequential cells, tagged with `clock : true;`:
+
+- `CP` for every flop (e.g. `DFQD0BWP300H8P64PDLVT`).
+- `CLK` for every SRAM (e.g. `TS1N7HSLVTA128X33M2WBZHOCP`).
+
+To regenerate the file from the LEFs after editing `lef_files/`:
+
+```sh
+tclsh8.6 scripts/gen_tech_lib.tcl lef_files/*.lef > liberty_files/n7_tech.lib
+```
+
+`add_lib <file>` loads a `.lib` and stores, per library cell, the set of sync
+pins in the `_libsyncpin` attribute. Query it with `get_sync_pins <cell>`.
+This is the foundation for the proposed sync-to-sync path report (`R1`).
+
 ## Upgrade roadmap
 
 Proposed upgrades for the tool. Status starts at `proposal` and moves to
@@ -61,10 +82,18 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 | G1  | Robustness  | Add consistent `_require` guards to all state-touching commands            | proposal   |
 | G4  | Reporting   | `report_net` / `report_pin` helper (driver, receivers, connected insts)    | proposal   |
 | G5  | Robustness  | Harden `read_netlist` `/`-skip parsing                                       | proposal   |
+| L1  | Liberty     | Static technology `.lib` for std cells + SRAMs with sync pins marked       | implemented |
+|     |             | (`CP` for flops, `CLK` for SRAMs) via `clock : true;` (see `liberty_files/`)  |            |
+| L2  | Liberty     | `add_lib` parser that recovers sync (clock) pins into a library attribute   | implemented |
+|     |             | (`_libsyncpin`); query with `get_sync_pins <cell>`                         |            |
+| R1  | Reporting   | `report_sync`: sync-to-sync `report_path` between flop CP / SRAM CK         | proposal   |
+|     |             | endpoints using the `_libsyncpin` attribute                                |            |
 
 Notes:
 - P1 enables P2, which enables P3. S1 also produces the indexed net map P3
   traverses, so P1 -> S1 -> P2 -> P3 is a sensible execution order.
+- L1 + L2 provide the sync-pin attribute that R1 needs, so L1 -> L2 -> R1 is
+  the execution order for the timing-intent track.
 - Performance items (S*) must preserve exact `lsearch` semantics (first match,
   duplicate handling, rebuild-on-mutation) and be verified by the regression
   suite before their status moves to `verified`.

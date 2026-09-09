@@ -43,6 +43,8 @@ if { $_gui_mode } {
 
 array set _libcell {}
 array set _libcellpindir {}
+array set _libsyncpin {}
+set _libcellsync [ list ]
 array set _instlist {}
 array set _hinstlist {}
 set _assignlist [ list ]
@@ -2347,6 +2349,57 @@ proc add_lef { filename } {
  puts "Info : total physical cell in memory $cellindex cells"
  puts ""
  
+}
+
+proc add_lib { filename } {
+ variable _libsyncpin
+ variable _libcellsync
+ set libcnt 0
+ set syncpin 0
+ set curcell ""
+ set curpin ""
+ set inpin 0
+ set isclock 0
+ set fp [ open $filename r]
+ puts "Info : Liberty file import $filename"
+ while { [gets $fp line] >=0 } {
+  set words [regexp -all -inline -- {\S+} $line]
+  set ARG1 [lindex $words 0]
+  set ARG2 [lindex $words 1]
+  set ARG3 [lindex $words 2]
+
+  if { $ARG1 == "cell" } {
+                     if { $curcell ne "" && [info exists _libsyncpin($curcell)] } { lappend _libcellsync $curcell }
+                     set curcell [string trim $ARG2 "()"]
+                     set _libsyncpin($curcell) [ list ]
+                     set libcnt [ expr $libcnt + 1 ]
+                     set inpin 0
+		     }
+
+  if { $ARG1 == "pin" && $curcell ne "" } {
+                     if { $inpin && $curpin ne "" && $isclock } { lappend _libsyncpin($curcell) $curpin }
+                     set curpin [string trim $ARG2 "()"]
+                     set isclock 0
+                     set inpin 1
+		     }
+
+  if { $ARG1 == "clock" && $inpin && $ARG2 == ":" && $ARG3 == "true" } { set isclock 1 }
+  if { $ARG1 == "clock" && $inpin && $ARG2 == "true" } { set isclock 1 }
+  }
+
+ if { $curcell ne "" && $inpin && $curpin ne "" && $isclock } { lappend _libsyncpin($curcell) $curpin }
+ if { $curcell ne "" && [info exists _libsyncpin($curcell)] } { lappend _libcellsync $curcell }
+ close $fp
+ puts "Info : Liberty logical cell import, imported $libcnt cells"
+ foreach c $_libcellsync { set s $_libsyncpin($c) ; if { [llength $s] > 0 } { set syncpin [ expr $syncpin + [llength $s] ] } }
+ puts "Info : total sync (clock) pins recovered $syncpin pins"
+ puts ""
+}
+
+proc get_sync_pins { cellname } {
+ variable _libsyncpin
+ if { ! [info exists _libsyncpin($cellname)] } { return "" }
+ return $_libsyncpin($cellname)
 }
 
 proc get_cell_id  { refname } {
