@@ -1,0 +1,13 @@
+VERSION 5.8 ;
+BUSBITCHARS "[]" ;
+DIVIDERCHAR "/" ;
+MACRO hierarchical_top
+FIXEDMASK ;
+CLASS BLOCK ;
+FOREIGN hierarchical_top 0.0 0.0 ;
+ORIGIN 0.0 0.0 ;
+SIZE  300 BY 300 ;
+SYMMETRY X Y ;
+END hierarchical_top
+ 
+END LIBRARY
