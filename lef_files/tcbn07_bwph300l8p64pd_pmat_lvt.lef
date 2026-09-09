@@ -1,0 +1,360 @@
+VERSION 5.8 ;
+BUSBITCHARS "[]" ;
+DIVIDERCHAR "/" ;
+UNITS DISTANCE MICRONS 2000 ;
+
+# Standard Cell Library - PMAT (Placement and Memory Assist Technology)
+# Additional cells for placement optimization
+
+# More AND gates with different drive strengths
+MACRO AN2D6BWP300H8P64PDLVT
+  CLASS CORE ;
+  ORIGIN 0.0 0.0 ;
+  SIZE 0.6 BY 0.3 ;
+  SYMMETRY X Y ;
+  PIN A
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.0 0.1 0.1 0.2 ;
+    END
+  END A
+  PIN B
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.2 0.1 0.3 0.2 ;
+    END
+  END B
+  PIN Y
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.45 0.1 0.6 0.2 ;
+    END
+  END Y
+END AN2D6BWP300H8P64PDLVT
+
+MACRO AN2D8BWP300H8P64PDLVT
+  CLASS CORE ;
+  ORIGIN 0.0 0.0 ;
+  SIZE 0.75 BY 0.3 ;
+  SYMMETRY X Y ;
+  PIN A
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.0 0.1 0.1 0.2 ;
+    END
+  END A
+  PIN B
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.3 0.1 0.4 0.2 ;
+    END
+  END B
+  PIN Y
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.6 0.1 0.75 0.2 ;
+    END
+  END Y
+END AN2D8BWP300H8P64PDLVT
+
+MACRO AN3D2BWP300H8P64PDLVT
+  CLASS CORE ;
+  ORIGIN 0.0 0.0 ;
+  SIZE 0.6 BY 0.3 ;
+  SYMMETRY X Y ;
+  PIN A
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.0 0.1 0.1 0.2 ;
+    END
+  END A
+  PIN B
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.2 0.1 0.3 0.2 ;
+    END
+  END B
+  PIN C
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.4 0.1 0.5 0.2 ;
+    END
+  END C
+  PIN Y
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.5 0.1 0.6 0.2 ;
+    END
+  END Y
+END AN3D2BWP300H8P64PDLVT
+
+# OR gates with different drives
+MACRO OR2D3BWP300H8P64PDLVT
+  CLASS CORE ;
+  ORIGIN 0.0 0.0 ;
+  SIZE 0.45 BY 0.3 ;
+  SYMMETRY X Y ;
+  PIN A
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.0 0.1 0.1 0.2 ;
+    END
+  END A
+  PIN B
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.15 0.1 0.25 0.2 ;
+    END
+  END B
+  PIN Y
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.35 0.1 0.45 0.2 ;
+    END
+  END Y
+END OR2D3BWP300H8P64PDLVT
+
+# More buffers
+MACRO BUFFD10BWP300H8P64PDLVT
+  CLASS CORE ;
+  ORIGIN 0.0 0.0 ;
+  SIZE 1.8 BY 0.3 ;
+  SYMMETRY X Y ;
+  PIN A
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.0 0.1 0.1 0.2 ;
+    END
+  END A
+  PIN Y
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 1.7 0.1 1.8 0.2 ;
+    END
+  END Y
+END BUFFD10BWP300H8P64PDLVT
+
+# More complex gates
+MACRO AO211D0BWP300H8P64PDLVT
+  CLASS CORE ;
+  ORIGIN 0.0 0.0 ;
+  SIZE 0.75 BY 0.3 ;
+  SYMMETRY X Y ;
+  PIN A
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.0 0.1 0.1 0.2 ;
+    END
+  END A
+  PIN B
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.15 0.1 0.25 0.2 ;
+    END
+  END B
+  PIN C
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.3 0.1 0.4 0.2 ;
+    END
+  END C
+  PIN Y
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.6 0.1 0.75 0.2 ;
+    END
+  END Y
+END AO211D0BWP300H8P64PDLVT
+
+MACRO AO21D1BWP300H8P64PDLVT
+  CLASS CORE ;
+  ORIGIN 0.0 0.0 ;
+  SIZE 0.6 BY 0.3 ;
+  SYMMETRY X Y ;
+  PIN A
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.0 0.1 0.1 0.2 ;
+    END
+  END A
+  PIN B
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.2 0.1 0.3 0.2 ;
+    END
+  END B
+  PIN C
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.4 0.1 0.5 0.2 ;
+    END
+  END C
+  PIN Y
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.5 0.1 0.6 0.2 ;
+    END
+  END Y
+END AO21D1BWP300H8P64PDLVT
+
+MACRO AO21D2BWP300H8P64PDLVT
+  CLASS CORE ;
+  ORIGIN 0.0 0.0 ;
+  SIZE 0.6 BY 0.3 ;
+  SYMMETRY X Y ;
+  PIN A
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.0 0.1 0.1 0.2 ;
+    END
+  END A
+  PIN B
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.2 0.1 0.3 0.2 ;
+    END
+  END B
+  PIN C
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.4 0.1 0.5 0.2 ;
+    END
+  END C
+  PIN Y
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.5 0.1 0.6 0.2 ;
+    END
+  END Y
+END AO21D2BWP300H8P64PDLVT
+
+MACRO AO21D4BWP300H8P64PDLVT
+  CLASS CORE ;
+  ORIGIN 0.0 0.0 ;
+  SIZE 0.75 BY 0.3 ;
+  SYMMETRY X Y ;
+  PIN A
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.0 0.1 0.1 0.2 ;
+    END
+  END A
+  PIN B
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.2 0.1 0.3 0.2 ;
+    END
+  END B
+  PIN C
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.4 0.1 0.5 0.2 ;
+    END
+  END C
+  PIN Y
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M1 ;
+      RECT 0.6 0.1 0.75 0.2 ;
+    END
+  END Y
+END AO21D4BWP300H8P64PDLVT
+
+# Filler cells
+MACRO FILLER1
+  CLASS CORE ;
+  ORIGIN 0.0 0.0 ;
+  SIZE 0.3 BY 0.3 ;
+  SYMMETRY X Y ;
+END FILLER1
+
+MACRO FILLER2
+  CLASS CORE ;
+  ORIGIN 0.0 0.0 ;
+  SIZE 0.6 BY 0.3 ;
+  SYMMETRY X Y ;
+END FILLER2
+
+# Layers
+LAYER M1
+  TYPE ROUTING ;
+  DIRECTION HORIZONTAL ;
+  PITCH 0.1 ;
+  WIDTH 0.05 ;
+END M1
+
+LAYER M2
+  TYPE ROUTING ;
+  DIRECTION VERTICAL ;
+  PITCH 0.1 ;
+  WIDTH 0.05 ;
+END M2
+
+SITE CORE
+  CLASS CORE ;
+  SIZE 0.3 BY 0.3 ;
+  SYMMETRY X Y ;
+END CORE
+
+END LIBRARY
