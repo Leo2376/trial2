@@ -42,6 +42,7 @@ if { $_gui_mode } {
 
 
 array set _libcell {}
+array set _libcellpindir {}
 array set _instlist {}
 array set _hinstlist {}
 array set _blockagelist {}
@@ -1987,9 +1988,11 @@ exec pwd
 proc add_lef { filename } {
  variable cellindex
  variable _libcell
+ variable _libcellpindir
  variable cataloglist
  set enacell 0
  set cellcnt 0
+ set curpin ""
  set fp [ open $filename r]
  puts "Info : LEF file import $filename"
  while { [gets $fp line] >=0 } {
@@ -2010,13 +2013,21 @@ proc add_lef { filename } {
 
   if { $ARG1 == "END" && $enacell == 1} { 
                      if { $ARG2 == [lindex $_libcell($cellindex) 0] } {
+                        if { $curpin ne "" } { lappend _libcellpindir($cellindex) $curpindir ; set curpin "" }
                         set enacell 0
 		       }
 		     }
 
-  if { $ARG1 == "PIN" && $enacell == 1} { 
+  if { $ARG1 == "PIN" && $enacell == 1} {
+                      if { $curpin ne "" } { lappend _libcellpindir($cellindex) $curpindir }
+                      set curpin $ARG2
+                      set curpindir "INPUT"
                       lset _libcell($cellindex) 3 [expr [lindex $_libcell($cellindex) 3] +1 ]
                       lset _libcell($cellindex) [expr [lindex $_libcell($cellindex) 3]+4]  $ARG2
+		     }
+
+  if { $ARG1 == "DIRECTION" && $enacell == 1 && $curpin ne "" } {
+                      set curpindir $ARG2
 		     }
 		     		     
   if { $ARG1 == "SIZE" && $enacell == 1 } {
