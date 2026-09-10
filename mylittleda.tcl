@@ -1973,12 +1973,20 @@ proc _resolve_net { s } {
  return ""
 }
 
-# get_cell <pattern>
-# Report all cells (leaf and hierarchical) whose full hierarchical instance
-# path matches the glob pattern. A pattern with a hierarchical prefix scopes
-# the match (e.g. "core0/c0/*reg*"); a bare pattern (e.g. "*reg*") matches
-# anywhere. Wildcards are the standard glob ones (*, ?, [..]).
-proc get_cell { pattern } {
+# get_cell <pattern> ?-hier?
+# Report cells (leaf and hierarchical) whose full hierarchical instance path
+# matches the glob pattern. Wildcards are the standard glob ones (*, ?, [..]).
+#
+# By default (no -hier) only the DIRECT children of the scope implied by the
+# pattern are reported:
+#   get_cell *             -> top-level instances only
+#   get_cell core0/w0/*    -> direct children of core0/w0 only
+#   get_cell *reg*         -> top-level instances matching *reg* only
+# This matches the common EDA convention that a non-hierarchical query stays
+# within one scope. With -hier the match is cross-hierarchy (the previous
+# behaviour): every instance whose full path matches the pattern is reported,
+# at any depth.
+proc get_cell { args } {
  variable instindex
  variable hinstindex
  variable _instlist
@@ -1989,12 +1997,45 @@ proc get_cell { pattern } {
 
  _require 2
 
+ if { [llength $args] == 0 } {
+  puts "Error : get_cell requires a pattern"
+  puts "Usage: get_cell <pattern> ?-hier?"
+  return
+ }
+ set pattern [lindex $args 0]
+ set hier 0
+ foreach a [lrange $args 1 end] {
+  if { $a eq "-hier" } { set hier 1 ; continue }
+  puts "Error : unknown option '$a'"
+  puts "Usage: get_cell <pattern> ?-hier?"
+  return
+ }
+
  puts "************************************************************"
  puts " get_cell : $pattern"
  puts "************************************************************"
+
+ # In the default (non-hier) mode, restrict the match to the direct children
+ # of the scope implied by the pattern. The scope is the literal prefix of
+ # the pattern up to the last component that still contains no wildcard; a
+ # bare pattern with no '/' scopes to the top level. "-1" marks the top.
+ set scope "-1"
+ if { ! $hier } {
+  if { [string match {*/*} $pattern] } {
+   set parts [split $pattern /]
+   set pre {}
+   foreach p $parts {
+    if { [string match {*[?*]*} $p] || [string match {*\[*\]*} $p] } { break }
+    lappend pre $p
+   }
+   if { [llength $pre] } { set scope [join $pre /] }
+  }
+ }
+
  set n 0
  for { set i 1 } { $i <= $instindex } { incr i } {
   set fullp [lindex $_instlist($i) 7]
+  if { ! $hier && $fullp ne $scope } { continue }
   set iname [lindex $_instlist($i) 0]
   if { $fullp eq "-1" } { set ipath $iname } else { set ipath "$fullp/$iname" }
   if { [string match $pattern $ipath] } {
@@ -2010,6 +2051,7 @@ proc get_cell { pattern } {
  }
  for { set i 1 } { $i <= $hinstindex } { incr i } {
   set fullp [lindex $_hinstlist($i) 7]
+  if { ! $hier && $fullp ne $scope } { continue }
   set iname [lindex $_hinstlist($i) 0]
   if { $fullp eq "-1" } { set ipath $iname } else { set ipath "$fullp/$iname" }
   if { [string match $pattern $ipath] } {
@@ -2019,7 +2061,9 @@ proc get_cell { pattern } {
   }
  }
  puts "  -------------------------------------------------------"
- if { $n == 1 } { puts "$n cell matching $pattern." } else { puts "$n cells matching $pattern." }
+ set hdr $pattern
+ if { $hier } { append hdr " -hier" }
+ if { $n == 1 } { puts "$n cell matching $hdr." } else { puts "$n cells matching $hdr." }
  puts ""
 }
 

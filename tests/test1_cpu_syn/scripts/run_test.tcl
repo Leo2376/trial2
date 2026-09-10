@@ -68,6 +68,24 @@ build_net_conn
 
 report_path -from core0/w0/nv_c0/c0/iu0/r_reg_M__ADDRESS__49_/Q  -to  core0/w0/nv_c0/c0/iu0/n20719
 
+puts "=========================================="
+puts "get_cell / all_connected non-reg checks"
+puts "=========================================="
+
+# get_cell without -hier stays within one scope (direct children only):
+#   *             -> top-level instances only (197)
+#   <scope>/*     -> direct children of <scope> only
+# get_cell -hier matches across the whole hierarchy (legacy behaviour).
+get_cell *
+get_cell * -hier
+get_cell core0/w0/nv_c0/c0/*
+get_cell core0/w0/nv_c0/c0/iu0/*
+
+# all_connected on a full hierarchical net reports only that scope's net,
+# not same-named nets reused in sibling submodules. Expect a single driver:
+# core0/w0/nv_c0/c0/iu0/U28571/ZN
+all_connected core0/w0/nv_c0/c0/iu0/n20719
+
 set hier_dontshow { SNPS_CLOCK grnand2_tech68_ }
 report_hierarchy_tree
 
