@@ -66,7 +66,7 @@ make_lib ../outputs/cpu_syn_test1.lib
 update_wire_db
 build_net_conn
 
-report_path -from core0/w0/nv_c0/c0/iu0/r_reg_M__ADDRESS__49_/Q -to core0/w0/nv_c0/c0/iu0/U28571/A1
+report_path -from core0/w0/nv_c0/c0/iu0/r_reg_M__ADDRESS__49_/Q  -to  core0/w0/nv_c0/c0/iu0/n20719
 
 set hier_dontshow { SNPS_CLOCK grnand2_tech68_ }
 report_hierarchy_tree

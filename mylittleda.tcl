@@ -1658,12 +1658,17 @@ proc build_net_conn { } {
  }
 
  # Lib-cell instances: classify each pin by LEF direction.
+ # Use the full hierarchical instance path (as built in pathlist) instead of
+ # the bare instance name, so netdriver/netload entries are unambiguous and
+ # resolve cleanly via the pathlist lookups used by report_path.
  for {set i 1} {$i <= $instindex} {incr i} {
   set inst $_instlist($i)
   set iname [lindex $inst 0]
   set ishier [lindex $inst 3]
   set refid [lindex $inst 8]
   if { $ishier != 0 } { continue }
+  set fullp [lindex $inst 7]
+  if { $fullp eq "-1" } { set ipath $iname } else { set ipath "$fullp/$iname" }
   set pins $_instpinconn1($i)
   set nets $_instpinconn2($i)
   set dirs [lindex [array get _libcellpindir $refid] 1]
@@ -1672,9 +1677,9 @@ proc build_net_conn { } {
    set wn [lindex $nets $j]
    set dr [lindex $dirs $j]
    if { $dr eq "OUTPUT" } {
-     lappend netdriver($wn) "$iname $pn"
+     lappend netdriver($wn) "$ipath $pn"
    } else {
-     lappend netload($wn) "$iname $pn"
+     lappend netload($wn) "$ipath $pn"
    }
   }
  }
@@ -1685,13 +1690,15 @@ proc build_net_conn { } {
   set inst $_hinstlist($i)
   set iname [lindex $inst 0]
   if { ! [info exists _hinstpinconn1($i)] } { continue }
+  set fullp [lindex $inst 7]
+  if { $fullp eq "-1" } { set ipath $iname } else { set ipath "$fullp/$iname" }
   set pins $_hinstpinconn1($i)
   set nets $_hinstpinconn2($i)
   for {set j 0} {$j < [llength $pins]} {incr j} {
    set pn [lindex $pins $j]
    set wn [lindex $nets $j]
-   lappend netdriver($wn) "$iname $pn"
-   lappend netload($wn) "$iname $pn"
+   lappend netdriver($wn) "$ipath $pn"
+   lappend netload($wn) "$ipath $pn"
   }
  }
 
@@ -1728,32 +1735,45 @@ proc report_path { args } {
  }
 
  # Resolve the -from point into a starting (net, inst, pin).
- # If from is a pin "inst/pin", the net is the one that pin drives/reads.
- # If from is a net, start from its driver.
+ # A point is a pin "inst/pin" only if that instance and pin exist; otherwise
+ # it is treated as a net (net names may themselves contain '/').
  set cur_net ""
  set start_point ""
+ set from_is_pin 0
  if { [regexp {^(.*)/([^/]+)$} $from -> inst pin] } {
-  set start_point "$inst $pin"
-  set cur_net [_pin_net $inst $pin]
-  if { $cur_net eq "" } { puts "Error : pin $from not found" ; return }
- } else {
-  set cur_net $from
-  set d [lindex [array get netdriver $from] 1]
+  set n [_pin_net $inst $pin]
+  if { $n ne "" } {
+   set start_point "$inst $pin"
+   set cur_net $n
+   set from_is_pin 1
+  }
+ }
+ if { ! $from_is_pin } {
+  set cur_net [_resolve_net $from]
+  set d [lindex [array get netdriver $cur_net] 1]
   if { [llength $d] } { set start_point [lindex $d 0] }
  }
+ if { $cur_net eq "" } { puts "Error : -from point $from not found" ; return }
 
  # Resolve the -to point similarly.
  set end_net ""
  set end_point ""
+ set to_is_pin 0
  if { [regexp {^(.*)/([^/]+)$} $to -> inst pin] } {
-  set end_point "$inst $pin"
-  set end_net [_pin_net $inst $pin]
- } else {
-  set end_net $to
-  set l [lindex [array get netload $to] 1]
-  if { [llength $l] } { set end_point [lindex $l 0] }
-  if { $end_point eq "" } { set end_point "<net> $to" }
+  set n [_pin_net $inst $pin]
+  if { $n ne "" } {
+   set end_point "$inst $pin"
+   set end_net $n
+   set to_is_pin 1
   }
+ }
+ if { ! $to_is_pin } {
+  set end_net [_resolve_net $to]
+  set l [lindex [array get netload $end_net] 1]
+  if { [llength $l] } { set end_point [lindex $l 0] }
+  if { $end_point eq "" } { set end_point "<net> $end_net" }
+ }
+ if { $end_net eq "" } { puts "Error : -to point $to not found" ; return }
 
  puts "************************************************************"
  puts " report_path : -from $from -to $to"
@@ -1773,51 +1793,67 @@ proc report_path { args } {
  puts "  Point                                   Fanout   Net"
  puts "  -------------------------------------------------------"
 
- # BFS/trace from cur_net toward end_net via loads, following the unique
- # driver through each cell encountered.
- set path [list]
- set seen_net [list]
+ # BFS from cur_net toward end_net via loads, following each load pin's
+ # cell output. Unlike a single greedy walk, all load branches are explored,
+ # so a path through any branch (not just the first) is found. A parent map
+ # records how each net was reached so the path can be reconstructed.
+ array set seen_net {}
+ array set parent_net {}
+ array set via_inst {}
+ array set via_pin {}
+ set q [list $cur_net]
+ set seen_net($cur_net) 1
  set found 0
- set net $cur_net
- while {1} {
+ while {[llength $q]} {
+  set net [lindex $q 0]
+  set q [lrange $q 1 end]
   if { $net eq $end_net } { set found 1 ; break }
-  if { [lsearch -exact $seen_net $net] >= 0 } { break }
-  lappend seen_net $net
   set loads [lindex [array get netload $net] 1]
-  set fanout [llength $loads]
-  # advance to the next net via the first load pin's cell output
-  set next ""
   foreach lp $loads {
    set ln [lindex $lp 0]
    set lpin [lindex $lp 1]
    if { $ln eq "<port>" } { continue }
    if { $ln eq "<assign>" } {
-    lappend path [list $net $fanout $ln $lpin $lpin]
-    set next $lpin
-    break
+    set out_net $lpin
+   } else {
+    set out_net [_cell_out_net $ln $lpin]
    }
-   set out_net [_cell_out_net $ln $lpin]
-   if { $out_net ne "" } {
-    lappend path [list $net $fanout $ln $lpin $out_net]
-    set next $out_net
-    break
-   }
+   if { $out_net eq "" } { continue }
+   if { [info exists seen_net($out_net)] } { continue }
+   set seen_net($out_net) 1
+   set parent_net($out_net) $net
+   set via_inst($out_net) $ln
+   set via_pin($out_net) $lpin
+   lappend q $out_net
   }
-  if { $next eq "" } { break }
-  set net $next
+ }
+
+ # Reconstruct the path of nets from cur_net to end_net.
+ set path [list]
+ if { $found } {
+  set n $end_net
+  while { $n ne $cur_net } {
+   set path [list $n {*}$path]
+   set n $parent_net($n)
+  }
  }
 
  # Emit the report.
  if { $start_point ne "" } {
   puts "  [_fmt_pin $start_point]"
  }
+ set prev_net $cur_net
  foreach seg $path {
-  lassign $seg net fanout ln lpin out_net
-  puts "  $net                                   $fanout"
+  set fanout [llength [lindex [array get netload $prev_net] 1]]
+  set ln $via_inst($seg)
+  set lpin $via_pin($seg)
+  puts "  $prev_net                                   $fanout"
   puts "  [_fmt_pin "$ln $lpin"]"
+  set prev_net $seg
  }
  if { $found } {
-  puts "  $end_net"
+  set fanout [llength [lindex [array get netload $end_net] 1]]
+  puts "  $end_net                                   $fanout"
  }
  puts "  -------------------------------------------------------"
  if { $found } {
@@ -1897,6 +1933,19 @@ proc _fmt_pin { p } {
  set refid [lindex $_instlist($iid) 8]
  set cname [lindex $_libcell($refid) 0]
  return "$iname/$pin ($cname)"
+}
+
+# Helper: resolve a -from/-to point that is a net (not an inst/pin). Net names
+# are stored bare in the connectivity map, so a hierarchical reference like
+# "a/b/n20719" is matched by its trailing token "n20719". The full string is
+# tried first in case a net genuinely contains '/'.
+proc _resolve_net { s } {
+ global netdriver netload
+ if { [info exists netdriver($s)] || [info exists netload($s)] } { return $s }
+ if { [regexp {/([^/]+)$} $s -> tail] } {
+  if { [info exists netdriver($tail)] || [info exists netload($tail)] } { return $tail }
+ }
+ return ""
 }
 
 #
