@@ -81,6 +81,16 @@ get_cell * -hier
 get_cell core0/w0/nv_c0/c0/*
 get_cell core0/w0/nv_c0/c0/iu0/*
 
+# get_net mirrors get_cell's scope semantics but for nets. Without -hier it
+# reports only the nets of the single scope implied by the pattern; with
+# -hier it matches across the whole hierarchy. Expect a single net for the
+# exact reference (driver: U28571/ZN).
+get_net *
+get_net * -hier
+get_net core0/w0/nv_c0/c0/*
+get_net core0/w0/nv_c0/c0/iu0/*
+get_net core0/w0/nv_c0/c0/iu0/n20719
+
 # all_connected on a full hierarchical net reports only that scope's net,
 # not same-named nets reused in sibling submodules. Expect a single driver:
 # core0/w0/nv_c0/c0/iu0/U28571/ZN

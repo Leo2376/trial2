@@ -101,9 +101,12 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | branches down to leaf sync pins (flop CP / SRAM CK). Depends on L2.        |            |
 | R3  | Reporting   | `all_connected <net or pin>`: report all nets connected to a net/pin;      | proposal   |
 |     |             | accepts wildcards (e.g. `all_connected n2*`).                           |            |
-| R4  | Reporting   | `get_cell <pattern>`: report all cells matching a pattern (e.g. `*reg*`);   | proposal   |
+| R4  | Reporting   | `get_cell <pattern>`: report all cells matching a pattern (e.g. `*reg*`);   | implemented |
 |     |             | handles hierarchy by scope (e.g. `get_cell core0/c0/*reg*` lists cells in  |            |
-|     |             | that scope).                                                             |            |
+|     |             | that scope). Add `-hier` for a cross-hierarchy match.                   |            |
+| R5  | Reporting   | `get_net <pattern>`: report all nets matching a pattern (e.g. `n2*`);     | implemented |
+|     |             | handles hierarchy by scope (e.g. `get_net core0/w0/nv_c0/c0/*` lists nets |            |
+|     |             | declared in that scope). Add `-hier` for a cross-hierarchy match.        |            |
 
 Notes:
 - P1 enables P2, which enables P3. S1 also produces the indexed net map P3
@@ -113,3 +116,25 @@ Notes:
 - Performance items (S*) must preserve exact `lsearch` semantics (first match,
   duplicate handling, rebuild-on-mutation) and be verified by the regression
   suite before their status moves to `verified`.
+
+## Connectivity query commands
+
+After `build_design` (and `update_wire_db` / `build_net_conn` for the net
+queries), the following report connectivity. Patterns are globs
+(`*`, `?`, `[..]`); a hierarchical prefix scopes the match to one module.
+
+- `report_path -from <pin|net> -to <pin|net>` — text-only connectivity report
+  (report_timing-style, no timing) across the net driver/receiver map.
+- `all_connected <net or pin>` — for a net pattern, list every matching net
+  with its driver and receiver pins; for an `inst/pin`, report that pin's
+  net. Net names are scoped by their containing module's path, so a full
+  hierarchical net reference reports only that scope's net.
+- `get_cell <pattern> ?-hier?` — list cells (leaf and hierarchical) whose
+  full instance path matches. Without `-hier` only the direct children of
+  the scope implied by the pattern are reported (`get_cell *` = top level
+  only); `-hier` matches across the whole hierarchy.
+- `get_net <pattern> ?-hier?` — list nets whose scoped name matches, with
+  their driver/receiver counts. Without `-hier` only the nets of the single
+  scope implied by the pattern are reported (`get_net *` = top-level nets
+  only, `get_net core0/w0/nv_c0/c0/*` = nets in that module); `-hier`
+  matches across the whole hierarchy.

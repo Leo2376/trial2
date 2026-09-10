@@ -1720,6 +1720,14 @@ proc _scoped_net { fullp net } {
  return "$fullp/$net"
 }
 
+# Helper: scope of a net key. For a scoped net "a/b/c/net" the scope is the
+# containing module path "a/b/c"; for a bare top-level net it is the top ("-1").
+proc _net_scope { key } {
+ if { ! [string match {*/*} $key] } { return "-1" }
+ set parts [split $key /]
+ return [join [lrange $parts 0 end-1] /]
+}
+
 # report_path -from <pin|net> -to <pin|net>
 # Text-only connectivity report (report_timing-style, no timing). Traces a path
 # from a source point to a sink point across the net connectivity map built by
@@ -2064,6 +2072,81 @@ proc get_cell { args } {
  set hdr $pattern
  if { $hier } { append hdr " -hier" }
  if { $n == 1 } { puts "$n cell matching $hdr." } else { puts "$n cells matching $hdr." }
+ puts ""
+}
+
+# get_net <pattern> ?-hier?
+# Report nets whose (scoped) name matches the glob pattern. Net names are
+# stored scoped by their containing module's hierarchical path
+# (e.g. "core0/w0/nv_c0/c0/iu0/n20719"); top-level nets keep the bare name.
+# Wildcards are the standard glob ones (*, ?, [..]).
+#
+# By default (no -hier) only the nets of the SINGLE scope implied by the
+# pattern are reported:
+#   get_net *                    -> top-level nets only
+#   get_net core0/w0/nv_c0/c0/*  -> nets declared in core0/w0/nv_c0/c0 only
+#   get_net n2*                  -> top-level nets matching n2* only
+# With -hier the match is cross-hierarchy: every net whose full scoped name
+# matches the pattern is reported, at any depth.
+proc get_net { args } {
+ global netdriver netload
+
+ _require 2
+
+ if { [llength $args] == 0 } {
+  puts "Error : get_net requires a pattern"
+  puts "Usage: get_net <pattern> ?-hier?"
+  return
+ }
+ set pattern [lindex $args 0]
+ set hier 0
+ foreach a [lrange $args 1 end] {
+  if { $a eq "-hier" } { set hier 1 ; continue }
+  puts "Error : unknown option '$a'"
+  puts "Usage: get_net <pattern> ?-hier?"
+  return
+ }
+
+ puts "************************************************************"
+ puts " get_net : $pattern"
+ puts "************************************************************"
+
+ # In the default (non-hier) mode, restrict the match to nets whose scope
+ # equals the scope implied by the pattern: the pattern minus its last path
+ # component (the net-name filter). A bare pattern with no '/' scopes to the
+ # top level. So "a/b/c/*" scopes to a/b/c, and an exact "a/b/c/n2" also
+ # scopes to a/b/c (its parent module).
+ set scope "-1"
+ if { ! $hier && [string match {*/*} $pattern] } {
+  set parts [split $pattern /]
+  set scope [join [lrange $parts 0 end-1] /]
+ }
+
+ # Collect the union of all known net keys, then filter by scope (non-hier)
+ # and by the glob pattern. De-duplicate via an array (O(1)) rather than a
+ # list search so the command stays fast on large designs.
+ array set seen {}
+ foreach name [array names netdriver] { set seen($name) 1 }
+ foreach name [array names netload]   { set seen($name) 1 }
+
+ set nets {}
+ foreach k [lsort [array names seen]] {
+  if { ! $hier && [_net_scope $k] ne $scope } { continue }
+  if { [string match $pattern $k] } { lappend nets $k }
+ }
+
+ foreach n $nets {
+  set d [lindex [array get netdriver $n] 1]
+  set nd [llength $d]
+  set l [lindex [array get netload $n] 1]
+  set nl [llength $l]
+  puts "  $n  (drivers:$nd receivers:$nl)"
+ }
+ puts "  -------------------------------------------------------"
+ set hdr $pattern
+ if { $hier } { append hdr " -hier" }
+ set nm [llength $nets]
+ if { $nm == 1 } { puts "$nm net matching $hdr." } else { puts "$nm nets matching $hdr." }
  puts ""
 }
 
