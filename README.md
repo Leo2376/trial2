@@ -99,6 +99,8 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | endpoints using the `_libsyncpin` attribute                                |            |
 | R2  | Reporting   | `trace_clock <pin/net>`: tree-like report tracing from a pin or net to all  | proposal   |
 |     |             | branches down to leaf sync pins (flop CP / SRAM CK). Depends on L2.        |            |
+| R3  | Reporting   | `all_connected <net or pin>`: report all nets connected to a net/pin;      | proposal   |
+|     |             | accepts wildcards (e.g. `all_connected n2*`).                           |            |
 
 Notes:
 - P1 enables P2, which enables P3. S1 also produces the indexed net map P3
