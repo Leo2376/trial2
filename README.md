@@ -101,6 +101,9 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | branches down to leaf sync pins (flop CP / SRAM CK). Depends on L2.        |            |
 | R3  | Reporting   | `all_connected <net or pin>`: report all nets connected to a net/pin;      | proposal   |
 |     |             | accepts wildcards (e.g. `all_connected n2*`).                           |            |
+| R4  | Reporting   | `get_cell <pattern>`: report all cells matching a pattern (e.g. `*reg*`);   | proposal   |
+|     |             | handles hierarchy by scope (e.g. `get_cell core0/c0/*reg*` lists cells in  |            |
+|     |             | that scope).                                                             |            |
 
 Notes:
 - P1 enables P2, which enables P3. S1 also produces the indexed net map P3

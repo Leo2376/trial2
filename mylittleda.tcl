@@ -1948,6 +1948,127 @@ proc _resolve_net { s } {
  return ""
 }
 
+# get_cell <pattern>
+# Report all cells (leaf and hierarchical) whose full hierarchical instance
+# path matches the glob pattern. A pattern with a hierarchical prefix scopes
+# the match (e.g. "core0/c0/*reg*"); a bare pattern (e.g. "*reg*") matches
+# anywhere. Wildcards are the standard glob ones (*, ?, [..]).
+proc get_cell { pattern } {
+ variable instindex
+ variable hinstindex
+ variable _instlist
+ variable _hinstlist
+ variable _libcell
+ variable pathlist
+ variable hpathlist
+
+ _require 2
+
+ puts "************************************************************"
+ puts " get_cell : $pattern"
+ puts "************************************************************"
+ set n 0
+ for { set i 1 } { $i <= $instindex } { incr i } {
+  set fullp [lindex $_instlist($i) 7]
+  set iname [lindex $_instlist($i) 0]
+  if { $fullp eq "-1" } { set ipath $iname } else { set ipath "$fullp/$iname" }
+  if { [string match $pattern $ipath] } {
+   set refid [lindex $_instlist($i) 8]
+   if { [info exists _libcell($refid)] } {
+    set refname [lindex $_libcell($refid) 0]
+   } else {
+    set refname [lindex $_instlist($i) 1]
+   }
+   puts "  $ipath ($refname)"
+   incr n
+  }
+ }
+ for { set i 1 } { $i <= $hinstindex } { incr i } {
+  set fullp [lindex $_hinstlist($i) 7]
+  set iname [lindex $_hinstlist($i) 0]
+  if { $fullp eq "-1" } { set ipath $iname } else { set ipath "$fullp/$iname" }
+  if { [string match $pattern $ipath] } {
+   set refname [lindex $_hinstlist($i) 1]
+   puts "  $ipath ($refname) hierarchical"
+   incr n
+  }
+ }
+ puts "  -------------------------------------------------------"
+ if { $n == 1 } { puts "$n cell matching $pattern." } else { puts "$n cells matching $pattern." }
+ puts ""
+}
+
+# all_connected <net or pin>
+# Report all nets connected to a net or pin. The argument may be a glob
+# pattern (with *, ?, [..]); every net whose name matches is reported with
+# its driver pin(s) and receiver pin(s). A pin "inst/pin" argument reports
+# the single net that pin is on.
+proc all_connected { pattern } {
+ global netdriver netload
+ variable pathlist
+ variable hpathlist
+
+ puts "************************************************************"
+ puts " all_connected : $pattern"
+ puts "************************************************************"
+
+ # If the argument resolves to a pin, report that pin's net.
+ if { [regexp {^(.*)/([^/]+)$} $pattern -> inst pin] } {
+  set n [_pin_net $inst $pin]
+  if { $n ne "" } {
+   puts "  pin $pattern is on net $n"
+   _report_net $n
+   return
+  }
+ }
+
+ # Otherwise treat the argument as a net pattern and expand over all
+ # known nets. The bare net name is matched so a hierarchical reference like
+ # "a/b/n2*" matches by its trailing token.
+ set nets [list]
+ foreach name [array names netdriver] { if { [string match $pattern $name] } { lappend nets $name } }
+ foreach name [array names netload]   { if { [string match $pattern $name] } { lappend nets $name } }
+ if { [regexp {/([^/]+)$} $pattern -> tail] } {
+  foreach name [array names netdriver] { if { [string match $tail $name] } { lappend nets $name } }
+  foreach name [array names netload]   { if { [string match $tail $name] } { lappend nets $name } }
+ }
+ # unique, sorted
+ set seen {}
+ set nets2 {}
+ foreach n [lsort $nets] { if { [lsearch -exact $seen $n] < 0 } { lappend seen $n ; lappend nets2 $n } }
+
+ if { [llength $nets2] == 0 } {
+  puts "No net matches $pattern."
+  puts ""
+  return
+ }
+ foreach n $nets2 { _report_net $n }
+ puts "  -------------------------------------------------------"
+ set nm [llength $nets2]
+ if { $nm == 1 } { puts "$nm net matching $pattern." } else { puts "$nm nets matching $pattern." }
+ puts ""
+}
+
+# Helper: print the drivers and receivers of a single net.
+proc _report_net { n } {
+ global netdriver netload
+ puts "  net $n"
+ set d [lindex [array get netdriver $n] 1]
+ if { [llength $d] } {
+  puts "    drivers :"
+  foreach p $d { puts "      [_fmt_pin $p]" }
+ } else {
+  puts "    drivers : (none)"
+ }
+ set l [lindex [array get netload $n] 1]
+ if { [llength $l] } {
+  puts "    receivers :"
+  foreach p $l { puts "      [_fmt_pin $p]" }
+ } else {
+  puts "    receivers : (none)"
+ }
+}
+
 #
 #############################################################
 
