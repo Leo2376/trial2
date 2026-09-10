@@ -82,10 +82,10 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 | G1  | Robustness  | Add consistent `_require` guards to all state-touching commands            | proposal   |
 | G4  | Reporting   | `report_net` / `report_pin` helper (driver, receivers, connected insts)    | proposal   |
 | G5  | Robustness  | Harden `read_netlist` `/`-skip parsing                                       | proposal   |
-| L1  | Liberty     | Static technology `.lib` for std cells + SRAMs with sync pins marked       | implemented |
+| L1  | Liberty     | Static technology `.lib` for std cells + SRAMs (sync pins only, no timing)  | implemented |
 |     |             | (`CP` for flops, `CLK` for SRAMs) via `clock : true;` (see `liberty_files/`)  |            |
-| L2  | Liberty     | `add_lib` parser that recovers sync (clock) pins into a library attribute   | implemented |
-|     |             | (`_libsyncpin`); query with `get_sync_pins <cell>`                         |            |
+| L2  | Liberty     | `add_lib` parser recovers sync (clock) pins only into `_libsyncpin` attr   | implemented |
+|     |             | (no timing tables); query with `get_sync_pins <cell>`                     |            |
 | R1  | Reporting   | `report_sync`: sync-to-sync `report_path` between flop CP / SRAM CK         | proposal   |
 |     |             | endpoints using the `_libsyncpin` attribute                                |            |
 
