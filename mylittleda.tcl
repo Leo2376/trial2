@@ -2159,10 +2159,14 @@ proc get_net { args } {
 }
 
 # all_connected <net or pin>
-# Report all nets connected to a net or pin. The argument may be a glob
-# pattern (with *, ?, [..]); every net whose name matches is reported with
-# its driver pin(s) and receiver pin(s). A pin "inst/pin" argument reports
-# the single net that pin is on.
+# Report the nets connected to a net or pin. A pin "inst/pin" argument
+# reports the single net that pin is on. A net argument may use globs
+# (*, ?, [..]); like get_net, the match is scoped: only nets of the single
+# scope implied by the pattern are reported (the pattern minus its last path
+# component; a bare name with no '/' scopes to the top level). So
+# "all_connected n77" reports only the top-level net n77 (not same-named nets
+# reused in submodules), and "all_connected core0/w0/n77" reports only that
+# scope's net. If the net is not in that hierarchy, nothing is found.
 proc all_connected { pattern } {
  global netdriver netload
  variable pathlist
@@ -2182,25 +2186,26 @@ proc all_connected { pattern } {
   }
  }
 
- # Otherwise treat the argument as a net pattern and expand over all
- # known nets. Net names are stored scoped by their containing module's
- # hierarchical path (e.g. "core0/w0/nv_c0/c0/iu0/n20719"), so a full
- # hierarchical reference matches its own scope exactly and does not pull in
- # same-named nets from sibling scopes. The trailing-token fallback is only
- # used for a bare (non-hierarchical) pattern, so a plain "n2*" can still
- # list every matching net across scopes.
- set nets [list]
- foreach name [array names netdriver] { if { [string match $pattern $name] } { lappend nets $name } }
- foreach name [array names netload]   { if { [string match $pattern $name] } { lappend nets $name } }
- if { ! [string match {*/*} $pattern] } {
-  set tail $pattern
-  foreach name [array names netdriver] { if { [string match $tail [lindex [split $name /] end]] } { lappend nets $name } }
-  foreach name [array names netload]   { if { [string match $tail [lindex [split $name /] end]] } { lappend nets $name } }
+ # Otherwise treat the argument as a net pattern, scoped like get_net: the
+ # scope is the pattern minus its last path component (top level "-1" for a
+ # bare name). Only nets whose containing scope equals this scope AND whose
+ # scoped name matches the pattern are reported, so same-named nets in sibling
+ # submodules are not pulled in.
+ set scope "-1"
+ if { [string match {*/*} $pattern] } {
+  set parts [split $pattern /]
+  set scope [join [lrange $parts 0 end-1] /]
  }
- # unique, sorted
- set seen {}
+
+ array set seen {}
+ foreach name [array names netdriver] { set seen($name) 1 }
+ foreach name [array names netload]   { set seen($name) 1 }
+
  set nets2 {}
- foreach n [lsort $nets] { if { [lsearch -exact $seen $n] < 0 } { lappend seen $n ; lappend nets2 $n } }
+ foreach k [lsort [array names seen]] {
+  if { [_net_scope $k] ne $scope } { continue }
+  if { [string match $pattern $k] } { lappend nets2 $k }
+ }
 
  if { [llength $nets2] == 0 } {
   puts "No net matches $pattern."

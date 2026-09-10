@@ -102,6 +102,13 @@ all_connected core0/w0/nv_c0/c0/iu0/n20719
 # driver: nv_entropy_valid (port), receiver: core0/nv_entropy_valid.
 all_connected nv_entropy_valid
 
+# all_connected is scoped like get_net (no -hier): a bare name matches only the
+# top-level net, not same-named nets reused in submodules. all_connected n77
+# must report a single top-level net n77 (driver U18/Z), not the 38 cross-scope
+# n77 nets. A hierarchical reference scopes to that module.
+all_connected n77
+all_connected core0/w0/nv_c0/c0/bht0/n77
+
 set hier_dontshow { SNPS_CLOCK grnand2_tech68_ }
 report_hierarchy_tree
 

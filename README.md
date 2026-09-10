@@ -161,10 +161,12 @@ queries), the following report connectivity. Patterns are globs
 
 - `report_path -from <pin|net> -to <pin|net>` — text-only connectivity report
   (report_timing-style, no timing) across the net driver/receiver map.
-- `all_connected <net or pin>` — for a net pattern, list every matching net
-  with its driver and receiver pins; for an `inst/pin`, report that pin's
-  net. Net names are scoped by their containing module's path, so a full
-  hierarchical net reference reports only that scope's net.
+- `all_connected <net or pin>` — for a net, report that net with its driver and
+  receiver pins; for an `inst/pin`, report that pin's net. The match is scoped
+  like `get_net` (no `-hier`): a bare name (e.g. `all_connected n77`) reports
+  only the top-level net `n77`, not same-named nets reused in submodules; a
+  hierarchical reference (e.g. `all_connected core0/w0/n77`) reports only that
+  scope's net. If the net is not in that hierarchy, nothing is found.
 - `get_cell <pattern> ?-hier?` — list cells (leaf and hierarchical) whose
   full instance path matches. Without `-hier` only the direct children of
   the scope implied by the pattern are reported (`get_cell *` = top level
