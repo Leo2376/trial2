@@ -97,6 +97,8 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | (no timing tables); query with `get_sync_pins <cell>`                     |            |
 | R1  | Reporting   | `report_sync`: sync-to-sync `report_path` between flop CP / SRAM CK         | proposal   |
 |     |             | endpoints using the `_libsyncpin` attribute                                |            |
+| R2  | Reporting   | `trace_clock <pin/net>`: tree-like report tracing from a pin or net to all  | proposal   |
+|     |             | branches down to leaf sync pins (flop CP / SRAM CK). Depends on L2.        |            |
 
 Notes:
 - P1 enables P2, which enables P3. S1 also produces the indexed net map P3
