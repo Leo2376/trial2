@@ -117,6 +117,16 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | nets whose fanout exceeds `set_max_fanout`, splitting the receivers across |            |
 |     |             | the buffers so each driver sees at most <n> loads. Uses the netload map     |            |
 |     |             | from `build_net_conn`. Depends on P2.                                       |            |
+| E1  | ECO         | `create_net <netname>`: create a new net inside a scope (e.g. `create_net   | proposal   |
+|     |             | core0/w0/c0/n_new`); the trailing token is the net name, the prefix is the  |            |
+|     |             | containing hierarchical scope.                                              |            |
+| E2  | ECO         | `create_cell <inst_path> <celltype>`: instantiate a lib cell inside a       | proposal   |
+|     |             | scope (e.g. `create_cell core0/w0/c0/u_buf BUFFD1BWP300H8P64PDLVT`); the   |            |
+|     |             | instance path is `<scope>/<instname>`.                                        |            |
+| E3  | ECO         | `disconnect_net <net> <pin>`: detach an instance pin from a net; the pin  | proposal   |
+|     |             | argument is `<inst>/<pin>`. Updates the netload/netdriver map (P2).         |            |
+| E4  | ECO         | `connect_net <net> <pin>`: attach an instance pin to a net; the pin         | proposal   |
+|     |             | argument is `<inst>/<pin>`. Updates the netload/netdriver map (P2).         |            |
 
 Notes:
 - P1 enables P2, which enables P3. S1 also produces the indexed net map P3
@@ -136,6 +146,12 @@ Notes:
   <buf>`, and checks via `get_net`/`all_connected` that every net now has at
   most <n> receivers and that the inserted buffers chain the original driver
   to the receivers. Depends on the P2 netload map, so P2 -> O2 is the order.
+- E1-E4 (ECO) are verified together: `create_net` a new net, `create_cell` a
+  buffer in a scope, `disconnect_net` a pin from its old net and `connect_net`
+  it to the new net, then `all_connected`/`get_net` to confirm the old net lost
+  the receiver and the new net gained it. E3/E4 mutate the netload map (P2),
+  so they require build_net_conn to have run first; the order is P2 -> E4.
+  A `write_verilog` (N1) dump after the ECO confirms the structural change.
 
 ## Connectivity query commands
 
