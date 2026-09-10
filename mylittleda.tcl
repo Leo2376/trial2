@@ -1661,6 +1661,12 @@ proc build_net_conn { } {
  # Use the full hierarchical instance path (as built in pathlist) instead of
  # the bare instance name, so netdriver/netload entries are unambiguous and
  # resolve cleanly via the pathlist lookups used by report_path.
+ #
+ # Net names are scoped by the containing module's hierarchical path, so a
+ # wire name reused in sibling submodules (e.g. "n20719" in iu0 and in cc0)
+ # stays a distinct net per scope instead of collapsing into one entry.
+ # Top-level wires (fullp == -1) keep the bare name so flat designs match a
+ # plain net reference.
  for {set i 1} {$i <= $instindex} {incr i} {
   set inst $_instlist($i)
   set iname [lindex $inst 0]
@@ -1674,7 +1680,7 @@ proc build_net_conn { } {
   set dirs [lindex [array get _libcellpindir $refid] 1]
   for {set j 0} {$j < [llength $pins]} {incr j} {
    set pn [lindex $pins $j]
-   set wn [lindex $nets $j]
+   set wn [_scoped_net $fullp [lindex $nets $j]]
    set dr [lindex $dirs $j]
    if { $dr eq "OUTPUT" } {
      lappend netdriver($wn) "$ipath $pn"
@@ -1696,13 +1702,22 @@ proc build_net_conn { } {
   set nets $_hinstpinconn2($i)
   for {set j 0} {$j < [llength $pins]} {incr j} {
    set pn [lindex $pins $j]
-   set wn [lindex $nets $j]
+   set wn [_scoped_net $fullp [lindex $nets $j]]
    lappend netdriver($wn) "$ipath $pn"
    lappend netload($wn) "$ipath $pn"
   }
  }
 
  puts "Info : built net connectivity ([llength [array names netdriver]] driver nets, [llength [array names netload]] load nets)"
+}
+
+# Helper: scope a net name by its containing module's hierarchical path. The
+# instance fullp is the path of the enclosing module; a wire declared in that
+# module is uniquely named as "fullp/net". At the top level (fullp == -1) the
+# bare wire name is returned so flat designs keep matching plain references.
+proc _scoped_net { fullp net } {
+ if { $fullp eq "-1" || $fullp eq "" } { return $net }
+ return "$fullp/$net"
 }
 
 # report_path -from <pin|net> -to <pin|net>
@@ -1881,7 +1896,10 @@ proc _pin_net { inst pin } {
   incr iid
   if { [info exists _instpinconn1($iid)] } {
    set k [lsearch -exact $_instpinconn1($iid) $pin]
-   if { $k >= 0 } { return [lindex $_instpinconn2($iid) $k] }
+   if { $k >= 0 } {
+    set fullp [lindex $_instlist($iid) 7]
+    return [_scoped_net $fullp [lindex $_instpinconn2($iid) $k]]
+   }
   }
  }
  set hid [lsearch -exact $hpathlist $inst]
@@ -1889,7 +1907,10 @@ proc _pin_net { inst pin } {
   incr hid
   if { [info exists _hinstpinconn1($hid)] } {
    set k [lsearch -exact $_hinstpinconn1($hid) $pin]
-   if { $k >= 0 } { return [lindex $_hinstpinconn2($hid) $k] }
+   if { $k >= 0 } {
+    set fullp [lindex $_hinstlist($hid) 7]
+    return [_scoped_net $fullp [lindex $_hinstpinconn2($hid) $k]]
+   }
   }
  }
  return ""
@@ -1910,9 +1931,10 @@ proc _cell_out_net { inst pin } {
  set pins $_instpinconn1($iid)
  set nets $_instpinconn2($iid)
  set refid [lindex $_instlist($iid) 8]
+ set fullp [lindex $_instlist($iid) 7]
  set dirs [lindex [array get _libcellpindir $refid] 1]
  for {set j 0} {$j < [llength $pins]} {incr j} {
-  if { [lindex $dirs $j] eq "OUTPUT" } { return [lindex $nets $j] }
+  if { [lindex $dirs $j] eq "OUTPUT" } { return [_scoped_net $fullp [lindex $nets $j]] }
  }
  return ""
 }
@@ -1935,10 +1957,13 @@ proc _fmt_pin { p } {
  return "$iname/$pin ($cname)"
 }
 
-# Helper: resolve a -from/-to point that is a net (not an inst/pin). Net names
-# are stored bare in the connectivity map, so a hierarchical reference like
-# "a/b/n20719" is matched by its trailing token "n20719". The full string is
-# tried first in case a net genuinely contains '/'.
+# Helper: resolve a -from/-to point that is a net (not an inst/pin). Net
+# names are stored scoped by their containing module's hierarchical path
+# (e.g. "core0/w0/nv_c0/c0/iu0/n20719"), so a full hierarchical reference
+# matches directly. A bare top-level name is also tried, and finally the
+# trailing token is matched for a partial reference; the most specific match
+# (full path, then bare, then tail) wins so distinct same-named nets in
+# sibling scopes are not collapsed.
 proc _resolve_net { s } {
  global netdriver netload
  if { [info exists netdriver($s)] || [info exists netload($s)] } { return $s }
@@ -2023,14 +2048,19 @@ proc all_connected { pattern } {
  }
 
  # Otherwise treat the argument as a net pattern and expand over all
- # known nets. The bare net name is matched so a hierarchical reference like
- # "a/b/n2*" matches by its trailing token.
+ # known nets. Net names are stored scoped by their containing module's
+ # hierarchical path (e.g. "core0/w0/nv_c0/c0/iu0/n20719"), so a full
+ # hierarchical reference matches its own scope exactly and does not pull in
+ # same-named nets from sibling scopes. The trailing-token fallback is only
+ # used for a bare (non-hierarchical) pattern, so a plain "n2*" can still
+ # list every matching net across scopes.
  set nets [list]
  foreach name [array names netdriver] { if { [string match $pattern $name] } { lappend nets $name } }
  foreach name [array names netload]   { if { [string match $pattern $name] } { lappend nets $name } }
- if { [regexp {/([^/]+)$} $pattern -> tail] } {
-  foreach name [array names netdriver] { if { [string match $tail $name] } { lappend nets $name } }
-  foreach name [array names netload]   { if { [string match $tail $name] } { lappend nets $name } }
+ if { ! [string match {*/*} $pattern] } {
+  set tail $pattern
+  foreach name [array names netdriver] { if { [string match $tail [lindex [split $name /] end]] } { lappend nets $name } }
+  foreach name [array names netload]   { if { [string match $tail [lindex [split $name /] end]] } { lappend nets $name } }
  }
  # unique, sorted
  set seen {}
