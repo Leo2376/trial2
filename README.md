@@ -111,6 +111,12 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | (modules, ports, wires, leaf-cell instances and hierarchical instances,   |            |
 |     |             | `assign` statements). Preserves hierarchy so a `read_netlist` ->           |            |
 |     |             | `write_verilog` round-trip is the verification testcase.                   |            |
+| O1  | Optimization| `set_max_fanout <n>`: set a global fanout threshold (max receivers per net)  | proposal   |
+|     |             | for `fix_max_fanout`.                                                       |            |
+| O2  | Optimization| `fix_max_fanout -cell <buffer>`: insert buffers of the given lib cell on   | proposal   |
+|     |             | nets whose fanout exceeds `set_max_fanout`, splitting the receivers across |            |
+|     |             | the buffers so each driver sees at most <n> loads. Uses the netload map     |            |
+|     |             | from `build_net_conn`. Depends on P2.                                       |            |
 
 Notes:
 - P1 enables P2, which enables P3. S1 also produces the indexed net map P3
@@ -125,6 +131,11 @@ Notes:
   dumped file and check that the module/port/wire/instance/assign structure
   matches. test5_path (flat, with `assign`) and a hierarchical design
   (test4_hierarchical) are the natural round-trip cases.
+- O1 + O2 (buffer insertion) are verified by a test that builds a net with a
+  high-fanout driver, runs `set_max_fanout <n>` then `fix_max_fanout -cell
+  <buf>`, and checks via `get_net`/`all_connected` that every net now has at
+  most <n> receivers and that the inserted buffers chain the original driver
+  to the receivers. Depends on the P2 netload map, so P2 -> O2 is the order.
 
 ## Connectivity query commands
 
