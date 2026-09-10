@@ -107,6 +107,10 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 | R5  | Reporting   | `get_net <pattern>`: report all nets matching a pattern (e.g. `n2*`);     | implemented |
 |     |             | handles hierarchy by scope (e.g. `get_net core0/w0/nv_c0/c0/*` lists nets |            |
 |     |             | declared in that scope). Add `-hier` for a cross-hierarchy match.        |            |
+| N1  | Netlist I/O | `write_verilog <file>`: dump the loaded netlist back out as Verilog         | proposal   |
+|     |             | (modules, ports, wires, leaf-cell instances and hierarchical instances,   |            |
+|     |             | `assign` statements). Preserves hierarchy so a `read_netlist` ->           |            |
+|     |             | `write_verilog` round-trip is the verification testcase.                   |            |
 
 Notes:
 - P1 enables P2, which enables P3. S1 also produces the indexed net map P3
@@ -116,6 +120,11 @@ Notes:
 - Performance items (S*) must preserve exact `lsearch` semantics (first match,
   duplicate handling, rebuild-on-mutation) and be verified by the regression
   suite before their status moves to `verified`.
+- N1 (write_verilog) is verified by a read -> dump round-trip: read a design
+  with `read_netlist`, write it back with `write_verilog`, then re-read the
+  dumped file and check that the module/port/wire/instance/assign structure
+  matches. test5_path (flat, with `assign`) and a hierarchical design
+  (test4_hierarchical) are the natural round-trip cases.
 
 ## Connectivity query commands
 
