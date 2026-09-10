@@ -69,6 +69,17 @@ build_net_conn
 report_path -from core0/w0/nv_c0/c0/iu0/r_reg_M__ADDRESS__49_/Q  -to  core0/w0/nv_c0/c0/iu0/n20719
 
 puts "=========================================="
+puts "get_lib_cell non-reg checks"
+puts "=========================================="
+
+# get_lib_cell queries the loaded library (cataloglist), not the netlist, so
+# it works once a LEF is imported. Exact name, prefix wildcard and substring
+# wildcard are all supported.
+get_lib_cell BUFFD10BWP300H8P64PDLVT
+get_lib_cell BUFF*
+get_lib_cell *DFF*
+
+puts "=========================================="
 puts "get_cell / all_connected non-reg checks"
 puts "=========================================="
 

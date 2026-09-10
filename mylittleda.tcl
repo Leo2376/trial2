@@ -2097,6 +2097,57 @@ proc get_cell { args } {
  puts ""
 }
 
+# get_lib_cell <refname>
+# Report library-cell references (refnames) whose name matches the glob
+# pattern (standard globs: *, ?, [..]). A bare refname with no wildcard is an
+# exact lookup. The reported info is the cell name, its class, its (LEF)
+# width x height, and its pin list with directions. Unlike get_cell/get_net this
+# queries the loaded library (cataloglist / _libcell), so it works as soon as
+# a LEF has been imported and does not require a design to be set or built.
+proc get_lib_cell { pattern } {
+ variable cellindex
+ variable _libcell
+ variable _libcellpindir
+ variable cataloglist
+
+ if { $pattern eq "" } {
+  puts "Error : get_lib_cell requires a pattern"
+  puts "Usage: get_lib_cell <refname>"
+  return
+ }
+
+ puts "************************************************************"
+ puts " get_lib_cell : $pattern"
+ puts "************************************************************"
+
+ # Catalog refid == lsearch index in cataloglist + 1, and matches the
+ # _libcell/_libcellpindir array key. Iterate all lib cells and keep those
+ # whose name matches the glob, in catalog order.
+ set n 0
+ for { set i 1 } { $i <= $cellindex } { incr i } {
+  if { ! [info exists _libcell($i)] } { continue }
+  set info $_libcell($i)
+  set cname [lindex $info 0]
+  if { ! [string match $pattern $cname] } { continue }
+  set cw [lindex $info 1]
+  set ch [lindex $info 2]
+  set cclass [lindex $info 4]
+  set npin [lindex $info 3]
+  set pins {}
+  if { [info exists _libcellpindir($i)] } {
+   set dirs $_libcellpindir($i)
+   for { set j 0 } { $j < $npin } { incr j } {
+    lappend pins "[lindex $info [expr {5+$j}]]/[lindex $dirs $j]"
+   }
+  }
+  puts "  $cname  class=$cclass  size=${cw}x${ch}  pins: [join $pins { }]"
+  incr n
+ }
+ puts "  -------------------------------------------------------"
+ if { $n == 1 } { puts "$n lib cell matching $pattern." } else { puts "$n lib cells matching $pattern." }
+ puts ""
+}
+
 # get_net <pattern> ?-hier?
 # Report nets whose (scoped) name matches the glob pattern. Net names are
 # stored scoped by their containing module's hierarchical path

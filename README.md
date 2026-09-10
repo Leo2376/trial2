@@ -107,6 +107,11 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 | R5  | Reporting   | `get_net <pattern>`: report all nets matching a pattern (e.g. `n2*`);     | implemented |
 |     |             | handles hierarchy by scope (e.g. `get_net core0/w0/nv_c0/c0/*` lists nets |            |
 |     |             | declared in that scope). Add `-hier` for a cross-hierarchy match.        |            |
+| R6  | Reporting   | `get_lib_cell <refname>`: report library-cell references whose name matches | implemented |
+|     |             | the glob pattern (e.g. `get_lib_cell BUFF*`, `get_lib_cell *DFF*`); an    |            |
+|     |             | exact name is a single-cell lookup. Reports name, class, LEF size and the |            |
+|     |             | pin list with directions. Queries the loaded library, not the netlist,   |            |
+|     |             | so it works as soon as a LEF is imported.                                  |            |
 | N1  | Netlist I/O | `write_verilog <file>`: dump the loaded netlist back out as Verilog         | proposal   |
 |     |             | (modules, ports, wires, leaf-cell instances and hierarchical instances,   |            |
 |     |             | `assign` statements). Preserves hierarchy so a `read_netlist` ->           |            |
@@ -127,6 +132,12 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | argument is `<inst>/<pin>`. Updates the netload/netdriver map (P2).         |            |
 | E4  | ECO         | `connect_net <net> <pin>`: attach an instance pin to a net; the pin         | implemented|
 |     |             | argument is `<inst>/<pin>`. Updates the netload/netdriver map (P2).         |            |
+| G1  | GUI         | `gui_start`: bring up the Tk GUI after a session that was started in       | proposal   |
+|     |             | batch mode (e.g. `tclsh ... -no-gui`), so a design can be loaded and         |            |
+|     |             | inspected interactively without relaunching the tool.                        |            |
+| H1  | Help        | `help <command>`: print the help/usage of a command; accepts wildcards, so  | proposal   |
+|     |             | `help report*` lists every `report_*` command's help and `help *cell*`      |            |
+|     |             | lists the help of all commands whose name matches the glob.                  |            |
 
 Notes:
 - P1 enables P2, which enables P3. S1 also produces the indexed net map P3
@@ -181,6 +192,11 @@ queries), the following report connectivity. Patterns are globs
   scope implied by the pattern are reported (`get_net *` = top-level nets
   only, `get_net core0/w0/nv_c0/c0/*` = nets in that module); `-hier`
   matches across the whole hierarchy.
+- `get_lib_cell <refname>` — list library-cell references whose name matches
+  the glob (`get_lib_cell BUFF*`, `get_lib_cell *DFF*`, or an exact name).
+  Reports each cell's class, LEF width x height and pin list with directions.
+  Unlike the commands above this queries the loaded library, not the netlist,
+  so it works as soon as a LEF is imported and needs no `build_design`.
 
 ## ECO commands
 
