@@ -96,6 +96,12 @@ get_net core0/w0/nv_c0/c0/iu0/n20719
 # core0/w0/nv_c0/c0/iu0/U28571/ZN
 all_connected core0/w0/nv_c0/c0/iu0/n20719
 
+# all_connected on a top input-port net: the port drives the net and the
+# core0 instance input pin is the receiver. Bus-concatenation pins must not
+# misalign the parser (core0/nv_dbgo_halted must NOT appear here). Expect
+# driver: nv_entropy_valid (port), receiver: core0/nv_entropy_valid.
+all_connected nv_entropy_valid
+
 set hier_dontshow { SNPS_CLOCK grnand2_tech68_ }
 report_hierarchy_tree
 

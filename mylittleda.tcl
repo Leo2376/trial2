@@ -1679,8 +1679,10 @@ proc build_net_conn { } {
   set nets $_instpinconn2($i)
   set dirs [lindex [array get _libcellpindir $refid] 1]
   for {set j 0} {$j < [llength $pins]} {incr j} {
+   set rawn [lindex $nets $j]
+   if { $rawn eq "<bus>" } { continue }
    set pn [lindex $pins $j]
-   set wn [_scoped_net $fullp [lindex $nets $j]]
+   set wn [_scoped_net $fullp $rawn]
    set dr [lindex $dirs $j]
    if { $dr eq "OUTPUT" } {
      lappend netdriver($wn) "$ipath $pn"
@@ -1701,8 +1703,10 @@ proc build_net_conn { } {
   set pins $_hinstpinconn1($i)
   set nets $_hinstpinconn2($i)
   for {set j 0} {$j < [llength $pins]} {incr j} {
+   set rawn [lindex $nets $j]
+   if { $rawn eq "<bus>" } { continue }
    set pn [lindex $pins $j]
-   set wn [_scoped_net $fullp [lindex $nets $j]]
+   set wn [_scoped_net $fullp $rawn]
    lappend netdriver($wn) "$ipath $pn"
    lappend netload($wn) "$ipath $pn"
   }
@@ -1905,8 +1909,10 @@ proc _pin_net { inst pin } {
   if { [info exists _instpinconn1($iid)] } {
    set k [lsearch -exact $_instpinconn1($iid) $pin]
    if { $k >= 0 } {
+    set rawn [lindex $_instpinconn2($iid) $k]
+    if { $rawn eq "<bus>" } { return "" }
     set fullp [lindex $_instlist($iid) 7]
-    return [_scoped_net $fullp [lindex $_instpinconn2($iid) $k]]
+    return [_scoped_net $fullp $rawn]
    }
   }
  }
@@ -1916,8 +1922,10 @@ proc _pin_net { inst pin } {
   if { [info exists _hinstpinconn1($hid)] } {
    set k [lsearch -exact $_hinstpinconn1($hid) $pin]
    if { $k >= 0 } {
+    set rawn [lindex $_hinstpinconn2($hid) $k]
+    if { $rawn eq "<bus>" } { return "" }
     set fullp [lindex $_hinstlist($hid) 7]
-    return [_scoped_net $fullp [lindex $_hinstpinconn2($hid) $k]]
+    return [_scoped_net $fullp $rawn]
    }
   }
  }
@@ -2915,12 +2923,19 @@ proc read_netlist { filename } {
                                                       }
                                        }						     
 
-    ########## INSTANCE PIN PARSING    
-    if { $ishier==0 } { 
-     if { $vstate == "inst_pin_conn" && $word != "(" && $word != ")"                                                                                      } {    lappend _instpinconn1($instindex) $word   }       
+    ########## INSTANCE PIN PARSING
+    # A pin connected to a bus concatenation (e.g. .p({a, b, c})) records one
+    # pin but its {..} body is skipped, which used to leave the pin without a
+    # net entry and misalign the pin/net lists. Append a single <bus> placeholder
+    # net so every pin keeps exactly one net entry; the placeholder is inert in
+    # the scalar net connectivity map (no driver/receiver).
+    if { $ishier==0 } {
+     if { $vstate == "inst_pin_conn" && $word != "(" && $word != ")"                                                                                      } {    lappend _instpinconn1($instindex) $word   }
+     if { $vstate == "inst_pin_connw" && $word == "\{" } {    lappend _instpinconn2($instindex) "<bus>"   }
      if { $vstate == "inst_pin_connw" && $word != "(" && $word != ")" && $word != "\[" && $word != "\]" && $word != "\{" && $word != "\}" && $word != "\,"} {    lappend _instpinconn2($instindex) $word   }
     } else {
-     if { $vstate == "inst_pin_conn" && $word != "(" && $word != ")"                                    			          		  } {    lappend _hinstpinconn1($hinstindex) $word   }       
+     if { $vstate == "inst_pin_conn" && $word != "(" && $word != ")"                                    			          		  } {    lappend _hinstpinconn1($hinstindex) $word   }
+     if { $vstate == "inst_pin_connw" && $word == "\{" } {    lappend _hinstpinconn2($hinstindex) "<bus>"   }
      if { $vstate == "inst_pin_connw" && $word != "(" && $word != ")" && $word != "\[" && $word != "\]" && $word != "\{" && $word != "\}" && $word != "\,"} {    lappend _hinstpinconn2($hinstindex) $word   }
     }
     
