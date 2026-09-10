@@ -1713,6 +1713,8 @@ proc build_net_conn { } {
  }
 
  puts "Info : built net connectivity ([llength [array names netdriver]] driver nets, [llength [array names netload]] load nets)"
+ global netconnbuilt
+ set netconnbuilt 1
 }
 
 # Helper: scope a net name by its containing module's hierarchical path. The
@@ -1730,6 +1732,18 @@ proc _net_scope { key } {
  if { ! [string match {*/*} $key] } { return "-1" }
  set parts [split $key /]
  return [join [lrange $parts 0 end-1] /]
+}
+
+# Helper: ordered list of pin names of a lib cell (refid). Pin names are stored
+# in the _libcell entry at indices 5..(5+pincnt-1); the count is at index 3.
+proc _libcell_pins { refid } {
+ variable _libcell
+ if { ! [info exists _libcell($refid)] } { return {} }
+ set info $_libcell($refid)
+ set npin [lindex $info 3]
+ set pins {}
+ for {set j 0} {$j < $npin} {incr j} { lappend pins [lindex $info [expr {5+$j}]] }
+ return $pins
 }
 
 # report_path -from <pin|net> -to <pin|net>
@@ -2237,6 +2251,291 @@ proc _report_net { n } {
  } else {
   puts "    receivers : (none)"
  }
+}
+
+# E1 create_net <netname>
+# Create a new net inside a scope. The trailing token is the net name and the
+# prefix (the path before the last '/') is the containing hierarchical scope; a
+# bare name with no '/' creates a top-level net. The net is registered as an
+# empty entry in the netdriver/netload map so get_net/all_connected see it and
+# it can later receive pins via connect_net (E4). Requires build_net_conn (P2)
+# to have run first, since ECO commands mutate that map.
+proc create_net { netname } {
+ global netdriver netload netconnbuilt
+
+ _require 2
+ if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
+  puts "Error : build_net_conn must run before create_net"
+  return
+ }
+ if { $netname eq "" } {
+  puts "Error : create_net requires a net name"
+  puts "Usage: create_net <netname>"
+  return
+ }
+
+ # Scope the net name like get_net/all_connected: top-level "-1" keeps the
+ # bare name, a hierarchical reference becomes "scope/net".
+ if { [string match {*/*} $netname] } {
+  set key $netname
+ } else {
+  set key $netname
+ }
+
+ if { [info exists netdriver($key)] || [info exists netload($key)] } {
+  puts "Error : net $key already exists"
+  return
+ }
+ set netdriver($key) {}
+ set netload($key) {}
+
+ puts "************************************************************"
+ puts " create_net : $netname"
+ puts "************************************************************"
+ puts "  created net $key (0 drivers, 0 receivers)"
+ puts ""
+}
+
+# E2 create_cell <inst_path> <celltype>
+# Instantiate a lib cell inside a scope. <inst_path> is "<scope>/<instname>";
+# a bare instname (no '/') places the cell at the top level. <celltype> must be
+# a lib cell present in cataloglist. A new _instlist entry, pathlist entry and
+# per-pin _instpinconn1/2 entries are created; the new cell's pins are left
+# unconnected ("<unconnected>") so connect_net (E4) can wire them. The new
+# cell is also recorded in the netdriver/netload map only once connect_net
+# attaches it. Requires build_design (hierarchy built).
+proc create_cell { inst_path celltype } {
+ variable instindex
+ variable _instlist
+ variable _instpinconn1
+ variable _instpinconn2
+ variable _libcell
+ variable _libcellpindir
+ variable cataloglist
+ variable pathlist
+ variable topname
+
+ _require 2
+ if { $inst_path eq "" || $celltype eq "" } {
+  puts "Error : create_cell requires an instance path and a cell type"
+  puts "Usage: create_cell <inst_path> <celltype>"
+  return
+ }
+
+ set refid [lsearch -exact $cataloglist $celltype]
+ incr refid
+ if { ! [info exists _libcell($refid)] } {
+  puts "Error : cell type $celltype not found in library"
+  return
+ }
+
+ # Split the instance path into scope (parent path) and instance name. A
+ # bare name places the cell at the top level (fullp == "-1").
+ if { [string match {*/*} $inst_path] } {
+  set parts [split $inst_path /]
+  set instname [lindex $parts end]
+  set fullp [join [lrange $parts 0 end-1] /]
+ } else {
+  set instname $inst_path
+  set fullp "-1"
+ }
+
+ # Reject a duplicate instance path so the new cell is unambiguous.
+ if { [lsearch -exact $pathlist $inst_path] >= 0 } {
+  puts "Error : instance $inst_path already exists"
+  return
+ }
+
+ incr instindex
+ set _instlist($instindex) [list $instname $celltype $topname 0 0 0 0 $fullp $refid "N"]
+ lappend pathlist $inst_path
+
+ # Per-pin records: the new cell has the lib cell's pins, all unconnected.
+ set pins [_libcell_pins $refid]
+ set dirs [lindex [array get _libcellpindir $refid] 1]
+ set _instpinconn1($instindex) $pins
+ set _instpinconn2($instindex) {}
+ foreach p $pins { lappend _instpinconn2($instindex) "<unconnected>" }
+
+ puts "************************************************************"
+ puts " create_cell : $inst_path $celltype"
+ puts "************************************************************"
+ puts "  created instance $inst_path ($celltype)"
+ puts "  pins: [join $pins { }]"
+ puts "  directions: [join $dirs { }]"
+ puts ""
+}
+
+# E3 disconnect_net <net> <pin>
+# Detach an instance pin from a net. <pin> is "<inst>/<pinname>". The net is
+# scoped like get_net (trailing token = net name, prefix = scope; bare name =
+# top level). The pin entry is removed from the net's driver list (if it is an
+# output pin) or its receiver list (if it is an input pin). Requires
+# build_net_conn (P2) to have run first.
+proc disconnect_net { net pin } {
+ global netdriver netload netconnbuilt
+ variable _instpinconn1
+ variable _instpinconn2
+ variable _instlist
+ variable pathlist
+ variable _libcellpindir
+
+ _require 2
+ if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
+  puts "Error : build_net_conn must run before disconnect_net"
+  return
+ }
+ if { $net eq "" || $pin eq "" } {
+  puts "Error : disconnect_net requires a net and a pin"
+  puts "Usage: disconnect_net <net> <pin>"
+  return
+ }
+
+ set key $net
+ if { ! [info exists netdriver($key)] && ! [info exists netload($key)] } {
+  puts "Error : net $net not found"
+  return
+ }
+
+ # The pin argument is "inst/pin". Find the instance in pathlist to learn
+ # the pin direction, then remove the matching {inst pin} entry from the
+ # net's driver or receiver list.
+ if { ! [regexp {^(.*)/([^/]+)$} $pin -> inst pinname] } {
+  puts "Error : pin must be given as <inst>/<pin>"
+  return
+ }
+ set iid [lsearch -exact $pathlist $inst]
+ if { $iid < 0 } {
+  puts "Error : instance $inst not found"
+  return
+ }
+ incr iid
+ if { ! [info exists _instpinconn1($iid)] } {
+  puts "Error : instance $inst has no pins"
+  return
+ }
+ set pk [lsearch -exact $_instpinconn1($iid) $pinname]
+ if { $pk < 0 } {
+  puts "Error : pin $pinname not found on instance $inst"
+  return
+ }
+ set refid [lindex $_instlist($iid) 8]
+ set dirs [lindex [array get _libcellpindir $refid] 1]
+ set dr [lindex $dirs $pk]
+ set entry "$inst $pinname"
+ set removed 0
+ if { $dr eq "OUTPUT" } {
+  set d [lindex [array get netdriver $key] 1]
+  set k [lsearch -exact $d $entry]
+  if { $k >= 0 } {
+   set netdriver($key) [lreplace $d $k $k]
+   set removed 1
+  }
+ } else {
+  set l [lindex [array get netload $key] 1]
+  set k [lsearch -exact $l $entry]
+  if { $k >= 0 } {
+   set netload($key) [lreplace $l $k $k]
+   set removed 1
+  }
+ }
+ if { ! $removed } {
+  puts "Error : pin $pin is not connected to net $net"
+  return
+ }
+ # Reflect the disconnect in the per-pin net record too.
+ lset _instpinconn2($iid) $pk "<unconnected>"
+
+ puts "************************************************************"
+ puts " disconnect_net : $net $pin"
+ puts "************************************************************"
+ puts "  disconnected pin $pin from net $key"
+ puts ""
+}
+
+# E4 connect_net <net> <pin>
+# Attach an instance pin to a net. <pin> is "<inst>/<pinname>". The net is
+# scoped like get_net. The pin is added to the net's driver list (if it is an
+# output pin) or its receiver list (if it is an input pin). Requires
+# build_net_conn (P2) to have run first.
+proc connect_net { net pin } {
+ global netdriver netload netconnbuilt
+ variable _instpinconn1
+ variable _instpinconn2
+ variable _instlist
+ variable pathlist
+ variable _libcellpindir
+
+ _require 2
+ if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
+  puts "Error : build_net_conn must run before connect_net"
+  return
+ }
+ if { $net eq "" || $pin eq "" } {
+  puts "Error : connect_net requires a net and a pin"
+  puts "Usage: connect_net <net> <pin>"
+  return
+ }
+
+ set key $net
+ if { ! [info exists netdriver($key)] && ! [info exists netload($key)] } {
+  puts "Error : net $net not found"
+  return
+ }
+
+ if { ! [regexp {^(.*)/([^/]+)$} $pin -> inst pinname] } {
+  puts "Error : pin must be given as <inst>/<pin>"
+  return
+ }
+ set iid [lsearch -exact $pathlist $inst]
+ if { $iid < 0 } {
+  puts "Error : instance $inst not found"
+  return
+ }
+ incr iid
+ if { ! [info exists _instpinconn1($iid)] } {
+  puts "Error : instance $inst has no pins"
+  return
+ }
+ set pk [lsearch -exact $_instpinconn1($iid) $pinname]
+ if { $pk < 0 } {
+  puts "Error : pin $pinname not found on instance $inst"
+  return
+ }
+ set refid [lindex $_instlist($iid) 8]
+ set dirs [lindex [array get _libcellpindir $refid] 1]
+ set dr [lindex $dirs $pk]
+ set entry "$inst $pinname"
+ if { $dr eq "OUTPUT" } {
+  if { [info exists netdriver($key)] } {
+   set d [lindex [array get netdriver $key] 1]
+   if { [lsearch -exact $d $entry] >= 0 } {
+    puts "Error : pin $pin already drives net $net"
+    return
+   }
+   lappend netdriver($key) $entry
+  } else {
+   set netdriver($key) [list $entry]
+  }
+ } else {
+  if { [info exists netload($key)] } {
+   set l [lindex [array get netload $key] 1]
+   if { [lsearch -exact $l $entry] >= 0 } {
+    puts "Error : pin $pin already loads net $net"
+    return
+   }
+   lappend netload($key) $entry
+  } else {
+   set netload($key) [list $entry]
+  }
+ }
+ lset _instpinconn2($iid) $pk [lindex [split $key /] end]
+
+ puts "************************************************************"
+ puts " connect_net : $net $pin"
+ puts "************************************************************"
+ puts "  connected pin $pin to net $key"
+ puts ""
 }
 
 #

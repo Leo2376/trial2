@@ -109,6 +109,38 @@ all_connected nv_entropy_valid
 all_connected n77
 all_connected core0/w0/nv_c0/c0/bht0/n77
 
+puts "=========================================="
+puts "ECO non-reg checks (E1-E4)"
+puts "=========================================="
+
+# E1-E4 ECO flow: create a new net, create a buffer in the same scope, move a
+# receiver from an existing net to the new net through the buffer, then verify
+# with get_net/all_connected. Uses net core0/w0/nv_c0/c0/iu0/n20719 which has a
+# single driver U28571/ZN and one receiver U28630/A1 before the ECO.
+#
+# E1 create_net: new net n_eco in scope core0/w0/nv_c0/c0/iu0.
+create_net core0/w0/nv_c0/c0/iu0/n_eco
+
+# E2 create_cell: instantiate a buffer in the same scope.
+create_cell core0/w0/nv_c0/c0/iu0/u_eco_buf BUFFD10BWP300H8P64PDLVT
+
+# E3 disconnect_net: detach the receiver pin from the old net.
+disconnect_net core0/w0/nv_c0/c0/iu0/n20719 core0/w0/nv_c0/c0/iu0/U28630/A1
+
+# E4 connect_net: buffer output drives the new net, buffer input loads the old
+# net, and the moved receiver now loads the new net.
+connect_net core0/w0/nv_c0/c0/iu0/n_eco core0/w0/nv_c0/c0/iu0/u_eco_buf/Z
+connect_net core0/w0/nv_c0/c0/iu0/n20719 core0/w0/nv_c0/c0/iu0/u_eco_buf/I
+connect_net core0/w0/nv_c0/c0/iu0/n_eco core0/w0/nv_c0/c0/iu0/U28630/A1
+
+# Verify: old net now has driver U28571/ZN and receiver u_eco_buf/I.
+all_connected core0/w0/nv_c0/c0/iu0/n20719
+# Verify: new net now has driver u_eco_buf/Z and receiver U28630/A1.
+all_connected core0/w0/nv_c0/c0/iu0/n_eco
+# Verify: the new net and cell are visible to the query commands.
+get_net core0/w0/nv_c0/c0/iu0/n_eco
+get_cell core0/w0/nv_c0/c0/iu0/u_*
+
 set hier_dontshow { SNPS_CLOCK grnand2_tech68_ }
 report_hierarchy_tree
 
