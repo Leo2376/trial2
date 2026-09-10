@@ -74,6 +74,10 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 | P2  | Path tracing| Build a net driver/receiver map (per net: driver pin(s), receiver pins)     | implemented |
 | P3  | Path tracing| `report_path -from <pin/net> -to <pin/net>`: text-only connectivity report  | implemented |
 |     |             | (report_timing-style listing of crossed cells/pins/nets, no timing)         |            |
+| P5  | Path tracing| `report_path ... -layout`: add an (x, y) coordinate column for crossed      | proposal   |
+|     |             | cells/pins; nets have no coordinate and stay blank.                        |            |
+| P6  | Path tracing| `report_path ... -net`: also print the logical nets crossed; by default only | proposal   |
+|     |             | the pins are reported.                                                      |            |
 | P4  | Path tracing| `report_path -from <pin/net>` (no `-to`): trace forward to the first sync   | proposal   |
 |     |             | endpoint (flop CP / SRAM CK via `_libsyncpin`); stop at first found, not the  |            |
 |     |             | longest, and report how many paths reach a sync endpoint. Depends on L2.   |            |
