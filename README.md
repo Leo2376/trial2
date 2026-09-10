@@ -112,7 +112,7 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | exact name is a single-cell lookup. Reports name, class, LEF size and the |            |
 |     |             | pin list with directions. Queries the loaded library, not the netlist,   |            |
 |     |             | so it works as soon as a LEF is imported.                                  |            |
-| N1  | Netlist I/O | `write_verilog <file>`: dump the loaded netlist back out as Verilog         | proposal   |
+| N1  | Netlist I/O | `write_verilog <file>`: dump the loaded netlist back out as Verilog         | implemented |
 |     |             | (modules, ports, wires, leaf-cell instances and hierarchical instances,   |            |
 |     |             | `assign` statements). Preserves hierarchy so a `read_netlist` ->           |            |
 |     |             | `write_verilog` round-trip is the verification testcase.                   |            |
@@ -150,8 +150,12 @@ Notes:
 - N1 (write_verilog) is verified by a read -> dump round-trip: read a design
   with `read_netlist`, write it back with `write_verilog`, then re-read the
   dumped file and check that the module/port/wire/instance/assign structure
-  matches. test5_path (flat, with `assign`) and a hierarchical design
-  (test4_hierarchical) are the natural round-trip cases.
+  matches. Implemented in test7_roundtrip: based on test3's medium_design.v
+  (hierarchical, with ANSI ports, bus bit-selects and `assign`s), it does a
+  read -> `write_verilog` -> re-read -> `write_verilog` round-trip and checks
+  the two dumps are byte-identical, so the structure is preserved. Comments
+  and line wrapping may differ from the source, but the structural content
+  is stable across the round-trip.
 - O1 + O2 (buffer insertion) are verified by a test that builds a net with a
   high-fanout driver, runs `set_max_fanout <n>` then `fix_max_fanout -cell
   <buf>`, and checks via `get_net`/`all_connected` that every net now has at
@@ -217,3 +221,15 @@ containing hierarchical scope; a bare name targets the top level.
 - `connect_net <net> <pin>` — attach an instance pin (`<inst>/<pin>`) to a net;
   the pin's direction selects the driver or receiver list. The net must exist
   (`create_net` or an existing net).
+
+## Netlist I/O commands
+
+After `set_top_design`, the design's netlist can be dumped back out:
+
+- `write_verilog <filename>` — dump the loaded netlist as Verilog: modules
+  (with ANSI-style ports), `wire` declarations, leaf-cell and hierarchical
+  instances (with `.pin ( net )` connections, preserving bus bit-selects),
+  and `assign` statements. Comments and line wrapping may differ from the
+  source, but the structural content is preserved so a `read_netlist` ->
+  `write_verilog` -> `read_netlist` round-trip is structurally equivalent
+  (verified byte-identical in test7_roundtrip).

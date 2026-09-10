@@ -1636,7 +1636,7 @@ proc build_net_conn { } {
  # Continuous assignments: assign lhs = rhs makes rhs a driver of lhs.
  variable _assignlist
  foreach a $_assignlist {
-  lassign $a alhs arhs
+  lassign $a alhs arhs amod
   lappend netdriver($alhs) "<assign> $arhs"
   lappend netload($arhs) "<assign> $alhs"
  }
@@ -2589,6 +2589,151 @@ proc connect_net { net pin } {
  puts ""
 }
 
+# Helper: map the internal short port-direction token to the Verilog keyword.
+proc _port_kw { t } {
+ if { $t eq "in" }  { return "input" }
+ if { $t eq "out" } { return "output" }
+ return "inout"
+}
+
+# N1 write_verilog <filename>
+# Dump the loaded netlist back out as Verilog: modules, ports, wires, leaf-cell
+# instances, hierarchical instances and continuous assignments. Comments and
+# line wrapping may differ from the source, but the structural content
+# (module/port/wire/instance/assign structure) is preserved so a
+# read_netlist -> write_verilog -> read_netlist round-trip is structurally
+# equivalent. Requires a design to have been read and set (set_top_design).
+# Works from the raw netlist capture, so it does not need build_design.
+proc write_verilog { filename } {
+ variable topname
+ variable hierindex
+ variable portindex
+ variable wireindex
+ variable instindex
+ variable hinstindex
+ variable _portlist
+ variable _porttype
+ variable _portmaster
+ variable _wirelist
+ variable _wiretype
+ variable _wiremaster
+ variable _instlist
+ variable _hinstlist
+ variable _instpinconn1
+ variable _instpinconn2
+ variable _hinstpinconn1
+ variable _hinstpinconn2
+ variable hierlistdef
+ variable _assignlist
+
+ _require 1
+ if { $filename eq "" } {
+  puts "Error : write_verilog requires a filename"
+  puts "Usage: write_verilog <filename>"
+  return
+ }
+
+ set fo [open $filename w]
+ puts $fo "// Verilog netlist dumped by My Little EDA"
+ puts $fo "// Top module: $topname"
+ puts $fo ""
+
+ # Modules are stored in parse order in hierlistdef (1-based via portindex).
+ # For each module emit a Verilog module with ANSI-style ports.
+ set mlist [lrange $hierlistdef 0 [expr {$hierindex-1}]]
+ for { set m 0 } { $m < $hierindex } { incr m } {
+  set modname [lindex $mlist $m]
+  set pid [expr {$m+1}]
+
+  # Port header (ANSI style).
+  set pnames [lindex [array get _portlist $pid] 1]
+  set ptypes [lindex [array get _porttype $pid] 1]
+  set hdr {}
+  if { [llength $pnames] } {
+   for { set j 0 } { $j < [llength $pnames] } { incr j } {
+    set pn [lindex $pnames $j]
+    set pt [lindex $ptypes $j]
+    if { [lindex $pt 0] eq "bus" } {
+     set dir [_port_kw [lindex $pt 1]]
+     set lo [lindex $pt 2]
+     set hi [lindex $pt 3]
+     lappend hdr "$dir \[$hi:$lo\] $pn"
+    } else {
+     lappend hdr "[_port_kw $pt] $pn"
+    }
+   }
+  }
+  if { [llength $hdr] } {
+   puts $fo "module $modname ( [join $hdr { , }] ) ;"
+  } else {
+   puts $fo "module $modname ( ) ;"
+  }
+  puts $fo ""
+
+  # Wires declared inside this module.
+  for { set w 1 } { $w <= $wireindex } { incr w } {
+   set wm [lindex [array get _wiremaster $w] 1]
+   if { $wm ne $modname } { continue }
+   set wn [lindex [array get _wirelist $w] 1]
+   set wt [lindex [array get _wiretype $w] 1]
+   if { [lindex $wt 0] eq "bus" } {
+    set lo [lindex $wt 2]
+    set hi [lindex $wt 3]
+    puts $fo "  wire \[$hi:$lo\] $wn ;"
+   } else {
+    puts $fo "  wire $wn ;"
+   }
+
+  }
+  puts $fo ""
+
+  # Leaf-cell instances in this module (skip the synthetic "assign" instances).
+  for { set i 1 } { $i <= $instindex } { incr i } {
+   set inst $_instlist($i)
+   if { [lindex $inst 2] ne $modname } { continue }
+   set refname [lindex $inst 1]
+   if { $refname eq "assign" } { continue }
+   set iname [lindex $inst 0]
+   set pins $_instpinconn1($i)
+   set nets $_instpinconn2($i)
+   set conns {}
+   for { set j 0 } { $j < [llength $pins] } { incr j } {
+    lappend conns ".[lindex $pins $j] ( [lindex $nets $j] )"
+   }
+   puts $fo "  $refname $iname ( [join $conns { , }] ) ;"
+  }
+
+  # Hierarchical instances in this module (skip the synthetic "assign" ones).
+  for { set i 1 } { $i <= $hinstindex } { incr i } {
+   set inst $_hinstlist($i)
+   if { [lindex $inst 2] ne $modname } { continue }
+   set refname [lindex $inst 1]
+   if { $refname eq "assign" } { continue }
+   set iname [lindex $inst 0]
+   set pins $_hinstpinconn1($i)
+   set nets $_hinstpinconn2($i)
+   set conns {}
+   for { set j 0 } { $j < [llength $pins] } { incr j } {
+    lappend conns ".[lindex $pins $j] ( [lindex $nets $j] )"
+   }
+   puts $fo "  $refname $iname ( [join $conns { , }] ) ;"
+  }
+
+  # Continuous assignments in this module.
+  foreach a $_assignlist {
+   lassign $a alhs arhs amod
+   if { $amod ne $modname } { continue }
+   puts $fo "  assign $alhs = $arhs ;"
+  }
+
+  puts $fo "endmodule"
+  puts $fo ""
+ }
+
+ close $fo
+ puts "Info : wrote Verilog netlist to $filename"
+}
+
 #
 #############################################################
 
@@ -3151,17 +3296,20 @@ proc read_netlist { filename } {
  set current_module ""
  set current_hi_idx ""
  set current_lo_idx ""
+ set ansi_dir ""
+ set cur_bit ""
+ set b1_is_bit 0
  set prev ""
  set vstate "idle"
  set hinstindex 0
     
  while { [gets $fp line] >=0 } {
   
-  if { [regexp {^[ \t]*assign[ \t]+([A-Za-z0-9_\[\]]+)[ \t]*=[ \t]*([^;]+);[ \t]*$} $line -> alhs arhs] } {
+  if { [regexp {^[ \t]*assign[ \t]+([A-Za-z0-9_\[\]\:]+)[ \t]*=[ \t]*([^;]+);[ \t]*$} $line -> alhs arhs] } {
      set alhs [string trim $alhs]
      foreach r [split [string trim $arhs] " "] {
        set r [string trim $r]
-       if { $r ne "" && $r ne "+" && $r ne "^" && $r ne "&" && $r ne "~" } { lappend _assignlist [list $alhs $r] }
+       if { $r ne "" && $r ne "+" && $r ne "^" && $r ne "&" && $r ne "~" } { lappend _assignlist [list $alhs $r $current_module] }
      }
   }
   set rline1  [string map {";" " ; "} $line   ]
@@ -3288,10 +3436,12 @@ proc read_netlist { filename } {
      if { $vstate == "inst_pin_conn" && $word != "(" && $word != ")"                                                                                      } {    lappend _instpinconn1($instindex) $word   }
      if { $vstate == "inst_pin_connw" && $word == "\{" } {    lappend _instpinconn2($instindex) "<bus>"   }
      if { $vstate == "inst_pin_connw" && $word != "(" && $word != ")" && $word != "\[" && $word != "\]" && $word != "\{" && $word != "\}" && $word != "\,"} {    lappend _instpinconn2($instindex) $word   }
+     if { $vstate == "inst_pin_connw_b1" && $b1_is_bit && $word != "\[" && $word != "\]" } { append cur_bit $word }
     } else {
      if { $vstate == "inst_pin_conn" && $word != "(" && $word != ")"                                    			          		  } {    lappend _hinstpinconn1($hinstindex) $word   }
      if { $vstate == "inst_pin_connw" && $word == "\{" } {    lappend _hinstpinconn2($hinstindex) "<bus>"   }
      if { $vstate == "inst_pin_connw" && $word != "(" && $word != ")" && $word != "\[" && $word != "\]" && $word != "\{" && $word != "\}" && $word != "\,"} {    lappend _hinstpinconn2($hinstindex) $word   }
+     if { $vstate == "inst_pin_connw_b1" && $b1_is_bit && $word != "\[" && $word != "\]" } { append cur_bit $word }
     }
     
    #######################  
@@ -3335,8 +3485,39 @@ proc read_netlist { filename } {
     if { $vstate == "idle" && $word == "inout"  } { set vstate "port_inout"  ; continue }
     if { $vstate == "idle" && $word == "wire"   } { set vstate "wire_decl"   ; continue }
 
-    if { $vstate == "module_decl" } { set vstate "port_decl1" ; continue }   
+    if { $vstate == "module_decl" } { set vstate "port_decl1" ; set ansi_dir "" ; continue }  
     if { $word == ";" && $vstate == "port_decl1" } { set vstate "idle" ; continue }  
+    # ANSI-style port declarations inside the module header (e.g.
+    # `module m ( input clk, output [31:0] data )`). The non-ANSI style (a bare
+    # name list in the header, declared in the body) has no direction keyword
+    # here, so ansi_dir stays empty and nothing is captured, leaving the body
+    # declarations to populate the port arrays.
+    if { $vstate == "port_decl1" && $word == "input" }  { set ansi_dir "in"   ; continue }
+    if { $vstate == "port_decl1" && $word == "output" } { set ansi_dir "out"  ; continue }
+    if { $vstate == "port_decl1" && $word == "inout" }  { set ansi_dir "inout"; continue }
+    if { $vstate == "port_decl1" && $word == "\[" } { set vstate "port_decl1_hi" ; continue }
+    if { $vstate == "port_decl1_hi" && $word != "\]" && $word != ":" } { set current_hi_idx $word ; continue }
+    if { $vstate == "port_decl1_hi" && $word == ":" } { set vstate "port_decl1_lo" ; continue }
+    if { $vstate == "port_decl1_lo" && $word != "\]" } { set current_lo_idx $word ; continue }
+    if { $vstate == "port_decl1_lo" && $word == "\]" } { set vstate "port_decl1_bus" ; continue }
+    if { $vstate == "port_decl1" && $ansi_dir ne "" && $word != "," && $word != ")" && $word != "(" } {
+     lappend _portlist($portindex) $word
+     if { $ansi_dir eq "in" }  { lappend _porttype($portindex) "in" }
+     if { $ansi_dir eq "out" } { lappend _porttype($portindex) "out" }
+     if { $ansi_dir eq "inout" } { lappend _porttype($portindex) "inout" }
+     lappend _portmaster($portindex) $current_module
+     continue
+    }
+    if { $vstate == "port_decl1_bus" && $word != "," && $word != ")" && $word != "(" } {
+     lappend _portlist($portindex) $word
+     if { $ansi_dir eq "in" }  { lappend _porttype($portindex) "bus in $current_lo_idx $current_hi_idx" }
+     if { $ansi_dir eq "out" } { lappend _porttype($portindex) "bus out $current_lo_idx $current_hi_idx" }
+     if { $ansi_dir eq "inout" } { lappend _porttype($portindex) "bus inout $current_lo_idx $current_hi_idx" }
+     lappend _portmaster($portindex) $current_module
+     set vstate "port_decl1"
+     continue
+    }
+    if { $vstate == "port_decl1_bus" && $word == "," } { set vstate "port_decl1" ; continue }
     if { $word == "module" && $vstate == "idle" } { set vstate "module_decl" ; continue } 
     
     if { $word == "endmodule" && $vstate == "idle" } { set vstate "idle" ; continue } 
@@ -3352,10 +3533,22 @@ proc read_netlist { filename } {
     if { $word == ")" && $vstate == "inst_pin_connw"  } { set vstate "inst_decl_pins" ; continue }         
 
 
-    if { $word == "\[" && $vstate == "inst_pin_connw"     } { set vstate "inst_pin_connw_b1" ; continue }         
-    if { $word == "\]" && $vstate == "inst_pin_connw_b1"  } { set vstate "inst_pin_connw" ; continue }         
+    if { $word == "\[" && $vstate == "inst_pin_connw"     } { set vstate "inst_pin_connw_b1" ; set b1_is_bit 1 ; set cur_bit "" ; continue }
+    if { $word == "\]" && $vstate == "inst_pin_connw_b1"  } {
+     set vstate "inst_pin_connw"
+     if { $b1_is_bit } {
+      if { $ishier == 0 } {
+       set nidx [llength $_instpinconn2($instindex)]
+       if { $nidx > 0 } { lset _instpinconn2($instindex) [expr {$nidx-1}] "[lindex $_instpinconn2($instindex) [expr {$nidx-1}]]\[$cur_bit\]" }
+      } else {
+       set nidx [llength $_hinstpinconn2($hinstindex)]
+       if { $nidx > 0 } { lset _hinstpinconn2($hinstindex) [expr {$nidx-1}] "[lindex $_hinstpinconn2($hinstindex) [expr {$nidx-1}]]\[$cur_bit\]" }
+      }
+     }
+     continue
+    }
 
-    if { $word == "\{" && $vstate == "inst_pin_connw"     } { set vstate "inst_pin_connw_b1" ; continue }         
+    if { $word == "\{" && $vstate == "inst_pin_connw"     } { set vstate "inst_pin_connw_b1" ; set b1_is_bit 0 ; continue }
     if { $word == "\}" && $vstate == "inst_pin_connw_b1"  } { set vstate "inst_pin_connw" ; continue }         
     
     if { $word == ";" && $vstate == "inst_decl_pins" } { set vstate "idle" ; continue }         
