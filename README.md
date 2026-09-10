@@ -74,6 +74,9 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 | P2  | Path tracing| Build a net driver/receiver map (per net: driver pin(s), receiver pins)     | implemented |
 | P3  | Path tracing| `report_path -from <pin/net> -to <pin/net>`: text-only connectivity report  | implemented |
 |     |             | (report_timing-style listing of crossed cells/pins/nets, no timing)         |            |
+| P4  | Path tracing| `report_path -from <pin/net>` (no `-to`): trace forward to the first sync   | proposal   |
+|     |             | endpoint (flop CP / SRAM CK via `_libsyncpin`); stop at first found, not the  |            |
+|     |             | longest, and report how many paths reach a sync endpoint. Depends on L2.   |            |
 | S1  | Performance | Convert `wiresearch` list to an array/dict map for O(1) net lookup          | implemented |
 |     |             | (replaces O(n) `lsearch` in `update_wire_db` / `list_all_pins`)            |            |
 | S2  | Performance | Convert `pathlist` / `hpathlist` to index maps for O(1) instance lookup    | proposal   |
