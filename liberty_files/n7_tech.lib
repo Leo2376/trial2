@@ -110,17 +110,17 @@ library (n7_tech) {
   cell (AN2D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (A1) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (B) {
+    pin (A2) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (Y) {
+    pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -130,17 +130,17 @@ library (n7_tech) {
   cell (AN2D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (A1) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (B) {
+    pin (A2) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (Y) {
+    pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -150,17 +150,17 @@ library (n7_tech) {
   cell (AN2D3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (A1) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (B) {
+    pin (A2) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (Y) {
+    pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -170,17 +170,17 @@ library (n7_tech) {
   cell (AN2D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (A1) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (B) {
+    pin (A2) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (Y) {
+    pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -190,17 +190,17 @@ library (n7_tech) {
   cell (AN2D8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (A1) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (B) {
+    pin (A2) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (Y) {
+    pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -270,22 +270,22 @@ library (n7_tech) {
   cell (AN3D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (A1) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (B) {
+    pin (A2) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (C) {
+    pin (A3) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (Y) {
+    pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -295,22 +295,22 @@ library (n7_tech) {
   cell (AN3D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (A1) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (B) {
+    pin (A2) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (C) {
+    pin (A3) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (Y) {
+    pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -460,7 +460,12 @@ library (n7_tech) {
   cell (AO211D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -475,7 +480,7 @@ library (n7_tech) {
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (Y) {
+    pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -545,7 +550,12 @@ library (n7_tech) {
   cell (AO21D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -555,12 +565,7 @@ library (n7_tech) {
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (C) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
+    pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -570,7 +575,12 @@ library (n7_tech) {
   cell (AO21D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -580,12 +590,7 @@ library (n7_tech) {
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (C) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
+    pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -595,7 +600,12 @@ library (n7_tech) {
   cell (AO21D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -605,12 +615,7 @@ library (n7_tech) {
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (C) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
+    pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -1195,7 +1200,12 @@ library (n7_tech) {
   cell (AOI21D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -1205,12 +1215,7 @@ library (n7_tech) {
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (C) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
+    pin (ZN) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -1700,27 +1705,27 @@ library (n7_tech) {
   cell (AOI22D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (A1) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (B) {
+    pin (A2) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (C) {
+    pin (B1) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (D) {
+    pin (B2) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (Y) {
+    pin (ZN) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -2400,12 +2405,12 @@ library (n7_tech) {
   cell (BUFFD10) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (I) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (Y) {
+    pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -2415,12 +2420,12 @@ library (n7_tech) {
   cell (BUFFD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (I) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (Y) {
+    pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -2430,12 +2435,12 @@ library (n7_tech) {
   cell (BUFFD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (I) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (Y) {
+    pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -2445,12 +2450,12 @@ library (n7_tech) {
   cell (BUFFD3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (I) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (Y) {
+    pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -2460,12 +2465,12 @@ library (n7_tech) {
   cell (BUFFD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (I) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (Y) {
+    pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -2475,12 +2480,12 @@ library (n7_tech) {
   cell (BUFFD8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (I) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (Y) {
+    pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -2560,13 +2565,13 @@ library (n7_tech) {
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (TE) {
-      direction : input ;
+    pin (Q) {
+      direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (Q) {
-      direction : output ;
+    pin (TE) {
+      direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
@@ -8950,17 +8955,17 @@ library (n7_tech) {
   cell (OR2D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (A1) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (B) {
+    pin (A2) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (Y) {
+    pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -8970,17 +8975,17 @@ library (n7_tech) {
   cell (OR2D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (A1) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (B) {
+    pin (A2) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (Y) {
+    pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -8990,17 +8995,17 @@ library (n7_tech) {
   cell (OR2D3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
-    pin (A) {
+    pin (A1) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (B) {
+    pin (A2) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (Y) {
+    pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -10871,631 +10876,6 @@ library (n7_tech) {
       function : "0" ;
     }
     pin (Z) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (INVX1) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (BUFFD1) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (BUFFD2) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (BUFFD3) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (BUFFD4) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (BUFFD6) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (BUFFD8) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (AN2D1) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (AN2D2) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (AN2D3) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (AN2D4) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (OR2D1) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (OR2D2) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NAND2D1) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NOR2D1) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (XOR2D1) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (AN3D1) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (C) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (CKLNQD1) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (CP) {
-      direction : input ;
-      clock : true ;
-      capacitance : 0.1 ;
-    }
-    pin (E) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (TE) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Q) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (AOI21D1) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (C) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (AOI22D1) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (C) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (D) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (AN2D6) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (AN2D8) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (AN3D2) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (C) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (OR2D3) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (BUFFD10) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (AO211D0) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (C) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (AO21D1) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (C) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (AO21D2) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (C) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (AO21D4) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (C) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (FILLER1) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-  }
-
-  cell (FILLER2) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-  }
-
-  cell (PAD) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (padin) {
-      direction : inout ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (CLKBUF) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (clk) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (clkout) {
       direction : output ;
       capacitance : 0.1 ;
       function : "0" ;
