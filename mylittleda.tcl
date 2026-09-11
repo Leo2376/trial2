@@ -2285,6 +2285,28 @@ proc _inst_coord { inst } {
  return "($x, $y)"
 }
 
+# Helper: numeric (x, y) placement of an instance as a list {x y}, or "" when
+# unplaced / a port / assign. Used by wire-length estimation in report_net.
+proc _inst_xy { inst } {
+ variable _instlist
+ variable pathlist
+ if { $inst eq "<port>" || $inst eq "<assign>" } { return "" }
+ set iid [lsearch -exact $pathlist $inst]
+ if { $iid < 0 } { return "" }
+ incr iid
+ if { [lindex $_instlist($iid) 4] != 1 } { return "" }
+ set x [lindex $_instlist($iid) 5]
+ set y [lindex $_instlist($iid) 6]
+ return [list $x $y]
+}
+
+# Helper: numeric (x, y) of an instance pin (a {inst pin} pair), or "" when
+# the instance is unplaced / a port / assign. Used by wire-length estimation
+# in report_net (W1).
+proc _pin_xy { p } {
+ return [_inst_xy [lindex $p 0]]
+}
+
 # Helper: resolve a -from/-to point that is a net (not an inst/pin). Net
 # names are stored scoped by their containing module's hierarchical path
 # (e.g. "core0/w0/nv_c0/c0/iu0/n20719"), so a full hierarchical reference
@@ -2797,6 +2819,79 @@ proc _report_net_detail { n } {
  }
  set nc [expr {[llength $d] + [llength $l]}]
  puts "    connected pins: $nc"
+
+ # Wire-length estimation (W1): from the placed (x, y) of the driver and
+ # receiver instance pins, take the bounding box (min/max x, min/max y) of
+ # all placed pins on the net. The estimated Manhattan half-perimeter wire
+ # length is deltaX + deltaY. The bounding-box corners are also reported.
+ # Unplaced pins, hierarchical pins, ports and assigns have no coordinate
+ # and are skipped.
+ set w [_net_wirelen $n]
+ if { $w eq "" } {
+  puts "    wire length   : (unavailable - fewer than 2 placed pins)"
+ } else {
+  lassign $w est deltax deltay minx miny maxx maxy
+  puts "    wire length   : estimated $est (deltaX $deltax + deltaY $deltay)"
+  puts "    bounding box  : ($minx, $miny) - ($maxx, $maxy)"
+ }
+}
+
+# Helper: compute the wire-length estimate for a scoped net key. Returns a
+# list {est deltax deltay minx miny maxx maxy} with all values formatted to
+# %.4g, or "" when fewer than 2 placed pins are on the net (so no bounding
+# box can be formed). Used by report_net (_report_net_detail) and the
+# report_net_wirelen getter. Unplaced pins, hierarchical pins, ports and
+# assigns have no coordinate and are skipped.
+proc _net_wirelen { n } {
+ global netdriver netload
+ set d [_net_drivers $n]
+ set l [_net_loads $n]
+ set coords {}
+ foreach p [concat $d $l] { set c [_pin_xy $p]; if { $c ne "" } { lappend coords $c } }
+ if { [llength $coords] < 2 } { return "" }
+ set minx [lindex [lindex $coords 0] 0]
+ set maxx $minx
+ set miny [lindex [lindex $coords 0] 1]
+ set maxy $miny
+ foreach c $coords {
+  set cx [lindex $c 0]
+  set cy [lindex $c 1]
+  if { $cx < $minx } { set minx $cx }
+  if { $cx > $maxx } { set maxx $cx }
+  if { $cy < $miny } { set miny $cy }
+  if { $cy > $maxy } { set maxy $cy }
+ }
+ set deltax [expr {$maxx - $minx}]
+ set deltay [expr {$maxy - $miny}]
+ set est [expr {$deltax + $deltay}]
+ return [list [format %.4g $est] [format %.4g $deltax] [format %.4g $deltay] [format %.4g $minx] [format %.4g $miny] [format %.4g $maxx] [format %.4g $maxy]]
+}
+
+# W1 report_net_wirelen <net>
+# Return the estimated Manhattan wire length (deltaX + deltaY) of a net as a
+# number, or "" when fewer than 2 placed pins are on the net (unavailable).
+# Same scope rule as report_net (scope = path before the last '/', top level
+# for a bare name). Requires build_net_conn (P2). Getter counterpart to the
+# wire-length line printed by report_net.
+proc report_net_wirelen { net } {
+ global netconnbuilt
+ _require 2
+ if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
+  puts "Error : build_net_conn must run before report_net_wirelen"
+  return ""
+ }
+ if { $net eq "" } {
+  puts "Error : report_net_wirelen requires a net name"
+  return ""
+ }
+ set key [_report_net_resolve $net]
+ if { $key eq "" } {
+  puts "Error : net $net not found"
+  return ""
+ }
+ set w [_net_wirelen $key]
+ if { $w eq "" } { return "" }
+ return [lindex $w 0]
 }
 
 # E1 create_net <netname>
