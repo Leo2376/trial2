@@ -483,10 +483,10 @@ proc _view_pan { dir } {
  set sx [expr {$app_width / 10.0}]
  set sy [expr {$app_height / 10.0}]
  switch -exact -- $dir {
-  left  { set _pan_dx [expr {$_pan_dx - $sx}] }
-  right { set _pan_dx [expr {$_pan_dx + $sx}] }
-  up    { set _pan_dy [expr {$_pan_dy + $sy}] }
-  down  { set _pan_dy [expr {$_pan_dy - $sy}] }
+  left  { set _pan_dx [expr {$_pan_dx + $sx}] }
+  right { set _pan_dx [expr {$_pan_dx - $sx}] }
+  up    { set _pan_dy [expr {$_pan_dy - $sy}] }
+  down  { set _pan_dy [expr {$_pan_dy + $sy}] }
  }
  redraw
 }
@@ -552,10 +552,14 @@ proc _build_view_toolbar { } {
 }
 
 
-proc redraw { } {
+proc redraw { args } {
  variable _gui_mode
+ # -verbose: print the per-stage Info messages (default is silent, so panning/
+ # zooming do not spam the console).
+ set verbose 0
+ foreach a $args { if { $a eq "-verbose" } { set verbose 1 } }
  if { ! $_gui_mode } {
-    puts "Info: REDRAW (batch mode - no GUI)"
+    if { $verbose } { puts "Info: REDRAW (batch mode - no GUI)" }
     return
  }
  _build_view_toolbar
@@ -586,7 +590,7 @@ proc redraw { } {
  
  .can delete all
 
- puts "Info : REDRAW APR objects .."
+ if { $verbose } { puts "Info : REDRAW APR objects .." }
  
  # APR objects
  set wsizex $app_width
@@ -602,7 +606,7 @@ proc redraw { } {
  set offset_x [expr {$base_off + $_pan_dx}]
  set offset_y [expr {$base_off + $_pan_dy}]
  # top Boudary
- puts "Info : REDRAW top boundary .."
+ if { $verbose } { puts "Info : REDRAW top boundary .." }
  set bl_x [lindex $topbox 0]
  set bl_y [lindex $topbox 1]
  set tr_x [lindex $topbox 2]
@@ -647,7 +651,7 @@ proc redraw { } {
   .can create rectangle $offset_x [expr $wsizey-$offset_y] $bound_x [expr $wsizey-$bound_y] -width 2 -outline "#b0b0b0"
 
  # core Boundary
- puts "Info : REDRAW top boundary .."
+ if { $verbose } { puts "Info : REDRAW top boundary .." }
   set bl_x [lindex $corebox 0]
   set bl_y [lindex $corebox 1]
   set tr_x [lindex $corebox 2]
@@ -663,10 +667,10 @@ proc redraw { } {
 
   .can create rectangle $bl_x $bl_y $tr_x $tr_y -width 1 -outline "#606060" -fill "#303030"
  } else {
-  puts "Info : no floorplan defined (run make_floorplan before redraw)"
+  if { $verbose } { puts "Info : no floorplan defined (run make_floorplan before redraw)" }
  }
  
- puts "Info : REDRAW placement blockage .."
+ if { $verbose } { puts "Info : REDRAW placement blockage .." }
   for { set i 1} { $i<= $blockageindex } { set i [expr $i +1] } {
          set bl_x [lindex $_blockagelist($i) 1]
 	 set bl_y [lindex $_blockagelist($i) 2]
@@ -685,7 +689,7 @@ proc redraw { } {
   
   }
 
- puts "Info : REDRAW placement regions .."
+ if { $verbose } { puts "Info : REDRAW placement regions .." }
   for { set i 1} { $i<= $regionindex } { set i [expr $i +1] } {
          set bl_x [lindex $_regionlist($i) 1]
 	 set bl_y [lindex $_regionlist($i) 2]
@@ -706,7 +710,7 @@ proc redraw { } {
 
 
  # cell placed 
- puts "Info : REDRAW placed instance .."
+ if { $verbose } { puts "Info : REDRAW placed instance .." }
   for { set i 1} { $i<= $instindex } { set i [expr $i +1] } {
    set inst $_instlist($i)
    if {  [lindex $inst 4] == 1 } {
@@ -806,7 +810,7 @@ proc redraw { } {
  }
 
 
- puts "Info : Bump redraw  .."
+ if { $verbose } { puts "Info : Bump redraw  .." }
   for { set i 1} { $i<= $bumpindex } { incr i } {
 
          set bl_x  [lindex $_bumplist($i) 2]
