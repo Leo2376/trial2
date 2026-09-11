@@ -66,13 +66,13 @@ puts "set_max_fanout / fix_max_fanout non-reg checks (O1/O2)"
 puts "=========================================="
 # O1+O2 buffer insertion. alu_result has a single logical driver set and 3
 # receivers (assign data_out, alu/result, rf/data_in). With set_max_fanout 2,
-# fix_max_fanout -cell BUFFD1BWP300H8P64PDLVT splits the 3 receivers across 2
+# fix_max_fanout -cell BUFFD1 splits the 3 receivers across 2
 # buffers: alu_result keeps the 2 buffer inputs as its receivers (<=2), and a
 # new net per buffer (alu_result_b1, alu_result_b2) carries the moved receivers,
 # each driven by a buffer Z output. show the before/after fanout.
 set_max_fanout 2
 report_net alu_result
-fix_max_fanout -cell BUFFD1BWP300H8P64PDLVT
+fix_max_fanout -cell BUFFD1
 # After: alu_result now has 2 receivers (the 2 buffer inputs), each <= maxfanout.
 report_net alu_result
 # The new buffer nets exist and each has at most maxfanout receivers.

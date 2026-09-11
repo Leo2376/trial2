@@ -19,14 +19,14 @@ puts "=========================================="
 puts "sync pin queries"
 puts "=========================================="
 
-set ff_pins [get_sync_pins DFQD0BWP300H8P64PDLVT]
-puts "DFQD0BWP300H8P64PDLVT sync pins : $ff_pins"
+set ff_pins [get_sync_pins DFQD0]
+puts "DFQD0 sync pins : $ff_pins"
 
 set ram_pins [get_sync_pins TS1N7HSLVTA128X33M2WBZHOCP]
 puts "TS1N7HSLVTA128X33M2WBZHOCP sync pins : $ram_pins"
 
-set comb_pins [get_sync_pins AN2D1BWP300H8P64PDLVT]
-puts "AN2D1BWP300H8P64PDLVT sync pins (should be empty) : $comb_pins"
+set comb_pins [get_sync_pins AN2D1]
+puts "AN2D1 sync pins (should be empty) : $comb_pins"
 
 puts "=========================================="
 puts "sync pin checks"

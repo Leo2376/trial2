@@ -1,9 +1,9 @@
 // Structural Netlist for Test 2: Small Design
 // Cells and pin names match std_cell.lef (corrected to the cpu_syn.v golden
 // reference):
-//   SDFQD1BWP300H8P64PDLVT  D(in) CP(in) SE(in) SI(in) Q(out)
-//   INVD1BWP300H8P64PDLVT   I(in) ZN(out)
-//   BUFFD1BWP300H8P64PDLVT  I(in) Z(out)
+//   SDFQD1  D(in) CP(in) SE(in) SI(in) Q(out)
+//   INVD1   I(in) ZN(out)
+//   BUFFD1  I(in) Z(out)
 
 module simple_counter (
     input clk,
@@ -21,20 +21,20 @@ module simple_counter (
 
     // Flip-flop chain (D flip-flops). SE tied to the reset-bar enable so the
     // scan-enable is held; SI held to reset.
-    SDFQD1BWP300H8P64PDLVT ff0 ( .D(enable), .CP(clk), .Q(net1), .SE(n_resetb), .SI(n_reset) );
-    SDFQD1BWP300H8P64PDLVT ff1 ( .D(net1), .CP(clk), .Q(net2), .SE(n_resetb), .SI(n_reset) );
-    SDFQD1BWP300H8P64PDLVT ff2 ( .D(net2), .CP(clk), .Q(net3), .SE(n_resetb), .SI(n_reset) );
-    SDFQD1BWP300H8P64PDLVT ff3 ( .D(net3), .CP(clk), .Q(net4), .SE(n_resetb), .SI(n_reset) );
+    SDFQD1 ff0 ( .D(enable), .CP(clk), .Q(net1), .SE(n_resetb), .SI(n_reset) );
+    SDFQD1 ff1 ( .D(net1), .CP(clk), .Q(net2), .SE(n_resetb), .SI(n_reset) );
+    SDFQD1 ff2 ( .D(net2), .CP(clk), .Q(net3), .SE(n_resetb), .SI(n_reset) );
+    SDFQD1 ff3 ( .D(net3), .CP(clk), .Q(net4), .SE(n_resetb), .SI(n_reset) );
 
     // Reset-bar and reset buffer
-    INVD1BWP300H8P64PDLVT  inv_reset ( .I(reset), .ZN(n_resetb) );
-    BUFFD1BWP300H8P64PDLVT buf_reset ( .I(reset), .Z(n_reset) );
+    INVD1  inv_reset ( .I(reset), .ZN(n_resetb) );
+    BUFFD1 buf_reset ( .I(reset), .Z(n_reset) );
 
     // Output buffers
-    BUFFD1BWP300H8P64PDLVT buf0 ( .I(net1), .Z(out0) );
-    BUFFD1BWP300H8P64PDLVT buf1 ( .I(net2), .Z(out1) );
-    BUFFD1BWP300H8P64PDLVT buf2 ( .I(net3), .Z(out2) );
-    BUFFD1BWP300H8P64PDLVT buf3 ( .I(net4), .Z(out3) );
+    BUFFD1 buf0 ( .I(net1), .Z(out0) );
+    BUFFD1 buf1 ( .I(net2), .Z(out1) );
+    BUFFD1 buf2 ( .I(net3), .Z(out2) );
+    BUFFD1 buf3 ( .I(net4), .Z(out3) );
 
 endmodule
 

@@ -59,7 +59,7 @@ It carries no real timing tables (all scalar `0.1`, units ns / pf / uW). The
 only timing intent it encodes is the set of synchronous (clock) pins of
 sequential cells, tagged with `clock : true;`:
 
-- `CP` for every flop (e.g. `DFQD0BWP300H8P64PDLVT`).
+- `CP` for every flop (e.g. `DFQD0`).
 - `CLK` for every SRAM (e.g. `TS1N7HSLVTA128X33M2WBZHOCP`).
 
 To regenerate the file from the LEFs after editing `lef_files/`:
@@ -144,7 +144,7 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | core0/w0/c0/n_new`); the trailing token is the net name, the prefix is the  |            |
 |     |             | containing hierarchical scope.                                              |            |
 | E2  | ECO         | `create_cell <inst_path> <celltype>`: instantiate a lib cell inside a       | implemented|
-|     |             | scope (e.g. `create_cell core0/w0/c0/u_buf BUFFD1BWP300H8P64PDLVT`); the   |            |
+|     |             | scope (e.g. `create_cell core0/w0/c0/u_buf BUFFD1`); the   |            |
 |     |             | instance path is `<scope>/<instname>`.                                        |            |
 | E3  | ECO         | `disconnect_net <net> <pin>`: detach an instance pin from a net; the pin  | implemented|
 |     |             | argument is `<inst>/<pin>`. Updates the netload/netdriver map (P2).         |            |

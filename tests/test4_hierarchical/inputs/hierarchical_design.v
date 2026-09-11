@@ -48,8 +48,8 @@ module ram_block (
     idata_mem_group idata ( .clk(clk), .addr(addr[19:0]), .data_in(data_in[31:0]), .data_out(idata_data) );
 
     // Combine outputs using std cells
-    OR2D1BWP300H8P64PDLVT or_combine0 ( .A1(itag_data[0]), .A2(idata_data[0]), .Z() );
-    OR2D1BWP300H8P64PDLVT or_combine1 ( .A1(itag_data[1]), .A2(idata_data[1]), .Z() );
+    OR2D1 or_combine0 ( .A1(itag_data[0]), .A2(idata_data[0]), .Z() );
+    OR2D1 or_combine1 ( .A1(itag_data[1]), .A2(idata_data[1]), .Z() );
 
     // Pass through some bits
     assign data_out[0] = itag_data[0];
@@ -165,18 +165,18 @@ module stdcell_alu (
     wire [31:0] temp;
 
     // Logic gates
-    AN2D1BWP300H8P64PDLVT and_alu0 ( .A1(input[0]), .A2(input[1]), .Z() );
-    AN2D1BWP300H8P64PDLVT and_alu1 ( .A1(input[2]), .A2(input[3]), .Z() );
-    OR2D1BWP300H8P64PDLVT or_alu0 ( .A1(input[0]), .A2(input[1]), .Z() );
-    OR2D1BWP300H8P64PDLVT or_alu1 ( .A1(input[2]), .A2(input[3]), .Z() );
-    XOR2D0BWP300H8P64PDLVT xor_alu0 ( .A1(input[0]), .A2(input[1]), .Z() );
-    XOR2D0BWP300H8P64PDLVT xor_alu1 ( .A1(input[2]), .A2(input[3]), .Z() );
+    AN2D1 and_alu0 ( .A1(input[0]), .A2(input[1]), .Z() );
+    AN2D1 and_alu1 ( .A1(input[2]), .A2(input[3]), .Z() );
+    OR2D1 or_alu0 ( .A1(input[0]), .A2(input[1]), .Z() );
+    OR2D1 or_alu1 ( .A1(input[2]), .A2(input[3]), .Z() );
+    XOR2D0 xor_alu0 ( .A1(input[0]), .A2(input[1]), .Z() );
+    XOR2D0 xor_alu1 ( .A1(input[2]), .A2(input[3]), .Z() );
 
     // Flip-flops
-    DFQD0BWP300H8P64PDLVT ff_alu0 ( .D(input[0]), .CP(clk), .Q(temp[0]) );
-    DFQD0BWP300H8P64PDLVT ff_alu1 ( .D(input[1]), .CP(clk), .Q(temp[1]) );
-    DFQD0BWP300H8P64PDLVT ff_alu2 ( .D(input[2]), .CP(clk), .Q(temp[2]) );
-    DFQD0BWP300H8P64PDLVT ff_alu3 ( .D(input[3]), .CP(clk), .Q(temp[3]) );
+    DFQD0 ff_alu0 ( .D(input[0]), .CP(clk), .Q(temp[0]) );
+    DFQD0 ff_alu1 ( .D(input[1]), .CP(clk), .Q(temp[1]) );
+    DFQD0 ff_alu2 ( .D(input[2]), .CP(clk), .Q(temp[2]) );
+    DFQD0 ff_alu3 ( .D(input[3]), .CP(clk), .Q(temp[3]) );
 
     // Pass through
     assign output[0] = temp[0];
@@ -221,10 +221,10 @@ module stdcell_logic (
     output [31:0] output
 );
 
-    AN2D1BWP300H8P64PDLVT and_logic0 ( .A1(input[0]), .A2(input[1]), .Z() );
-    AN2D1BWP300H8P64PDLVT and_logic1 ( .A1(input[2]), .A2(input[3]), .Z() );
-    OR2D1BWP300H8P64PDLVT or_logic0 ( .A1(input[0]), .A2(input[1]), .Z() );
-    OR2D1BWP300H8P64PDLVT or_logic1 ( .A1(input[2]), .A2(input[3]), .Z() );
+    AN2D1 and_logic0 ( .A1(input[0]), .A2(input[1]), .Z() );
+    AN2D1 and_logic1 ( .A1(input[2]), .A2(input[3]), .Z() );
+    OR2D1 or_logic0 ( .A1(input[0]), .A2(input[1]), .Z() );
+    OR2D1 or_logic1 ( .A1(input[2]), .A2(input[3]), .Z() );
 
     assign output = input;
 
@@ -237,10 +237,10 @@ module stdcell_decode (
     output [31:0] output
 );
 
-    INVD1BWP300H8P64PDLVT inv_dec0 ( .I(input[0]), .ZN() );
-    INVD1BWP300H8P64PDLVT inv_dec1 ( .I(input[1]), .ZN() );
-    BUFFD1BWP300H8P64PDLVT buf_dec0 ( .I(input[0]), .Z() );
-    BUFFD1BWP300H8P64PDLVT buf_dec1 ( .I(input[1]), .Z() );
+    INVD1 inv_dec0 ( .I(input[0]), .ZN() );
+    INVD1 inv_dec1 ( .I(input[1]), .ZN() );
+    BUFFD1 buf_dec0 ( .I(input[0]), .Z() );
+    BUFFD1 buf_dec1 ( .I(input[1]), .Z() );
 
     assign output = input;
 

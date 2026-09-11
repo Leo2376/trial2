@@ -1,6 +1,6 @@
 // Structural Netlist for Test 6: Liberty sync-pin import
 // Non-ANSI port style (matches cpu_syn.v golden reference). Uses one flop
-// (DFQD0BWP300H8P64PDLVT, sync pin CP) and one SRAM
+// (DFQD0, sync pin CP) and one SRAM
 // (TS1N7HSLVTA128X33M2WBZHOCP, sync pin CLK) so add_lib sync-pin recovery can
 // be validated against a built design.
 module sync_top ( clk, data_in, addr, data_out );
@@ -11,7 +11,7 @@ module sync_top ( clk, data_in, addr, data_out );
   wire   q_net;
   wire   qout_net;
 
-  DFQD0BWP300H8P64PDLVT sync_ff ( .D(data_in), .CP(clk), .Q(q_net) );
+  DFQD0 sync_ff ( .D(data_in), .CP(clk), .Q(q_net) );
   TS1N7HSLVTA128X33M2WBZHOCP sync_ram ( .CLK(clk), .A(addr), .D(data_in), .Q(qout_net) );
 
   assign data_out = q_net & qout_net;

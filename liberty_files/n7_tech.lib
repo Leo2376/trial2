@@ -7,7 +7,7 @@ library (n7_tech) {
   capacitive_load_unit (0.1, pf) ;
   leakage_power_unit : "0.1uW" ;
 
-  cell (AIOI21D0BWP300H8P64PDLVT) {
+  cell (AIOI21D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -32,7 +32,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AIOI21D1BWP300H8P64PDLVT) {
+  cell (AIOI21D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -57,7 +57,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AIOI21D2BWP300H8P64PDLVT) {
+  cell (AIOI21D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -82,7 +82,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AIOI21D4BWP300H8P64PDLVT) {
+  cell (AIOI21D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -107,7 +107,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN2D1BWP300H8P64PDLVT) {
+  cell (AN2D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -127,7 +127,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN2D2BWP300H8P64PDLVT) {
+  cell (AN2D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -147,7 +147,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN2D3BWP300H8P64PDLVT) {
+  cell (AN2D3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -167,7 +167,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN2D4BWP300H8P64PDLVT) {
+  cell (AN2D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -187,7 +187,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN2D8BWP300H8P64PDLVT) {
+  cell (AN2D8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -207,7 +207,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN2OPTLD4BWP300H8P64PDLVT) {
+  cell (AN2OPTLD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -227,7 +227,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN2OPTLD6BWP300H8P64PDLVT) {
+  cell (AN2OPTLD6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -247,7 +247,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN2OPTLD8BWP300H8P64PDLVT) {
+  cell (AN2OPTLD8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -267,7 +267,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN3D1BWP300H8P64PDLVT) {
+  cell (AN3D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -292,7 +292,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN3D2BWP300H8P64PDLVT) {
+  cell (AN3D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -317,7 +317,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN3D3BWP300H8P64PDLVT) {
+  cell (AN3D3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -342,7 +342,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN3OPTLD8BWP300H8P64PDLVT) {
+  cell (AN3OPTLD8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -367,7 +367,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN4D0BWP300H8P64PDLVT) {
+  cell (AN4D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -397,7 +397,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN4D6BWP300H8P64PDLVT) {
+  cell (AN4D6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -427,7 +427,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN4OPTLD1BWP300H8P64PDLVT) {
+  cell (AN4OPTLD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -457,7 +457,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AO211D0BWP300H8P64PDLVT) {
+  cell (AO211D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -482,7 +482,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AO211OPTLD1BWP300H8P64PDLVT) {
+  cell (AO211OPTLD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -512,7 +512,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AO211OPTLD2BWP300H8P64PDLVT) {
+  cell (AO211OPTLD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -542,7 +542,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AO21D1BWP300H8P64PDLVT) {
+  cell (AO21D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -567,7 +567,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AO21D2BWP300H8P64PDLVT) {
+  cell (AO21D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -592,7 +592,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AO21D4BWP300H8P64PDLVT) {
+  cell (AO21D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -617,7 +617,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AO21OPTLD2BWP300H8P64PDLVT) {
+  cell (AO21OPTLD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -642,7 +642,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AO22D0BWP300H8P64PDLVT) {
+  cell (AO22D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -672,7 +672,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AO22D4BWP300H8P64PDLVT) {
+  cell (AO22D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -702,7 +702,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AO22OPTLD1BWP300H8P64PDLVT) {
+  cell (AO22OPTLD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -732,7 +732,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AO22OPTLD2BWP300H8P64PDLVT) {
+  cell (AO22OPTLD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -762,7 +762,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AO33D1BWP300H8P64PDLVT) {
+  cell (AO33D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -802,7 +802,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOAI211D0BWP300H8P64PDLVT) {
+  cell (AOAI211D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -832,7 +832,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOAI211D1BWP300H8P64PDLVT) {
+  cell (AOAI211D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -862,7 +862,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOAI211D2BWP300H8P64PDLVT) {
+  cell (AOAI211D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -892,7 +892,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOAI211D4BWP300H8P64PDLVT) {
+  cell (AOAI211D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -922,7 +922,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI211OPTPAD1BWP300H8P64PDLVT) {
+  cell (AOI211OPTPAD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -952,7 +952,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI211OPTPAD2BWP300H8P64PDLVT) {
+  cell (AOI211OPTPAD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -982,7 +982,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI211OPTPAD4BWP300H8P64PDLVT) {
+  cell (AOI211OPTPAD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1012,7 +1012,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI211OPTPAD6BWP300H8P64PDLVT) {
+  cell (AOI211OPTPAD6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1042,7 +1042,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI211SKPD1BWP300H8P64PDLVT) {
+  cell (AOI211SKPD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1072,7 +1072,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI211SKPD2BWP300H8P64PDLVT) {
+  cell (AOI211SKPD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1102,7 +1102,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI211SKPD3BWP300H8P64PDLVT) {
+  cell (AOI211SKPD3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1132,7 +1132,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI211SKPD4BWP300H8P64PDLVT) {
+  cell (AOI211SKPD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1162,7 +1162,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI211SKPD8BWP300H8P64PDLVT) {
+  cell (AOI211SKPD8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1192,7 +1192,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI21D1BWP300H8P64PDLVT) {
+  cell (AOI21D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -1217,7 +1217,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI21D3BWP300H8P64PDLVT) {
+  cell (AOI21D3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1242,7 +1242,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI21OPTLD2BWP300H8P64PDLVT) {
+  cell (AOI21OPTLD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1267,7 +1267,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI21OPTLD4BWP300H8P64PDLVT) {
+  cell (AOI21OPTLD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1292,7 +1292,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI21OPTPAD1BWP300H8P64PDLVT) {
+  cell (AOI21OPTPAD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1317,7 +1317,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI21OPTPAOPTLD2BWP300H8P64PDLVT) {
+  cell (AOI21OPTPAOPTLD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1342,7 +1342,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI21SKND6BWP300H8P64PDLVT) {
+  cell (AOI21SKND6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1367,7 +1367,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI21SKND8BWP300H8P64PDLVT) {
+  cell (AOI21SKND8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1392,7 +1392,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI21SKPD1BWP300H8P64PDLVT) {
+  cell (AOI21SKPD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1417,7 +1417,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI21SKPD2BWP300H8P64PDLVT) {
+  cell (AOI21SKPD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1442,7 +1442,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI21SKPD3BWP300H8P64PDLVT) {
+  cell (AOI21SKPD3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1467,7 +1467,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI21SKPD4BWP300H8P64PDLVT) {
+  cell (AOI21SKPD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1492,7 +1492,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI21SKPD6BWP300H8P64PDLVT) {
+  cell (AOI21SKPD6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1517,7 +1517,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI21SKPD8BWP300H8P64PDLVT) {
+  cell (AOI21SKPD8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1542,7 +1542,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI221D0BWP300H8P64PDLVT) {
+  cell (AOI221D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1577,7 +1577,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI222D1BWP300H8P64PDLVT) {
+  cell (AOI222D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1617,7 +1617,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI222D2BWP300H8P64PDLVT) {
+  cell (AOI222D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1657,7 +1657,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI222D4BWP300H8P64PDLVT) {
+  cell (AOI222D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1697,7 +1697,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI22D1BWP300H8P64PDLVT) {
+  cell (AOI22D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -1727,7 +1727,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI22OPTPAD1BWP300H8P64PDLVT) {
+  cell (AOI22OPTPAD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1757,7 +1757,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI22OPTPAD2BWP300H8P64PDLVT) {
+  cell (AOI22OPTPAD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1787,7 +1787,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI22SKPD1BWP300H8P64PDLVT) {
+  cell (AOI22SKPD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1817,7 +1817,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI22SKPD2BWP300H8P64PDLVT) {
+  cell (AOI22SKPD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1847,7 +1847,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI22SKPD3BWP300H8P64PDLVT) {
+  cell (AOI22SKPD3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1877,7 +1877,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI22SKPD4BWP300H8P64PDLVT) {
+  cell (AOI22SKPD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1907,7 +1907,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI22SKPD6BWP300H8P64PDLVT) {
+  cell (AOI22SKPD6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1937,7 +1937,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI22SKPD8BWP300H8P64PDLVT) {
+  cell (AOI22SKPD8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -1967,7 +1967,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI311D0BWP300H8P64PDLVT) {
+  cell (AOI311D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -2002,7 +2002,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI31D1BWP300H8P64PDLVT) {
+  cell (AOI31D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -2032,7 +2032,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI31OPTLD2BWP300H8P64PDLVT) {
+  cell (AOI31OPTLD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -2062,7 +2062,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI31SKND1BWP300H8P64PDLVT) {
+  cell (AOI31SKND1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -2092,7 +2092,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI31SKND2BWP300H8P64PDLVT) {
+  cell (AOI31SKND2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -2122,7 +2122,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI31SKPD1BWP300H8P64PDLVT) {
+  cell (AOI31SKPD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -2152,7 +2152,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI31SKPD2BWP300H8P64PDLVT) {
+  cell (AOI31SKPD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -2182,7 +2182,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI31SKPD4BWP300H8P64PDLVT) {
+  cell (AOI31SKPD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -2212,7 +2212,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI31SKPOPTLD4BWP300H8P64PDLVT) {
+  cell (AOI31SKPOPTLD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -2242,7 +2242,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI32D1BWP300H8P64PDLVT) {
+  cell (AOI32D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -2277,47 +2277,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI33D1BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A3) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B3) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (AOI33D2BWP300H8P64PDLVT) {
+  cell (AOI33D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -2357,7 +2317,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI33D4BWP300H8P64PDLVT) {
+  cell (AOI33D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -2397,7 +2357,47 @@ library (n7_tech) {
     }
   }
 
-  cell (BUFFD10BWP300H8P64PDLVT) {
+  cell (AOI33D4) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A3) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (B1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (B2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (B3) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (BUFFD10) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -2412,7 +2412,7 @@ library (n7_tech) {
     }
   }
 
-  cell (BUFFD1BWP300H8P64PDLVT) {
+  cell (BUFFD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -2427,7 +2427,7 @@ library (n7_tech) {
     }
   }
 
-  cell (BUFFD2BWP300H8P64PDLVT) {
+  cell (BUFFD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -2442,7 +2442,7 @@ library (n7_tech) {
     }
   }
 
-  cell (BUFFD3BWP300H8P64PDLVT) {
+  cell (BUFFD3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -2457,7 +2457,7 @@ library (n7_tech) {
     }
   }
 
-  cell (BUFFD4BWP300H8P64PDLVT) {
+  cell (BUFFD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -2472,7 +2472,7 @@ library (n7_tech) {
     }
   }
 
-  cell (BUFFD8BWP300H8P64PDLVT) {
+  cell (BUFFD8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -2487,7 +2487,7 @@ library (n7_tech) {
     }
   }
 
-  cell (BUFFSKND10BWP300H8P64PDLVT) {
+  cell (BUFFSKND10) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I) {
@@ -2502,7 +2502,7 @@ library (n7_tech) {
     }
   }
 
-  cell (BUFFSKND16BWP300H8P64PDLVT) {
+  cell (BUFFSKND16) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I) {
@@ -2517,7 +2517,7 @@ library (n7_tech) {
     }
   }
 
-  cell (BUFFSKND6BWP300H8P64PDLVT) {
+  cell (BUFFSKND6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I) {
@@ -2532,7 +2532,7 @@ library (n7_tech) {
     }
   }
 
-  cell (BUFFSKND8BWP300H8P64PDLVT) {
+  cell (BUFFSKND8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I) {
@@ -2547,7 +2547,7 @@ library (n7_tech) {
     }
   }
 
-  cell (CKLNQD1BWP300H8P64PDLVT) {
+  cell (CKLNQD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -2572,7 +2572,7 @@ library (n7_tech) {
     }
   }
 
-  cell (CKMUX2TWBD8BWP300H8P64PDLVT) {
+  cell (CKMUX2TWBD8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I0) {
@@ -2597,7 +2597,7 @@ library (n7_tech) {
     }
   }
 
-  cell (CKNR2D2BWP300H8P64PDLVT) {
+  cell (CKNR2D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -2617,7 +2617,7 @@ library (n7_tech) {
     }
   }
 
-  cell (CKNR2TWBD1BWP300H8P64PDLVT) {
+  cell (CKNR2TWBD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -2637,7 +2637,7 @@ library (n7_tech) {
     }
   }
 
-  cell (CMPE42D1BWP300H8P64PDLVT) {
+  cell (CMPE42D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -2682,7 +2682,7 @@ library (n7_tech) {
     }
   }
 
-  cell (DFQD0BWP300H8P64PDLVT) {
+  cell (DFQD0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -2702,7 +2702,7 @@ library (n7_tech) {
     }
   }
 
-  cell (DFQNOPTLD1BWP300H8P64PDLVT) {
+  cell (DFQNOPTLD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -2722,7 +2722,7 @@ library (n7_tech) {
     }
   }
 
-  cell (DFQOPTLD1BWP300H8P64PDLVT) {
+  cell (DFQOPTLD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -2742,7 +2742,7 @@ library (n7_tech) {
     }
   }
 
-  cell (DFRPQD0BWP300H8P64PDLVT) {
+  cell (DFRPQD0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CD) {
@@ -2767,7 +2767,7 @@ library (n7_tech) {
     }
   }
 
-  cell (DFRPQOPTLD4BWP300H8P64PDLVT) {
+  cell (DFRPQOPTLD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CD) {
@@ -2792,7 +2792,7 @@ library (n7_tech) {
     }
   }
 
-  cell (FA1D0BWP300H8P64PDLVT) {
+  cell (FA1D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -2822,7 +2822,7 @@ library (n7_tech) {
     }
   }
 
-  cell (FA1OPTCD1BWP300H8P64PDLVT) {
+  cell (FA1OPTCD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -2852,7 +2852,7 @@ library (n7_tech) {
     }
   }
 
-  cell (FA1OPTCD2BWP300H8P64PDLVT) {
+  cell (FA1OPTCD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -2882,7 +2882,7 @@ library (n7_tech) {
     }
   }
 
-  cell (FA1OPTLD1BWP300H8P64PDLVT) {
+  cell (FA1OPTLD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -2912,7 +2912,7 @@ library (n7_tech) {
     }
   }
 
-  cell (FA1OPTSD2BWP300H8P64PDLVT) {
+  cell (FA1OPTSD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -2942,7 +2942,7 @@ library (n7_tech) {
     }
   }
 
-  cell (FCICOD1BWP300H8P64PDLVT) {
+  cell (FCICOD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -2967,7 +2967,7 @@ library (n7_tech) {
     }
   }
 
-  cell (FCICOD2BWP300H8P64PDLVT) {
+  cell (FCICOD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -2992,7 +2992,7 @@ library (n7_tech) {
     }
   }
 
-  cell (FCICOND1BWP300H8P64PDLVT) {
+  cell (FCICOND1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -3017,7 +3017,7 @@ library (n7_tech) {
     }
   }
 
-  cell (FCISD0BWP300H8P64PDLVT) {
+  cell (FCISD0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -3042,7 +3042,7 @@ library (n7_tech) {
     }
   }
 
-  cell (FCISD1BWP300H8P64PDLVT) {
+  cell (FCISD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -3067,7 +3067,7 @@ library (n7_tech) {
     }
   }
 
-  cell (FCISD4BWP300H8P64PDLVT) {
+  cell (FCISD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -3092,7 +3092,7 @@ library (n7_tech) {
     }
   }
 
-  cell (FCISND0BWP300H8P64PDLVT) {
+  cell (FCISND0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -3117,7 +3117,7 @@ library (n7_tech) {
     }
   }
 
-  cell (HA1D1BWP300H8P64PDLVT) {
+  cell (HA1D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -3142,7 +3142,7 @@ library (n7_tech) {
     }
   }
 
-  cell (HA1D2BWP300H8P64PDLVT) {
+  cell (HA1D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -3167,7 +3167,7 @@ library (n7_tech) {
     }
   }
 
-  cell (HA1D4BWP300H8P64PDLVT) {
+  cell (HA1D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -3192,7 +3192,7 @@ library (n7_tech) {
     }
   }
 
-  cell (HA1OPTLD4BWP300H8P64PDLVT) {
+  cell (HA1OPTLD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -3217,7 +3217,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IAO21D1BWP300H8P64PDLVT) {
+  cell (IAO21D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3242,7 +3242,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IAO21D2BWP300H8P64PDLVT) {
+  cell (IAO21D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3267,7 +3267,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IAO21D4BWP300H8P64PDLVT) {
+  cell (IAO21D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3292,7 +3292,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IAOI21D1BWP300H8P64PDLVT) {
+  cell (IAOI21D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3317,7 +3317,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IAOI21D4BWP300H8P64PDLVT) {
+  cell (IAOI21D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3342,7 +3342,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IAOI21OPTLD2BWP300H8P64PDLVT) {
+  cell (IAOI21OPTLD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3367,7 +3367,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IAOI21OPTLD4BWP300H8P64PDLVT) {
+  cell (IAOI21OPTLD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3392,7 +3392,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IIND3D0BWP300H8P64PDLVT) {
+  cell (IIND3D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3417,7 +3417,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IIND3D1BWP300H8P64PDLVT) {
+  cell (IIND3D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3442,7 +3442,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IIND3D2BWP300H8P64PDLVT) {
+  cell (IIND3D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3467,7 +3467,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IIND3D4BWP300H8P64PDLVT) {
+  cell (IIND3D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3492,37 +3492,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IIND4D0BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (IIND4D1BWP300H8P64PDLVT) {
+  cell (IIND4D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3552,7 +3522,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IIND4D2BWP300H8P64PDLVT) {
+  cell (IIND4D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3582,7 +3552,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IIND4D4BWP300H8P64PDLVT) {
+  cell (IIND4D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3612,82 +3582,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IINR3D1BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (IINR3D2BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (IINR3D4BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (IINR4D1BWP300H8P64PDLVT) {
+  cell (IIND4D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3717,7 +3612,82 @@ library (n7_tech) {
     }
   }
 
-  cell (IINR4D2BWP300H8P64PDLVT) {
+  cell (IINR3D1) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (B1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (IINR3D2) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (B1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (IINR3D4) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (B1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (IINR4D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3747,7 +3717,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IINR4D4BWP300H8P64PDLVT) {
+  cell (IINR4D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3777,7 +3747,37 @@ library (n7_tech) {
     }
   }
 
-  cell (IND2D0BWP300H8P64PDLVT) {
+  cell (IINR4D4) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (B1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (B2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (IND2D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3797,7 +3797,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IND2D1BWP300H8P64PDLVT) {
+  cell (IND2D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3817,7 +3817,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IND2D2BWP300H8P64PDLVT) {
+  cell (IND2D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3837,7 +3837,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IND2D3BWP300H8P64PDLVT) {
+  cell (IND2D3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3857,7 +3857,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IND2D4BWP300H8P64PDLVT) {
+  cell (IND2D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3877,7 +3877,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IND2D6BWP300H8P64PDLVT) {
+  cell (IND2D6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3897,7 +3897,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IND2D8BWP300H8P64PDLVT) {
+  cell (IND2D8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3917,7 +3917,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IND3D1BWP300H8P64PDLVT) {
+  cell (IND3D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3942,7 +3942,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IND3D3BWP300H8P64PDLVT) {
+  cell (IND3D3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3967,7 +3967,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IND3OPTPAD1BWP300H8P64PDLVT) {
+  cell (IND3OPTPAD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -3992,7 +3992,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IND3OPTPAD2BWP300H8P64PDLVT) {
+  cell (IND3OPTPAD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4017,7 +4017,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IND4D0BWP300H8P64PDLVT) {
+  cell (IND4D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4047,7 +4047,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IND4D1BWP300H8P64PDLVT) {
+  cell (IND4D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4077,7 +4077,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IND4D2BWP300H8P64PDLVT) {
+  cell (IND4D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4107,7 +4107,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IND4D4BWP300H8P64PDLVT) {
+  cell (IND4D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4137,7 +4137,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INR2D1BWP300H8P64PDLVT) {
+  cell (INR2D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4157,7 +4157,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INR2D2BWP300H8P64PDLVT) {
+  cell (INR2D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4177,7 +4177,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INR2D3BWP300H8P64PDLVT) {
+  cell (INR2D3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4197,7 +4197,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INR2D4BWP300H8P64PDLVT) {
+  cell (INR2D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4217,7 +4217,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INR2D6BWP300H8P64PDLVT) {
+  cell (INR2D6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4237,7 +4237,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INR2D8BWP300H8P64PDLVT) {
+  cell (INR2D8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4257,32 +4257,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INR3D1BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (INR3D3BWP300H8P64PDLVT) {
+  cell (INR3D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4307,7 +4282,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INR3D4BWP300H8P64PDLVT) {
+  cell (INR3D3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4332,7 +4307,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INR3D6BWP300H8P64PDLVT) {
+  cell (INR3D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4357,7 +4332,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INR3D8BWP300H8P64PDLVT) {
+  cell (INR3D6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4382,7 +4357,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INR3OPTPAD1BWP300H8P64PDLVT) {
+  cell (INR3D8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4407,7 +4382,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INR3OPTPAD2BWP300H8P64PDLVT) {
+  cell (INR3OPTPAD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4432,7 +4407,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INR4D1BWP300H8P64PDLVT) {
+  cell (INR3OPTPAD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4450,11 +4425,6 @@ library (n7_tech) {
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (B3) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
     pin (ZN) {
       direction : output ;
       capacitance : 0.1 ;
@@ -4462,7 +4432,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INR4D2BWP300H8P64PDLVT) {
+  cell (INR4D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4492,7 +4462,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INR4D4BWP300H8P64PDLVT) {
+  cell (INR4D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4522,7 +4492,37 @@ library (n7_tech) {
     }
   }
 
-  cell (INVD1BWP300H8P64PDLVT) {
+  cell (INR4D4) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (B1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (B2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (B3) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (INVD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I) {
@@ -4537,7 +4537,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INVD2BWP300H8P64PDLVT) {
+  cell (INVD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I) {
@@ -4552,7 +4552,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INVD3BWP300H8P64PDLVT) {
+  cell (INVD3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I) {
@@ -4567,7 +4567,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INVD4BWP300H8P64PDLVT) {
+  cell (INVD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I) {
@@ -4582,7 +4582,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INVD8BWP300H8P64PDLVT) {
+  cell (INVD8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I) {
@@ -4597,7 +4597,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INVSKND5BWP300H8P64PDLVT) {
+  cell (INVSKND5) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I) {
@@ -4612,7 +4612,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INVSKPD12BWP300H8P64PDLVT) {
+  cell (INVSKPD12) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I) {
@@ -4627,7 +4627,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INVSKPD14BWP300H8P64PDLVT) {
+  cell (INVSKPD14) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I) {
@@ -4642,7 +4642,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INVSKPD1BWP300H8P64PDLVT) {
+  cell (INVSKPD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I) {
@@ -4657,7 +4657,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INVSKPD2BWP300H8P64PDLVT) {
+  cell (INVSKPD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I) {
@@ -4672,7 +4672,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INVSKPD3BWP300H8P64PDLVT) {
+  cell (INVSKPD3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I) {
@@ -4687,7 +4687,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INVSKPD4BWP300H8P64PDLVT) {
+  cell (INVSKPD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I) {
@@ -4702,7 +4702,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INVSKPD6BWP300H8P64PDLVT) {
+  cell (INVSKPD6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I) {
@@ -4717,7 +4717,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INVSKPD8BWP300H8P64PDLVT) {
+  cell (INVSKPD8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I) {
@@ -4732,7 +4732,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IOA21D0BWP300H8P64PDLVT) {
+  cell (IOA21D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4757,7 +4757,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IOA21D1BWP300H8P64PDLVT) {
+  cell (IOA21D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4782,7 +4782,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IOA21D2BWP300H8P64PDLVT) {
+  cell (IOA21D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4807,7 +4807,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IOA21D4BWP300H8P64PDLVT) {
+  cell (IOA21D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4832,7 +4832,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IOAI21D0BWP300H8P64PDLVT) {
+  cell (IOAI21D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4857,7 +4857,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IOAI21D1BWP300H8P64PDLVT) {
+  cell (IOAI21D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4882,7 +4882,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IOAI21D2BWP300H8P64PDLVT) {
+  cell (IOAI21D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4907,7 +4907,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IOAI21D4BWP300H8P64PDLVT) {
+  cell (IOAI21D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4932,7 +4932,7 @@ library (n7_tech) {
     }
   }
 
-  cell (IOAI21OPTLD2BWP300H8P64PDLVT) {
+  cell (IOAI21OPTLD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -4957,7 +4957,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ISOCLSNKCWD4BWP300H8P64PDLVT) {
+  cell (ISOCLSNKCWD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I) {
@@ -4977,7 +4977,7 @@ library (n7_tech) {
     }
   }
 
-  cell (MAOI222D2BWP300H8P64PDLVT) {
+  cell (MAOI222D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -5002,7 +5002,7 @@ library (n7_tech) {
     }
   }
 
-  cell (MAOI222D4BWP300H8P64PDLVT) {
+  cell (MAOI222D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -5027,7 +5027,7 @@ library (n7_tech) {
     }
   }
 
-  cell (MAOI22D1BWP300H8P64PDLVT) {
+  cell (MAOI22D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5057,7 +5057,7 @@ library (n7_tech) {
     }
   }
 
-  cell (MAOI22D2BWP300H8P64PDLVT) {
+  cell (MAOI22D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5087,7 +5087,7 @@ library (n7_tech) {
     }
   }
 
-  cell (MAOI22D4BWP300H8P64PDLVT) {
+  cell (MAOI22D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5117,7 +5117,7 @@ library (n7_tech) {
     }
   }
 
-  cell (MOAI22D0BWP300H8P64PDLVT) {
+  cell (MOAI22D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5147,7 +5147,7 @@ library (n7_tech) {
     }
   }
 
-  cell (MOAI22D2BWP300H8P64PDLVT) {
+  cell (MOAI22D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5177,7 +5177,7 @@ library (n7_tech) {
     }
   }
 
-  cell (MOAI22D4BWP300H8P64PDLVT) {
+  cell (MOAI22D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5207,7 +5207,7 @@ library (n7_tech) {
     }
   }
 
-  cell (MUX2D0BWP300H8P64PDLVT) {
+  cell (MUX2D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I0) {
@@ -5232,7 +5232,7 @@ library (n7_tech) {
     }
   }
 
-  cell (MUX2D1BWP300H8P64PDLVT) {
+  cell (MUX2D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I0) {
@@ -5257,7 +5257,7 @@ library (n7_tech) {
     }
   }
 
-  cell (MUX2D2BWP300H8P64PDLVT) {
+  cell (MUX2D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I0) {
@@ -5282,7 +5282,7 @@ library (n7_tech) {
     }
   }
 
-  cell (MUX2D3BWP300H8P64PDLVT) {
+  cell (MUX2D3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I0) {
@@ -5307,7 +5307,7 @@ library (n7_tech) {
     }
   }
 
-  cell (MUX2D4BWP300H8P64PDLVT) {
+  cell (MUX2D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I0) {
@@ -5332,7 +5332,7 @@ library (n7_tech) {
     }
   }
 
-  cell (MUX2ND0BWP300H8P64PDLVT) {
+  cell (MUX2ND0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I0) {
@@ -5357,7 +5357,7 @@ library (n7_tech) {
     }
   }
 
-  cell (MUX2ND3BWP300H8P64PDLVT) {
+  cell (MUX2ND3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I0) {
@@ -5382,7 +5382,7 @@ library (n7_tech) {
     }
   }
 
-  cell (MUX2ND4BWP300H8P64PDLVT) {
+  cell (MUX2ND4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I0) {
@@ -5407,7 +5407,7 @@ library (n7_tech) {
     }
   }
 
-  cell (MUX2ND8BWP300H8P64PDLVT) {
+  cell (MUX2ND8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I0) {
@@ -5432,7 +5432,7 @@ library (n7_tech) {
     }
   }
 
-  cell (MUX3D0BWP300H8P64PDLVT) {
+  cell (MUX3D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I0) {
@@ -5467,7 +5467,7 @@ library (n7_tech) {
     }
   }
 
-  cell (MUX3OPTLD1BWP300H8P64PDLVT) {
+  cell (MUX3OPTLD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I0) {
@@ -5502,47 +5502,7 @@ library (n7_tech) {
     }
   }
 
-  cell (MUX4D0BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (I0) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (I1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (I2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (I3) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (S0) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (S1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Z) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (MUX4ND0BWP300H8P64PDLVT) {
+  cell (MUX4D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (I0) {
@@ -5575,6 +5535,46 @@ library (n7_tech) {
       capacitance : 0.1 ;
       function : "0" ;
     }
+    pin (Z) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (MUX4ND0) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (I0) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (I1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (I2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (I3) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (S0) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (S1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
     pin (ZN) {
       direction : output ;
       capacitance : 0.1 ;
@@ -5582,7 +5582,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND2D1BWP300H8P64PDLVT) {
+  cell (ND2D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5602,7 +5602,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND2OPTPAD1BWP300H8P64PDLVT) {
+  cell (ND2OPTPAD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5622,7 +5622,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND2OPTPAD2BWP300H8P64PDLVT) {
+  cell (ND2OPTPAD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5642,7 +5642,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND2SKND10BWP300H8P64PDLVT) {
+  cell (ND2SKND10) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5662,7 +5662,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND2SKND16BWP300H8P64PDLVT) {
+  cell (ND2SKND16) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5682,7 +5682,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND2SKND2BWP300H8P64PDLVT) {
+  cell (ND2SKND2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5702,7 +5702,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND2SKND3BWP300H8P64PDLVT) {
+  cell (ND2SKND3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5722,7 +5722,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND2SKND4BWP300H8P64PDLVT) {
+  cell (ND2SKND4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5742,7 +5742,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND2SKND6BWP300H8P64PDLVT) {
+  cell (ND2SKND6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5762,7 +5762,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND2SKND8BWP300H8P64PDLVT) {
+  cell (ND2SKND8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5782,82 +5782,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND3OPTPAD1BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A3) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (ND3OPTPAD2BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A3) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (ND3SKND12BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A3) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (ND3SKND1BWP300H8P64PDLVT) {
+  cell (ND3OPTPAD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5882,7 +5807,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND3SKND2BWP300H8P64PDLVT) {
+  cell (ND3OPTPAD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5907,7 +5832,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND3SKND3BWP300H8P64PDLVT) {
+  cell (ND3SKND12) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5932,7 +5857,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND3SKND4BWP300H8P64PDLVT) {
+  cell (ND3SKND1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5957,7 +5882,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND3SKND6BWP300H8P64PDLVT) {
+  cell (ND3SKND2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -5982,7 +5907,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND3SKND8BWP300H8P64PDLVT) {
+  cell (ND3SKND3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -6007,7 +5932,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND4SKND1BWP300H8P64PDLVT) {
+  cell (ND3SKND4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -6025,11 +5950,6 @@ library (n7_tech) {
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (A4) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
     pin (ZN) {
       direction : output ;
       capacitance : 0.1 ;
@@ -6037,7 +5957,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND4SKND2BWP300H8P64PDLVT) {
+  cell (ND3SKND6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -6055,7 +5975,27 @@ library (n7_tech) {
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (A4) {
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (ND3SKND8) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A3) {
       direction : input ;
       capacitance : 0.1 ;
       function : "0" ;
@@ -6067,7 +6007,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND4SKND3BWP300H8P64PDLVT) {
+  cell (ND4SKND1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -6097,7 +6037,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND4SKNNMED4BWP300H8P64PDLVT) {
+  cell (ND4SKND2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -6127,7 +6067,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND4SKNNMED6BWP300H8P64PDLVT) {
+  cell (ND4SKND3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -6157,7 +6097,7 @@ library (n7_tech) {
     }
   }
 
-  cell (ND4SKNNMED8BWP300H8P64PDLVT) {
+  cell (ND4SKNNMED4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -6187,457 +6127,7 @@ library (n7_tech) {
     }
   }
 
-  cell (NR2D1BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NR2OPTPAD12BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NR2OPTPAD16BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NR2OPTPAD4BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NR2SKPD10BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NR2SKPD2BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NR2SKPD3BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NR2SKPD4BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NR2SKPD6BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NR2SKPD8BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NR3OPTPAD12BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A3) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NR3OPTPAD1BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A3) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NR3OPTPAD2BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A3) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NR3SKPD12BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A3) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NR3SKPD1BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A3) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NR3SKPD2BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A3) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NR3SKPD3BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A3) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NR3SKPD4BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A3) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NR3SKPD6BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A3) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NR3SKPD8BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A3) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (NR4SKPD1BWP300H8P64PDLVT) {
+  cell (ND4SKNNMED6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -6667,7 +6157,7 @@ library (n7_tech) {
     }
   }
 
-  cell (NR4SKPD2BWP300H8P64PDLVT) {
+  cell (ND4SKNNMED8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -6697,7 +6187,457 @@ library (n7_tech) {
     }
   }
 
-  cell (NR4SKPD3BWP300H8P64PDLVT) {
+  cell (NR2D1) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR2OPTPAD12) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR2OPTPAD16) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR2OPTPAD4) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR2SKPD10) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR2SKPD2) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR2SKPD3) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR2SKPD4) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR2SKPD6) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR2SKPD8) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR3OPTPAD12) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A3) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR3OPTPAD1) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A3) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR3OPTPAD2) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A3) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR3SKPD12) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A3) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR3SKPD1) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A3) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR3SKPD2) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A3) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR3SKPD3) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A3) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR3SKPD4) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A3) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR3SKPD6) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A3) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR3SKPD8) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A3) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR4SKPD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -6727,7 +6667,7 @@ library (n7_tech) {
     }
   }
 
-  cell (NR4SKPD4BWP300H8P64PDLVT) {
+  cell (NR4SKPD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -6757,7 +6697,7 @@ library (n7_tech) {
     }
   }
 
-  cell (NR4SKPD6BWP300H8P64PDLVT) {
+  cell (NR4SKPD3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -6787,7 +6727,7 @@ library (n7_tech) {
     }
   }
 
-  cell (NR4SKPD8BWP300H8P64PDLVT) {
+  cell (NR4SKPD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -6817,7 +6757,67 @@ library (n7_tech) {
     }
   }
 
-  cell (OA211D0BWP300H8P64PDLVT) {
+  cell (NR4SKPD6) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A3) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A4) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (NR4SKPD8) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A3) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A4) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (OA211D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -6847,7 +6847,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OA211OPTLD1BWP300H8P64PDLVT) {
+  cell (OA211OPTLD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -6877,7 +6877,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OA211OPTLD2BWP300H8P64PDLVT) {
+  cell (OA211OPTLD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -6907,7 +6907,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OA211OPTLD4BWP300H8P64PDLVT) {
+  cell (OA211OPTLD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -6937,7 +6937,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OA21D0BWP300H8P64PDLVT) {
+  cell (OA21D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -6962,7 +6962,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OA21D1BWP300H8P64PDLVT) {
+  cell (OA21D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -6987,7 +6987,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OA21OPTLD2BWP300H8P64PDLVT) {
+  cell (OA21OPTLD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7012,7 +7012,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OA21OPTLD4BWP300H8P64PDLVT) {
+  cell (OA21OPTLD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7037,7 +7037,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OA22D0BWP300H8P64PDLVT) {
+  cell (OA22D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7067,7 +7067,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OA22D4BWP300H8P64PDLVT) {
+  cell (OA22D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7097,7 +7097,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OA22OPTLD1BWP300H8P64PDLVT) {
+  cell (OA22OPTLD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7127,7 +7127,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI211OPTPAD1BWP300H8P64PDLVT) {
+  cell (OAI211OPTPAD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7157,7 +7157,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI211OPTPAD2BWP300H8P64PDLVT) {
+  cell (OAI211OPTPAD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7187,7 +7187,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI211OPTPAD4BWP300H8P64PDLVT) {
+  cell (OAI211OPTPAD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7217,7 +7217,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI211OPTPAD6BWP300H8P64PDLVT) {
+  cell (OAI211OPTPAD6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7247,7 +7247,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI211SKND1BWP300H8P64PDLVT) {
+  cell (OAI211SKND1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7277,7 +7277,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI211SKND2BWP300H8P64PDLVT) {
+  cell (OAI211SKND2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7307,7 +7307,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI211SKND3BWP300H8P64PDLVT) {
+  cell (OAI211SKND3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7337,7 +7337,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI211SKND4BWP300H8P64PDLVT) {
+  cell (OAI211SKND4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7367,7 +7367,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI211SKND6BWP300H8P64PDLVT) {
+  cell (OAI211SKND6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7397,7 +7397,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI211SKND8BWP300H8P64PDLVT) {
+  cell (OAI211SKND8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7427,7 +7427,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI211SKPD1BWP300H8P64PDLVT) {
+  cell (OAI211SKPD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7457,7 +7457,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI211SKPD2BWP300H8P64PDLVT) {
+  cell (OAI211SKPD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7487,7 +7487,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI21D1BWP300H8P64PDLVT) {
+  cell (OAI21D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7512,7 +7512,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI21OPTPAD1BWP300H8P64PDLVT) {
+  cell (OAI21OPTPAD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7537,7 +7537,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI21OPTPAD2BWP300H8P64PDLVT) {
+  cell (OAI21OPTPAD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7562,7 +7562,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI21OPTPAD4BWP300H8P64PDLVT) {
+  cell (OAI21OPTPAD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7587,7 +7587,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI21OPTPAOPTLD2BWP300H8P64PDLVT) {
+  cell (OAI21OPTPAOPTLD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7612,7 +7612,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI21OPTPAOPTLD4BWP300H8P64PDLVT) {
+  cell (OAI21OPTPAOPTLD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7637,7 +7637,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI21SKND1BWP300H8P64PDLVT) {
+  cell (OAI21SKND1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7662,7 +7662,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI21SKND2BWP300H8P64PDLVT) {
+  cell (OAI21SKND2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7687,7 +7687,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI21SKND3BWP300H8P64PDLVT) {
+  cell (OAI21SKND3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7712,7 +7712,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI21SKND4BWP300H8P64PDLVT) {
+  cell (OAI21SKND4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7737,7 +7737,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI21SKND6BWP300H8P64PDLVT) {
+  cell (OAI21SKND6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7762,7 +7762,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI21SKND8BWP300H8P64PDLVT) {
+  cell (OAI21SKND8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7787,7 +7787,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI21SKPD1BWP300H8P64PDLVT) {
+  cell (OAI21SKPD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7812,7 +7812,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI21SKPD2BWP300H8P64PDLVT) {
+  cell (OAI21SKPD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7837,7 +7837,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI21SKPD4BWP300H8P64PDLVT) {
+  cell (OAI21SKPD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7862,7 +7862,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI221D1BWP300H8P64PDLVT) {
+  cell (OAI221D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7897,7 +7897,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI222D0BWP300H8P64PDLVT) {
+  cell (OAI222D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7937,7 +7937,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI222D2BWP300H8P64PDLVT) {
+  cell (OAI222D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -7977,7 +7977,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI222D4BWP300H8P64PDLVT) {
+  cell (OAI222D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8017,7 +8017,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI22OPTPAD1BWP300H8P64PDLVT) {
+  cell (OAI22OPTPAD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8047,7 +8047,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI22OPTPAD2BWP300H8P64PDLVT) {
+  cell (OAI22OPTPAD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8077,7 +8077,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI22OPTPAD4BWP300H8P64PDLVT) {
+  cell (OAI22OPTPAD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8107,7 +8107,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI22SKND1BWP300H8P64PDLVT) {
+  cell (OAI22SKND1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8137,7 +8137,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI22SKND2BWP300H8P64PDLVT) {
+  cell (OAI22SKND2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8167,7 +8167,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI22SKND3BWP300H8P64PDLVT) {
+  cell (OAI22SKND3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8197,7 +8197,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI22SKND4BWP300H8P64PDLVT) {
+  cell (OAI22SKND4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8227,7 +8227,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI22SKND6BWP300H8P64PDLVT) {
+  cell (OAI22SKND6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8257,7 +8257,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI22SKND8BWP300H8P64PDLVT) {
+  cell (OAI22SKND8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8287,7 +8287,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI22SKPD1BWP300H8P64PDLVT) {
+  cell (OAI22SKPD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8317,7 +8317,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI22SKPD2BWP300H8P64PDLVT) {
+  cell (OAI22SKPD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8347,7 +8347,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI311D1BWP300H8P64PDLVT) {
+  cell (OAI311D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8382,7 +8382,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI31D1BWP300H8P64PDLVT) {
+  cell (OAI31D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8412,7 +8412,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI31SKND1BWP300H8P64PDLVT) {
+  cell (OAI31SKND1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8442,7 +8442,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI31SKND2BWP300H8P64PDLVT) {
+  cell (OAI31SKND2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8472,7 +8472,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI31SKND4BWP300H8P64PDLVT) {
+  cell (OAI31SKND4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8502,7 +8502,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI31SKNOPTLD4BWP300H8P64PDLVT) {
+  cell (OAI31SKNOPTLD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8532,7 +8532,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI31SKPD1BWP300H8P64PDLVT) {
+  cell (OAI31SKPD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8562,7 +8562,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI31SKPD2BWP300H8P64PDLVT) {
+  cell (OAI31SKPD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8592,7 +8592,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI32D0BWP300H8P64PDLVT) {
+  cell (OAI32D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8627,7 +8627,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI32D1BWP300H8P64PDLVT) {
+  cell (OAI32D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8662,7 +8662,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI33D0BWP300H8P64PDLVT) {
+  cell (OAI33D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8702,7 +8702,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI33D2BWP300H8P64PDLVT) {
+  cell (OAI33D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8742,7 +8742,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAI33D4BWP300H8P64PDLVT) {
+  cell (OAI33D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8782,7 +8782,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAOI211D1BWP300H8P64PDLVT) {
+  cell (OAOI211D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8812,7 +8812,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAOI211D2BWP300H8P64PDLVT) {
+  cell (OAOI211D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8842,7 +8842,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OAOI211D4BWP300H8P64PDLVT) {
+  cell (OAOI211D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8872,7 +8872,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OIAI21D1BWP300H8P64PDLVT) {
+  cell (OIAI21D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8897,7 +8897,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OIAI21D2BWP300H8P64PDLVT) {
+  cell (OIAI21D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8922,7 +8922,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OIAI21D4BWP300H8P64PDLVT) {
+  cell (OIAI21D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -8947,7 +8947,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OR2D1BWP300H8P64PDLVT) {
+  cell (OR2D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -8967,7 +8967,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OR2D2BWP300H8P64PDLVT) {
+  cell (OR2D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -8987,7 +8987,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OR2D3BWP300H8P64PDLVT) {
+  cell (OR2D3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -9007,7 +9007,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OR2OPTLD4BWP300H8P64PDLVT) {
+  cell (OR2OPTLD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -9027,7 +9027,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OR2OPTLD6BWP300H8P64PDLVT) {
+  cell (OR2OPTLD6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -9047,7 +9047,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OR2OPTLD8BWP300H8P64PDLVT) {
+  cell (OR2OPTLD8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -9067,32 +9067,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OR3D1BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A3) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Z) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (OR3D2BWP300H8P64PDLVT) {
+  cell (OR3D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -9117,7 +9092,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OR3OPTLD4BWP300H8P64PDLVT) {
+  cell (OR3D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -9142,7 +9117,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OR3OPTLD6BWP300H8P64PDLVT) {
+  cell (OR3OPTLD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -9167,7 +9142,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OR3OPTLD8BWP300H8P64PDLVT) {
+  cell (OR3OPTLD6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -9192,7 +9167,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OR4D0BWP300H8P64PDLVT) {
+  cell (OR3OPTLD8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -9210,11 +9185,6 @@ library (n7_tech) {
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (A4) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
     pin (Z) {
       direction : output ;
       capacitance : 0.1 ;
@@ -9222,7 +9192,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OR4D3BWP300H8P64PDLVT) {
+  cell (OR4D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -9252,7 +9222,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OR4OPTLD1BWP300H8P64PDLVT) {
+  cell (OR4D3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -9282,7 +9252,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OR4OPTLD2BWP300H8P64PDLVT) {
+  cell (OR4OPTLD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -9312,7 +9282,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OR4OPTLD6BWP300H8P64PDLVT) {
+  cell (OR4OPTLD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -9342,7 +9312,37 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFKRPQD0BWP300H8P64PDLVT) {
+  cell (OR4OPTLD6) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A3) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A4) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (Z) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (SDFKRPQD0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (C) {
@@ -9377,7 +9377,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFKRPQD1BWP300H8P64PDLVT) {
+  cell (SDFKRPQD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (C) {
@@ -9412,7 +9412,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFKRPQD2BWP300H8P64PDLVT) {
+  cell (SDFKRPQD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (C) {
@@ -9447,7 +9447,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFKSNQD0BWP300H8P64PDLVT) {
+  cell (SDFKSNQD0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -9482,7 +9482,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFKSNQD1BWP300H8P64PDLVT) {
+  cell (SDFKSNQD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -9517,7 +9517,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFKSNQD2BWP300H8P64PDLVT) {
+  cell (SDFKSNQD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -9552,7 +9552,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFKSRPQD0BWP300H8P64PDLVT) {
+  cell (SDFKSRPQD0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (C) {
@@ -9592,7 +9592,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQD0BWP300H8P64PDLVT) {
+  cell (SDFQD0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -9622,7 +9622,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQD1BWP300H8P64PDLVT) {
+  cell (SDFQD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -9652,7 +9652,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQD2BWP300H8P64PDLVT) {
+  cell (SDFQD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -9682,7 +9682,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQD4BWP300H8P64PDLVT) {
+  cell (SDFQD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -9712,7 +9712,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQND0BWP300H8P64PDLVT) {
+  cell (SDFQND0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -9742,7 +9742,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQND2BWP300H8P64PDLVT) {
+  cell (SDFQND2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -9772,7 +9772,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQOPTBBD0BWP300H8P64PDLVT) {
+  cell (SDFQOPTBBD0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -9802,7 +9802,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQOPTBBD1BWP300H8P64PDLVT) {
+  cell (SDFQOPTBBD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -9832,7 +9832,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQOPTBBD2BWP300H8P64PDLVT) {
+  cell (SDFQOPTBBD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -9862,7 +9862,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQOPTBBD4BWP300H8P64PDLVT) {
+  cell (SDFQOPTBBD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -9892,7 +9892,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQOPTBBOPTLD4BWP300H8P64PDLVT) {
+  cell (SDFQOPTBBOPTLD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -9922,7 +9922,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQOPTBCD0BWP300H8P64PDLVT) {
+  cell (SDFQOPTBCD0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -9952,7 +9952,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQOPTBCD1BWP300H8P64PDLVT) {
+  cell (SDFQOPTBCD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -9982,7 +9982,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQOPTBCD2BWP300H8P64PDLVT) {
+  cell (SDFQOPTBCD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -10012,7 +10012,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQOPTBCD4BWP300H8P64PDLVT) {
+  cell (SDFQOPTBCD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -10042,7 +10042,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQOPTBCUSS1D0BWP300H8P64PDLVT) {
+  cell (SDFQOPTBCUSS1D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -10072,7 +10072,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQOPTBCUSS1D1BWP300H8P64PDLVT) {
+  cell (SDFQOPTBCUSS1D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -10102,7 +10102,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQOPTBCUSS1D2BWP300H8P64PDLVT) {
+  cell (SDFQOPTBCUSS1D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -10132,7 +10132,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQOPTLD4BWP300H8P64PDLVT) {
+  cell (SDFQOPTLD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -10162,7 +10162,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQOPTQD0BWP300H8P64PDLVT) {
+  cell (SDFQOPTQD0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -10192,7 +10192,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQOPTQD1BWP300H8P64PDLVT) {
+  cell (SDFQOPTQD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -10222,7 +10222,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFQOPTQD2BWP300H8P64PDLVT) {
+  cell (SDFQOPTQD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -10252,7 +10252,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SDFRPQD0BWP300H8P64PDLVT) {
+  cell (SDFRPQD0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CD) {
@@ -10287,7 +10287,7 @@ library (n7_tech) {
     }
   }
 
-  cell (SEDFQD1BWP300H8P64PDLVT) {
+  cell (SEDFQD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -10322,7 +10322,7 @@ library (n7_tech) {
     }
   }
 
-  cell (TIEHXPBWP300H8P64PDLVT) {
+  cell (TIEHXP) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (Z) {
@@ -10332,7 +10332,7 @@ library (n7_tech) {
     }
   }
 
-  cell (TIELXNBWP300H8P64PDLVT) {
+  cell (TIELXN) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (ZN) {
@@ -10342,27 +10342,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XNR2D0BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A1) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (A2) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (ZN) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (XNR2D6BWP300H8P64PDLVT) {
+  cell (XNR2D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10382,7 +10362,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XNR2OPTLD1BWP300H8P64PDLVT) {
+  cell (XNR2D6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10402,7 +10382,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XNR2OPTLD2BWP300H8P64PDLVT) {
+  cell (XNR2OPTLD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10422,7 +10402,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XNR2OPTLD4BWP300H8P64PDLVT) {
+  cell (XNR2OPTLD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10442,7 +10422,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XNR2OPTLD6BWP300H8P64PDLVT) {
+  cell (XNR2OPTLD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10462,7 +10442,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XNR3OPTLD2BWP300H8P64PDLVT) {
+  cell (XNR2OPTLD6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10475,11 +10455,6 @@ library (n7_tech) {
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (A3) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
     pin (ZN) {
       direction : output ;
       capacitance : 0.1 ;
@@ -10487,7 +10462,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XNR4D1BWP300H8P64PDLVT) {
+  cell (XNR3OPTLD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10505,11 +10480,6 @@ library (n7_tech) {
       capacitance : 0.1 ;
       function : "0" ;
     }
-    pin (A4) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
     pin (ZN) {
       direction : output ;
       capacitance : 0.1 ;
@@ -10517,7 +10487,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XNR4D2BWP300H8P64PDLVT) {
+  cell (XNR4D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10547,7 +10517,37 @@ library (n7_tech) {
     }
   }
 
-  cell (XOR2D0BWP300H8P64PDLVT) {
+  cell (XNR4D2) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A1) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A2) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A3) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (A4) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (ZN) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (XOR2D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10567,7 +10567,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XOR2D3BWP300H8P64PDLVT) {
+  cell (XOR2D3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10587,7 +10587,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XOR2D4BWP300H8P64PDLVT) {
+  cell (XOR2D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10607,7 +10607,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XOR2D6BWP300H8P64PDLVT) {
+  cell (XOR2D6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10627,7 +10627,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XOR2OPTLD1BWP300H8P64PDLVT) {
+  cell (XOR2OPTLD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10647,7 +10647,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XOR2OPTLD2BWP300H8P64PDLVT) {
+  cell (XOR2OPTLD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10667,7 +10667,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XOR2OPTLD6BWP300H8P64PDLVT) {
+  cell (XOR2OPTLD6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10687,7 +10687,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XOR3D0BWP300H8P64PDLVT) {
+  cell (XOR3D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10712,7 +10712,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XOR3D2BWP300H8P64PDLVT) {
+  cell (XOR3D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10737,7 +10737,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XOR3D4BWP300H8P64PDLVT) {
+  cell (XOR3D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10762,7 +10762,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XOR3OPTLD4BWP300H8P64PDLVT) {
+  cell (XOR3OPTLD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10787,7 +10787,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XOR4D0BWP300H8P64PDLVT) {
+  cell (XOR4D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10817,7 +10817,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XOR4D2BWP300H8P64PDLVT) {
+  cell (XOR4D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10847,7 +10847,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XOR4D4BWP300H8P64PDLVT) {
+  cell (XOR4D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A1) {
@@ -10877,7 +10877,7 @@ library (n7_tech) {
     }
   }
 
-  cell (INVX1BWP300H8P64PDLVT) {
+  cell (INVX1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -10892,7 +10892,7 @@ library (n7_tech) {
     }
   }
 
-  cell (BUFFD1BWP300H8P64PDLVT) {
+  cell (BUFFD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -10907,7 +10907,7 @@ library (n7_tech) {
     }
   }
 
-  cell (BUFFD2BWP300H8P64PDLVT) {
+  cell (BUFFD2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -10922,7 +10922,7 @@ library (n7_tech) {
     }
   }
 
-  cell (BUFFD3BWP300H8P64PDLVT) {
+  cell (BUFFD3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -10937,7 +10937,7 @@ library (n7_tech) {
     }
   }
 
-  cell (BUFFD4BWP300H8P64PDLVT) {
+  cell (BUFFD4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -10952,7 +10952,7 @@ library (n7_tech) {
     }
   }
 
-  cell (BUFFD6BWP300H8P64PDLVT) {
+  cell (BUFFD6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -10967,7 +10967,7 @@ library (n7_tech) {
     }
   }
 
-  cell (BUFFD8BWP300H8P64PDLVT) {
+  cell (BUFFD8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -10982,27 +10982,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN2D1BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (AN2D2BWP300H8P64PDLVT) {
+  cell (AN2D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -11022,7 +11002,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN2D3BWP300H8P64PDLVT) {
+  cell (AN2D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -11042,7 +11022,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN2D4BWP300H8P64PDLVT) {
+  cell (AN2D3) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -11062,7 +11042,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OR2D1BWP300H8P64PDLVT) {
+  cell (AN2D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -11082,7 +11062,7 @@ library (n7_tech) {
     }
   }
 
-  cell (OR2D2BWP300H8P64PDLVT) {
+  cell (OR2D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -11102,7 +11082,7 @@ library (n7_tech) {
     }
   }
 
-  cell (NAND2D1BWP300H8P64PDLVT) {
+  cell (OR2D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -11122,7 +11102,7 @@ library (n7_tech) {
     }
   }
 
-  cell (NOR2D1BWP300H8P64PDLVT) {
+  cell (NAND2D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -11142,7 +11122,7 @@ library (n7_tech) {
     }
   }
 
-  cell (XOR2D1BWP300H8P64PDLVT) {
+  cell (NOR2D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -11162,7 +11142,27 @@ library (n7_tech) {
     }
   }
 
-  cell (AN3D1BWP300H8P64PDLVT) {
+  cell (XOR2D1) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (B) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (Y) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (AN3D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -11187,7 +11187,7 @@ library (n7_tech) {
     }
   }
 
-  cell (CKLNQD1BWP300H8P64PDLVT) {
+  cell (CKLNQD1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (CP) {
@@ -11212,7 +11212,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI21D1BWP300H8P64PDLVT) {
+  cell (AOI21D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -11237,7 +11237,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AOI22D1BWP300H8P64PDLVT) {
+  cell (AOI22D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -11267,7 +11267,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN2D6BWP300H8P64PDLVT) {
+  cell (AN2D6) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -11287,7 +11287,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN2D8BWP300H8P64PDLVT) {
+  cell (AN2D8) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -11307,67 +11307,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AN3D2BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (C) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (OR2D3BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (B) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (BUFFD10BWP300H8P64PDLVT) {
-    area : 0.1 ;
-    leakage_power : 0.1 ;
-    pin (A) {
-      direction : input ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-    pin (Y) {
-      direction : output ;
-      capacitance : 0.1 ;
-      function : "0" ;
-    }
-  }
-
-  cell (AO211D0BWP300H8P64PDLVT) {
+  cell (AN3D2) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -11392,7 +11332,42 @@ library (n7_tech) {
     }
   }
 
-  cell (AO21D1BWP300H8P64PDLVT) {
+  cell (OR2D3) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (B) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (Y) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (BUFFD10) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (Y) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (AO211D0) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -11417,7 +11392,7 @@ library (n7_tech) {
     }
   }
 
-  cell (AO21D2BWP300H8P64PDLVT) {
+  cell (AO21D1) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
@@ -11442,7 +11417,32 @@ library (n7_tech) {
     }
   }
 
-  cell (AO21D4BWP300H8P64PDLVT) {
+  cell (AO21D2) {
+    area : 0.1 ;
+    leakage_power : 0.1 ;
+    pin (A) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (B) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (C) {
+      direction : input ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+    pin (Y) {
+      direction : output ;
+      capacitance : 0.1 ;
+      function : "0" ;
+    }
+  }
+
+  cell (AO21D4) {
     area : 0.1 ;
     leakage_power : 0.1 ;
     pin (A) {
