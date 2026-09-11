@@ -51,13 +51,13 @@ if { ! $_gui_mode } {
   }
   # Pan/zoom toolbar: the 6 control buttons must be present on top of the canvas.
   set tbok 1
-  foreach b {up down left right zin zout} {
+  foreach b {up down left right zin zout draw} {
     if { ! [winfo exists .tb.$b] } { set tbok 0 }
   }
   if { $tbok } {
-    puts "PASS: pan/zoom toolbar buttons present (up/down/left/right/zin/zout)"
+    puts "PASS: pan/zoom/draw toolbar buttons present (up/down/left/right/zin/zout/draw)"
   } else {
-    puts "FAIL: pan/zoom toolbar buttons missing"
+    puts "FAIL: pan/zoom/draw toolbar buttons missing"
     set pass 0
   }
   # Force a redraw of the floorplan-less design; this is the crash scenario.

@@ -102,6 +102,14 @@ set _view_scale 1.0
 set _pan_dx 0.0
 set _pan_dy 0.0
 
+# GUI draw mode: "detail" draws every placed cell; "fast" skips cells whose
+# on-screen size is less than 1/200th of the canvas, which speeds up redraw
+# on designs with many small standard cells. _smallcell_cache marks, per lib
+# cell refid, whether the cell is small at the current view scale (1 = small /
+# filtered, 0 = draw); it is rebuilt at the top of each redraw.
+set _draw_mode detail
+array set _smallcell_cache {}
+
 set gridutil [ list ]
 
 set utlzmap  [ list ]
@@ -497,6 +505,27 @@ proc _view_reset { } {
  redraw
 }
 
+# Toggle between detail (draw every cell) and fast (filter cells below
+# 1/200th of the canvas) draw modes, then redraw. The button label is
+# refreshed to show the active mode.
+proc _view_toggle_draw { } {
+ global _draw_mode
+ if { $_draw_mode eq "detail" } {
+  set _draw_mode fast
+ } else {
+  set _draw_mode detail
+ }
+ _update_draw_button
+ redraw
+}
+
+proc _update_draw_button { } {
+ global _draw_mode
+ if { [winfo exists .tb.draw] } {
+  .tb.draw configure -text "Draw: $_draw_mode"
+ }
+}
+
 # Build the pan/zoom toolbar (a frame of buttons) on top of the canvas. Idempotent:
 # created once, then left in place across redraws. The six buttons are arranged
 # on a single row at the very top of the window.
@@ -510,6 +539,7 @@ proc _build_view_toolbar { } {
  button .tb.zin   -text "Zoom In 2x"  -command {_view_zoom 2.0}   -width 10
  button .tb.zout  -text "Zoom Out 2x" -command {_view_zoom 0.5}   -width 10
  button .tb.fit   -text "Fit" -command {_view_reset} -width 5
+ button .tb.draw  -text "Draw: detail" -command {_view_toggle_draw} -width 12
  pack .tb -side top -fill x -before .can
  pack .tb.left -side left -padx 1 -pady 1
  pack .tb.up   -side left -padx 1 -pady 1
@@ -517,8 +547,10 @@ proc _build_view_toolbar { } {
  pack .tb.right -side left -padx 1 -pady 1
  pack .tb.zin  -side left -padx 4 -pady 1
  pack .tb.zout -side left -padx 4 -pady 1
+ pack .tb.draw -side left -padx 4 -pady 1
  pack .tb.fit  -side right -padx 4 -pady 1
 }
+
 
 proc redraw { } {
  variable _gui_mode
@@ -587,6 +619,27 @@ proc redraw { } {
   # Fold the user pan into the margins used by every transform below.
   set offset_x [expr {$base_off + $_pan_dx}]
   set offset_y [expr {$base_off + $_pan_dy}]
+
+  # Rebuild the small-cell cache for the current view scale. A lib cell is
+  # "small" (filtered in fast mode) when its on-screen width AND height are
+  # both less than 1/200th of the canvas. The cache is keyed by refid so the
+  # per-instance loop below stays a cheap O(1) lookup.
+  global _draw_mode _smallcell_cache
+  array unset _smallcell_cache
+  if { $_draw_mode eq "fast" } {
+   set minx [expr {$wsizex / 200.0}]
+   set miny [expr {$wsizey / 200.0}]
+   for { set c 1 } { $c <= $cellindex } { incr c } {
+    if { ! [info exists _libcell($c)] } { continue }
+    set cw [lindex $_libcell($c) 1]
+    set ch [lindex $_libcell($c) 2]
+    if { $scale_f*$cw < $minx && $scale_f*$ch < $miny } {
+     set _smallcell_cache($c) 1
+    } else {
+     set _smallcell_cache($c) 0
+    }
+   }
+  }
 
   set bound_x [expr $offset_x+$scale_f*$tr_x]
   set bound_y [expr $offset_y+$scale_f*$tr_y]
@@ -662,6 +715,11 @@ proc redraw { } {
 	 set szx [lindex $_libcell($refid) 1]
 	 set szy [lindex $_libcell($refid) 2]
 	 set class [lindex $_libcell($refid) 4]
+
+         # Fast-draw filter: skip small std cells (CORE) cached as below the
+         # 1/200th-of-canvas threshold for the current view scale. Macros
+         # (BLOCK/PAD) are always drawn regardless of mode.
+         if { $_draw_mode eq "fast" && $class eq "CORE" && [info exists _smallcell_cache($refid)] && $_smallcell_cache($refid) } { continue }
 
          set outline "white" ; set blockfill "white"
          if {$class == "BLOCK"}  { set outline "#d0d0d0" ; set blockfill "#101010" }
