@@ -13,7 +13,8 @@ puts ""
 
 add_lef ../../../lef_files/std_cell.lef
 add_lef ../../../lef_files/sram.lef
-add_lib ../../../liberty_files/n7_tech.lib
+add_lib ../../../liberty_files/std_cell.lib
+add_lib ../../../liberty_files/sram.lib
 
 puts "=========================================="
 puts "sync pin queries"

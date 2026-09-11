@@ -10,14 +10,31 @@
 # tables. All timing values are the scalar 0.1 (units: ns / pf / uW) to keep
 # the file minimal and syntactically valid.
 #
-# Usage:  tclsh scripts/gen_tech_lib.tcl <lef...>  >  liberty_files/n7_tech.lib
+# Usage:
+#   tclsh scripts/gen_tech_lib.tcl <lef...>  >  liberty_files/std_cell.lib
+#   tclsh scripts/gen_tech_lib.tcl -name sram <lef...>  >  liberty_files/sram.lib
+# The optional `-name <libname>` sets the emitted `library (<libname>)` wrapper
+# name (defaults to `tech_lib`). add_lib ignores the library name, so this is
+# purely cosmetic.
 
 # Pin names that identify a synchronous (clock) endpoint of a sequential cell.
 set SYNC_PIN_NAMES {CP CLK}
 
+set libname "tech_lib"
+set lefs {}
+for {set i 0} {$i < [llength $argv]} {incr i} {
+    set a [lindex $argv $i]
+    if {$a eq "-name"} {
+        set libname [lindex $argv [incr i]]
+    } else {
+        lappend lefs $a
+    }
+}
+set argv $lefs
+
 if {$argv eq ""} {
     puts stderr "Error: no LEF files given"
-    puts stderr "Usage: gen_tech_lib.tcl <lef...>"
+    puts stderr "Usage: gen_tech_lib.tcl ?-name <libname>? <lef...>"
     exit 1
 }
 
@@ -69,7 +86,7 @@ foreach lef $argv {
     close $fh
 }
 
-puts "library (n7_tech) {"
+puts "library ($libname) {"
 puts "  delay_model : table_lookup ;"
 puts "  time_unit : \"1ns\" ;"
 puts "  voltage_unit : \"1V\" ;"

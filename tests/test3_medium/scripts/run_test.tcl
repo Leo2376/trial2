@@ -35,7 +35,7 @@ make_lib ../outputs/medium_design_test3.lib
 # trace_clock (R2) can trace the clock tree to leaf sync endpoints.
 update_wire_db
 build_net_conn
-add_lib ../../../liberty_files/n7_tech.lib
+add_lib ../../../liberty_files/std_cell.lib
 puts "=========================================="
 puts "trace_clock non-reg checks (R2)"
 puts "=========================================="

@@ -53,19 +53,20 @@ its own `tests/<test>/outputs/` folder (these are gitignored).
 
 ## Technology Liberty (`.lib`)
 
-The technology library file `liberty_files/n7_tech.lib` is a static,
-minimal Liberty file covering every std cell and SRAM defined in `lef_files/`.
-It carries no real timing tables (all scalar `0.1`, units ns / pf / uW). The
-only timing intent it encodes is the set of synchronous (clock) pins of
+The technology library files under `liberty_files/` are static, minimal
+Liberty files covering the std cells and SRAMs defined in `lef_files/`.
+They carry no real timing tables (all scalar `0.1`, units ns / pf / uW). The
+only timing intent they encode is the set of synchronous (clock) pins of
 sequential cells, tagged with `clock : true;`:
 
-- `CP` for every flop (e.g. `DFQD0`).
-- `CLK` for every SRAM (e.g. `SP128X33M2`).
+- `CP` for every flop (e.g. `DFQD0`) in `liberty_files/std_cell.lib`.
+- `CLK` for every SRAM (e.g. `SP128X33M2`) in `liberty_files/sram.lib`.
 
-To regenerate the file from the LEFs after editing `lef_files/`:
+To regenerate the files from the LEFs after editing `lef_files/`:
 
 ```sh
-tclsh8.6 scripts/gen_tech_lib.tcl lef_files/*.lef > liberty_files/n7_tech.lib
+tclsh8.6 scripts/gen_tech_lib.tcl -name std_cell lef_files/std_cell.lef > liberty_files/std_cell.lib
+tclsh8.6 scripts/gen_tech_lib.tcl -name sram lef_files/sram.lef > liberty_files/sram.lib
 ```
 
 `add_lib <file>` loads a `.lib` and stores, per library cell, the set of sync
