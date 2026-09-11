@@ -116,12 +116,12 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | (modules, ports, wires, leaf-cell instances and hierarchical instances,   |            |
 |     |             | `assign` statements). Preserves hierarchy so a `read_netlist` ->           |            |
 |     |             | `write_verilog` round-trip is the verification testcase.                   |            |
-| N2  | Netlist I/O | `write_db <file>`: dump a binary database containing 100% of the in-memory | proposal   |
+| N2  | Netlist I/O | `write_db <file>`: dump a binary database containing 100% of the in-memory | implemented |
 |     |             | design state - instances, wires, positions, the net connectivity map,    |            |
 |     |             | the loaded library (LEF) info, ports, assigns - everything, ready to be   |            |
 |     |             | reloaded. The goal is to skip the slow read_netlist / build_design path    |            |
 |     |             | and load the whole database faster.                                        |            |
-| N3  | Netlist I/O | `restore_db <file>`: reload a binary database written by `write_db`,        | proposal   |
+| N3  | Netlist I/O | `restore_db <file>`: reload a binary database written by `write_db`,        | implemented |
 |     |             | restoring all variables (instances, wires, positions, connectivity, LEF    |            |
 |     |             | library, ports, assigns) so the session is ready immediately without      |            |
 |     |             | re-parsing the source netlist or rebuilding the design.                    |            |
@@ -254,3 +254,12 @@ After `set_top_design`, the design's netlist can be dumped back out:
   source, but the structural content is preserved so a `read_netlist` ->
   `write_verilog` -> `read_netlist` round-trip is structurally equivalent
   (verified byte-identical in test7_roundtrip).
+- `write_db <file>` — dump the full in-memory database to a file: every scalar,
+  list and array variable holding design state (instances, wires, placement,
+  the net connectivity map, the loaded LEF library, ports, assigns) so the
+  whole database can be reloaded faster than re-parsing the netlist.
+- `restore_db <file>` — reload a database written by `write_db`. Restores all
+  variables so the session is ready immediately: `get_cell` / `get_net` /
+  `all_connected` / `get_lib_cell` and the placement / library data are all
+  available without `read_netlist`, `set_top_design`, `build_design` or
+  `build_net_conn` (verified query-identical in test8_db).

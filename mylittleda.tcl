@@ -3008,6 +3008,136 @@ proc write_verilog { filename } {
  puts "Info : wrote Verilog netlist to $filename"
 }
 
+# N2 write_db <file>
+# Dump the full in-memory database to a file: every scalar, list and array
+# variable that holds design state (instances, wires, placement, the net
+# connectivity map, the loaded LEF library, ports, assigns, etc.) is written so
+# restore_db can reload the whole database without re-parsing the netlist or
+# rebuilding the design. The format is a Tcl-sourceable text representation
+# (a single Tcl value per line, arrays emitted as a flat list of key/value
+# pairs), prefixed with a magic header and version tag for a fast sanity check
+# on restore.
+proc write_db { filename } {
+ _require 1
+ if { $filename eq "" } {
+  puts "Error : write_db requires a filename"
+  puts "Usage: write_db <file>"
+  return
+ }
+
+ set fo [open $filename w]
+ puts $fo "# mylittleda db"
+ puts $fo "# version 1"
+
+ # Scalars that hold scalar design state.
+ foreach v {topname topnameid bumpindex cellindex hierindex instindex hinstindex portindex wireindex blockageindex regionindex scale_f siteh fontsize targetutilz netconnbuilt} {
+  variable $v
+  puts $fo "S $v [list [set $v]]"
+ }
+
+ # Lists that hold design state.
+ foreach v {cataloglist hierlistdef hierlist pathlist hpathlist corebox topbox instrefsearch hinstrefsearch wiresearch _assignlist _libcellsync gridutil utlzmap hier_dontshow} {
+  variable $v
+  puts $fo "L $v [list [set $v]]"
+ }
+
+ # Arrays: emit each array as a flat list of {key value key value ...} so the
+ # whole array is restored with array set. Iterate over a fixed name list so
+ # the set is explicit and stable (no incidental globals leak in).
+ foreach v {_libcell _libcellpindir _libsyncpin _instlist _hinstlist _blockagelist _regionlist _portlist _porttype _portmaster _wirelist _wiretype _wiremaster _wireinst _instpinconn1 _instpinconn2 _hinstpinconn1 _hinstpinconn2 _wirepinconn _bumplist wiresearch_map} {
+  variable $v
+  set names [array names $v]
+  set pairs {}
+  foreach k $names {
+   lappend pairs $k [set ${v}($k)]
+  }
+  puts $fo "A $v [list $pairs]"
+ }
+
+ # The net connectivity map is global (not a variable) in this script.
+ global netdriver netload
+ set pairs {}
+ foreach k [array names netdriver] { lappend pairs $k $netdriver($k) }
+ puts $fo "G netdriver [list $pairs]"
+ set pairs {}
+ foreach k [array names netload] { lappend pairs $k $netload($k) }
+ puts $fo "G netload [list $pairs]"
+
+ close $fo
+ puts "Info : wrote database to $filename"
+}
+
+# N3 restore_db <file>
+# Reload a database written by write_db. Every scalar, list and array variable
+# is restored, so the session is ready immediately: get_cell / get_net /
+# all_connected / get_lib_cell and the placement / library data are all
+# available without read_netlist, set_top_design, build_design or
+# build_net_conn. The source netlist and LEFs do not need to be re-imported.
+proc restore_db { filename } {
+ if { $filename eq "" } {
+  puts "Error : restore_db requires a filename"
+  puts "Usage: restore_db <file>"
+  return
+ }
+ if { ! [file exists $filename] } {
+  puts "Error : db file $filename not found"
+  return
+ }
+
+ set fi [open $filename r]
+ set magic [gets $fi]
+ set verline [gets $fi]
+ if { $magic ne "# mylittleda db" } {
+  puts "Error : not a mylittleda db file"
+  close $fi
+  return
+ }
+ if { ! [regexp {# version ([0-9]+)} $verline -> vdb] } { set vdb 0 }
+ if { $vdb != 1 } {
+  puts "Error : unsupported db version $vdb"
+  close $fi
+  return
+ }
+
+ global netdriver netload
+ array unset netdriver
+ array unset netload
+
+ while {[gets $fi line] >= 0} {
+  if { $line eq "" } { continue }
+  set tag [lindex $line 0]
+  set name [lindex $line 1]
+  set val [lrange $line 2 end]
+  if { $tag eq "S" } {
+   variable $name
+   set $name [lindex $val 0]
+  } elseif { $tag eq "L" } {
+   variable $name
+   set $name [lindex $val 0]
+  } elseif { $tag eq "A" } {
+   variable $name
+   array unset $name
+   array set $name [lindex $val 0]
+  } elseif { $tag eq "G" } {
+   set gv [lindex $val 0]
+   if { $name eq "netdriver" } { array set netdriver $gv }
+   if { $name eq "netload" }   { array set netload $gv }
+  }
+ }
+ close $fi
+
+ # The scalar/array values were restored via `variable $name` in the loop
+ # above, so they are linked into this namespace; declare the ones used in the
+ # summary so they are visible here (each name separately: `variable a b c`
+ # would treat b/c as initial values, not extra names).
+ variable topname
+ variable instindex
+ variable hinstindex
+ variable portindex
+ puts "Info : restored database from $filename"
+ puts "Info : top $topname, $instindex leaf insts, $hinstindex hier insts, $portindex ports"
+}
+
 #
 #############################################################
 
