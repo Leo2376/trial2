@@ -118,6 +118,1070 @@ module syncram_2p_h_153_242_605 ( rclk, renable, raddress, dataout, wclk,
   TIELXN U5 ( .ZN(n21) );
 endmodule
 
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_0 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_132 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_131 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_130 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_129 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_128 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_127 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_126 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_125 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_124 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_123 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_122 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_121 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_120 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_119 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_118 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_117 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_116 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_115 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_114 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_113 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_112 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_111 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_110 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_109 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_108 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_107 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_106 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_105 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_104 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_103 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_102 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_101 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_100 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_99 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_98 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_97 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_96 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_95 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_94 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_93 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_92 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_91 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_90 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_89 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_88 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_87 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_86 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_85 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_84 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_83 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_82 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_81 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_80 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_79 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_78 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_77 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_76 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_75 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_74 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_73 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_72 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_71 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_70 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_69 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_68 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_67 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_66 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_65 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_64 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_63 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_62 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_61 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_60 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_59 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_58 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_57 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_56 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_55 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_54 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_53 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_52 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_51 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_50 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_49 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_48 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_47 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_46 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_45 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_44 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_43 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_42 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_41 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_40 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_39 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_38 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_37 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_36 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_35 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_34 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_33 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_32 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_31 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_30 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_29 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_28 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_27 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_26 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_25 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_24 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_23 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_22 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_21 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_20 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_19 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_18 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_17 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_16 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_15 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_14 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_13 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_12 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_11 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_10 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_9 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_8 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_7 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_6 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_5 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_4 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_3 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_2 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
+module SNPS_CLOCK_GATE_HIGH_bhtnv_h_832_242_406_1 ( CLK, EN, ENCLK, TE );
+  input CLK, EN, TE;
+  output ENCLK;
+
+
+  CKLNQD1 latch ( .CP(CLK), .E(EN), .TE(TE), .Q(ENCLK) );
+endmodule
+
 module bhtnv_h_832_242_406 ( clk, rstn_BAR, holdn, bhti, bhto, testin, mtesti, 
         mtesto, mtestclk, IN0, IN1, IN2, IN3, IN4, IN5, IN6, IN7, IN8, IN9, 
         IN10, IN11, IN12, IN13, IN14, IN15, IN16, IN17, IN18, IN19, IN20, IN21, 
