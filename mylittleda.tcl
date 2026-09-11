@@ -640,7 +640,7 @@ proc redraw { } {
 
 
 	#text
-         if {$class == "BLOCK" && $szx<$szy}		 
+         if {$class == "BLOCK" && $szx < $szy} {
          set text [lindex $_libcell($refid) 0]
          set tx_y [expr $bl_y+($tr_y-$bl_y)/20 ]
          set tx_x [expr $tr_x-($tr_x-$bl_x)/4 ]
@@ -652,8 +652,9 @@ proc redraw { } {
 				 if { [expr $bl_y-$tr_y] >  40 && [expr $bl_y-$tr_y] <=  70 } { .can create text $tx_x $tx_y -text $text -fill $outline -angle 90 -justify left -anchor w -font {Helvetica -5 bold}}
 	                        
 				
+         }
 
-         if {$class == "BLOCK" && $szx>=$szy}
+         if {$class == "BLOCK" && $szx >= $szy} {
          set text [lindex $_libcell($refid) 0]
          set tx_y [expr $bl_y+($tr_y-$bl_y)/4 ]
          set tx_x [expr $bl_x+($tr_x-$bl_x)/20 ]
@@ -665,6 +666,7 @@ proc redraw { } {
 				 if { [expr $tr_x-$bl_x] >  40 && [expr $tr_x-$bl_x] <=  70 } {  .can create text $tx_x $tx_y -text $text -fill $outline -angle 0 -justify left -anchor w -font {Helvetica -9 bold}}
 	                        
 	 }
+         }
  }
 
 
