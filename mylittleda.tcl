@@ -124,6 +124,8 @@ set siteh 0.3
 set _mt_on 0
 set _mt_workers 8
 set _mt_thread_loaded 0
+# Counter for unique per-call tsv namespaces in the parallel site scan.
+set _eval_sites_seq 0
 
 set fontsize 6
 
@@ -1175,16 +1177,25 @@ proc _eval_sites { site_coords utlzmap } {
  global _mt_on _mt_workers _mt_thread_loaded
  set msite {}
  if { $_mt_on && $_mt_thread_loaded } {
-  tsv::array unset site_result
-  tsv::set site_counter 0
+  # Use a unique shared-namespace per call so no stale results remain; the
+  # Thread tsv API has no 'array unset', so we sidestep clearing entirely.
+  # Each namespace must be initialised with tsv::array set before use.
+  set ns site_eval[incr _eval_sites_seq]
+  tsv::array set $ns counter 0
+  # tsv::incr returns the post-increment value, so start at -1 so the first
+  # worker-grabbed index is 0 (matches site_coords list indices).
+  tsv::set $ns counter -1
+  tsv::set $ns coords $site_coords
+  tsv::set $ns utlzmap $utlzmap
+  # Tell workers which namespace to use (avoids interpolating it into the
+  # script body, so the worker script stays a clean brace-delimited string).
+  tsv::array set site_eval_ns x 1
+  tsv::set site_eval_ns cur $ns
+  # done counter: workers increment it as they finish; the main thread waits
+  # until it equals nw (thread::join does not fit this create/wait pattern).
+  tsv::set site_eval_ns done 0
   set n [llength $site_coords]
   set nw [expr {$_mt_workers < $n ? $_mt_workers : $n}]
-  # Worker script: a self-contained string sent to each fresh worker
-  # interpreter (which has neither _site_worker nor _scan_cell). The data is
-  # passed via tsv so the script body has no free variables to interpolate,
-  # keeping brace nesting simple and parse-safe.
-  tsv::set site_coords $site_coords
-  tsv::set site_utlzmap $utlzmap
   set wscript {
    proc _wscan { bx by utlzmap } {
     set utlz 0
@@ -1197,27 +1208,30 @@ proc _eval_sites { site_coords utlzmap } {
     }
     return $utlz
    }
-   set coords [tsv::get site_coords]
-   set utzmap [tsv::get site_utlzmap]
+   set ns [tsv::get site_eval_ns cur]
+   set coords [tsv::get $ns coords]
+   set utzmap [tsv::get $ns utlzmap]
    while 1 {
-    set i [tsv::incr site_counter]
+    set i [tsv::incr $ns counter]
     if { $i >= [llength $coords] } { break }
     set trip [lindex $coords $i]
     set psite [lindex $trip 0]
     set bx [lindex $trip 1]
     set by [lindex $trip 2]
-    tsv::set site_result $psite [_wscan $bx $by $utzmap]
+    tsv::set $ns result_$psite [_wscan $bx $by $utzmap]
    }
-   thread::wait
+   tsv::incr site_eval_ns done
+   thread::release
   }
   set workers {}
   for { set w 0 } { $w < $nw } { incr w } {
    lappend workers [thread::create $wscript]
   }
-  foreach tid $workers { thread::join $tid }
+  # Wait for all workers to report done, then gather results in site order.
+  while { [tsv::get site_eval_ns done] < $nw } { after 5 }
   foreach trip $site_coords {
    set psite [lindex $trip 0]
-   set utlz [tsv::get site_result $psite]
+   set utlz [tsv::get $ns result_$psite]
    puts "Info : placement site $psite has occupation of [expr {$utlz/4}] %"
    lappend msite $utlz
   }
