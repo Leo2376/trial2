@@ -1262,6 +1262,7 @@ proc _eval_sites { site_coords utlzmap } {
 
 proc make_placement { {opt "-full"} } {
  variable topname
+ global _mt_on _mt_thread_loaded _mt_workers
  _require 3
  variable topnameid
  variable hierindex
@@ -1285,6 +1286,14 @@ proc make_placement { {opt "-full"} } {
  variable _regionlist
 
  set pregion 0
+
+ # Announce the threading mode so the user can tell from the log whether
+ # make_placement is running the parallel site scan (MT on) or serially.
+ if { $_mt_on && $_mt_thread_loaded } {
+  puts "Info : make_placement with multithread ON ($_mt_workers workers)"
+ } else {
+  puts "Info : make_placement single-threaded"
+ }
 
  if { $opt == "-full" } { 
  puts "Info : Make Full placement ..."
