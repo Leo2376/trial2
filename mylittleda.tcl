@@ -1861,15 +1861,61 @@ proc initial_placement { {opt "-full"} } {
   lappend workers [thread::create $wscript]
  }
  while { [tsv::get ipl_ns done] < $nw } { after 5 }
+ # Gather: a cell that did not fit any of its row's spans has no pl_* key, so
+ # use tsv::exists (not tsv::get, which would throw) and skip it. The leftover
+ # cells are placed by a serial fallback pass below so the MT result is as
+ # complete as the serial one.
  set placed 0
+ set leftover {}
+ # row index lookup by y0 and per-row used cursor (rightmost packed x).
+ array set rowof {}
+ for { set r 0 } { $r < $nrows } { incr r } {
+  set rowof([format %.6f [lindex [lindex $rows $r] 0]]) $r
+ }
+ set rowused {}
+ for { set r 0 } { $r < $nrows } { incr r } { lappend rowused 0 }
  foreach c $free_cells {
   set cid [lindex $c 0]
-  set pos [tsv::get $ns pl_$cid]
-  if { [llength $pos] == 2 } {
+  if { [tsv::exists $ns pl_$cid] } {
+   set pos [tsv::get $ns pl_$cid]
+   set px [lindex $pos 0]; set py [lindex $pos 1]
    lset _instlist($cid) 4 1
-   lset _instlist($cid) 5 [lindex $pos 0]
-   lset _instlist($cid) 6 [lindex $pos 1]
+   lset _instlist($cid) 5 $px
+   lset _instlist($cid) 6 $py
    incr placed
+   set r $rowof([format %.6f $py])
+   set endx [expr {$px + [lindex $c 1]}]
+   if { $endx > [lindex $rowused $r] } { lset rowused $r $endx }
+  } else {
+   lappend leftover $c
+  }
+ }
+ # Serial fallback: pack any cells the workers could not fit into whichever
+ # row still has room (resume each row's cursor after the MT-packed cells).
+ # This mirrors the serial path so the final placement is as complete and
+ # identical to single-thread as possible.
+ foreach c $leftover {
+  set cid [lindex $c 0]
+  set szx [lindex $c 1]
+  set done 0
+  for { set r 0 } { $r < $nrows } { incr r } {
+   set ry0 [lindex [lindex $rows $r] 0]
+   set spans [lindex [lindex $rows $r] 1]
+   set usex [lindex $rowused $r]
+   foreach sp $spans {
+    set sx0 [lindex $sp 0]; set sx1 [lindex $sp 1]
+    set px [expr {$usex > $sx0 ? $usex : $sx0}]
+    if { $px + $szx <= $sx1 } {
+     lset _instlist($cid) 4 1
+     lset _instlist($cid) 5 $px
+     lset _instlist($cid) 6 $ry0
+     lset rowused $r [expr {$px + $szx}]
+     incr placed
+     set done 1
+     break
+    }
+   }
+   if { $done } { break }
   }
  }
  puts "Info : initial_placement, placed $placed / $nfree cells (multithread, $nw workers)"
