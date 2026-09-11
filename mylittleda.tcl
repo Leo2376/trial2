@@ -1746,10 +1746,40 @@ proc _libcell_pins { refid } {
  return $pins
 }
 
-# report_path -from <pin|net> -to <pin|net>
+# Helper: print one net row of a report_path report. The crossed net is shown
+# only when -net is set; otherwise the Net column stays blank (P6). With
+# -layout the wider (x, y) column layout is used; the net itself has no
+# coordinate so that field stays blank.
+proc _report_path_net_line { net fanout opt_net opt_layout } {
+ set netcol ""
+ if { $opt_net } { set netcol $net }
+ if { $opt_layout } {
+  puts [format "  %-38s %-17s %-7s %s" "" "" $fanout $netcol]
+ } else {
+  puts [format "  %-38s %-7s %s" "" $fanout $netcol]
+ }
+}
+
+# Helper: print one pin row of a report_path report. With -layout the placed
+# (x, y) of the instance is shown (blank for ports/assigns/unplaced) (P5).
+proc _report_path_pin_line { pin opt_layout } {
+ set s [_fmt_pin $pin]
+ if { $opt_layout } {
+  set coord [_inst_coord [lindex $pin 0]]
+  puts [format "  %-38s %-17s" $s $coord]
+ } else {
+  puts [format "  %s" $s]
+ }
+}
+
+# report_path -from <pin|net> -to <pin|net> ?-net? ?-layout?
 # Text-only connectivity report (report_timing-style, no timing). Traces a path
 # from a source point to a sink point across the net connectivity map built by
 # build_net_conn. A point is either a net name or a pin "inst/pin".
+#   -net    : also print the logical nets crossed (by default only the pins are
+#             listed and the Net column stays blank) (P6).
+#   -layout : add an (x, y) coordinate column for placed crossed cells/pins;
+#             nets/ports/unplaced cells stay blank (P5).
 proc report_path { args } {
  variable topname
  variable _libcell
@@ -1758,20 +1788,25 @@ proc report_path { args } {
  variable instindex
  variable hinstindex
  global netdriver netload
+ variable pathlist
 
  set from ""
  set to ""
+ set opt_net 0
+ set opt_layout 0
  for {set i 0} {$i < [llength $args]} {incr i} {
   set a [lindex $args $i]
-  if { $a eq "-from" } { set from [lindex $args [incr i]] ; continue }
-  if { $a eq "-to" }   { set to [lindex $args [incr i]] ; continue }
+  if { $a eq "-from" }   { set from [lindex $args [incr i]] ; continue }
+  if { $a eq "-to" }     { set to [lindex $args [incr i]] ; continue }
+  if { $a eq "-net" }    { set opt_net 1 ; continue }
+  if { $a eq "-layout" } { set opt_layout 1 ; continue }
   puts "Error : unknown option '$a'"
-  puts "Usage: report_path -from <pin|net> -to <pin|net>"
+  puts "Usage: report_path -from <pin|net> -to <pin|net> ?-net? ?-layout?"
   return
  }
  if { $from eq "" || $to eq "" } {
   puts "Error : report_path requires -from and -to"
-  puts "Usage: report_path -from <pin|net> -to <pin|net>"
+  puts "Usage: report_path -from <pin|net> -to <pin|net> ?-net? ?-layout?"
   return
  }
 
@@ -1817,7 +1852,10 @@ proc report_path { args } {
  if { $end_net eq "" } { puts "Error : -to point $to not found" ; return }
 
  puts "************************************************************"
- puts " report_path : -from $from -to $to"
+ set h2 " report_path : -from $from -to $to"
+ if { $opt_net }    { append h2 " -net" }
+ if { $opt_layout } { append h2 " -layout" }
+ puts $h2
  puts "************************************************************"
  if { $start_point eq "" } {
   puts "Startpoint : <net> $cur_net"
@@ -1831,8 +1869,16 @@ proc report_path { args } {
  }
  puts "Path type  : functional (no timing)"
  puts ""
- puts "  Point                                   Fanout   Net"
- puts "  -------------------------------------------------------"
+ # Column header. -layout adds an (x, y) column for placed instance pins
+ # (nets/ports stay blank); -net keeps the crossed-net column visible (by
+ # default only the pins are listed and the Net column is blank).
+ if { $opt_layout } {
+  puts "  Point                                   (x, y)            Fanout   Net"
+  puts "  ---------------------------------------------------------------"
+ } else {
+  puts "  Point                                   Fanout   Net"
+  puts "  -------------------------------------------------------"
+ }
 
  # BFS from cur_net toward end_net via loads, following each load pin's
  # cell output. Unlike a single greedy walk, all load branches are explored,
@@ -1879,24 +1925,30 @@ proc report_path { args } {
   }
  }
 
- # Emit the report.
+ # Emit the report. Each net line lists the crossed net (only with -net,
+ # otherwise blank) and fanout; each pin line lists the pin, its (x, y) with
+ # -layout, and the cell name. Columns stay aligned for both layouts.
  if { $start_point ne "" } {
-  puts "  [_fmt_pin $start_point]"
+  _report_path_pin_line $start_point $opt_layout
  }
  set prev_net $cur_net
  foreach seg $path {
   set fanout [llength [_net_loads $prev_net]]
   set ln $via_inst($seg)
   set lpin $via_pin($seg)
-  puts "  $prev_net                                   $fanout"
-  puts "  [_fmt_pin "$ln $lpin"]"
+  _report_path_net_line $prev_net $fanout $opt_net $opt_layout
+  _report_path_pin_line "$ln $lpin" $opt_layout
   set prev_net $seg
  }
  if { $found } {
   set fanout [llength [_net_loads $end_net]]
-  puts "  $end_net                                   $fanout"
+  _report_path_net_line $end_net $fanout $opt_net $opt_layout
  }
- puts "  -------------------------------------------------------"
+ if { $opt_layout } {
+  puts "  ---------------------------------------------------------------"
+ } else {
+  puts "  -------------------------------------------------------"
+ }
  if { $found } {
   puts "1 path found."
  } else {
@@ -1985,6 +2037,25 @@ proc _fmt_pin { p } {
  set refid [lindex $_instlist($iid) 8]
  set cname [lindex $_libcell($refid) 0]
  return "$iname/$pin ($cname)"
+}
+
+# Helper: (x, y) placement of an instance, or "" when unplaced / a port /
+# assign. Used by report_path -layout to add a coordinate column for crossed
+# cells; nets have no coordinate and stay blank.
+proc _inst_coord { inst } {
+ variable _instlist
+ variable pathlist
+ if { $inst eq "<port>" || $inst eq "<assign>" } { return "" }
+ set iid [lsearch -exact $pathlist $inst]
+ if { $iid < 0 } { return "" }
+ incr iid
+ if { [lindex $_instlist($iid) 4] != 1 } { return "" }
+ set x [lindex $_instlist($iid) 5]
+ set y [lindex $_instlist($iid) 6]
+ # Strip float rounding noise (e.g. 45.89999999999992 -> 45.9).
+ set x [format %.4g $x]
+ set y [format %.4g $y]
+ return "($x, $y)"
 }
 
 # Helper: resolve a -from/-to point that is a net (not an inst/pin). Net

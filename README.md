@@ -74,9 +74,9 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 | P2  | Path tracing| Build a net driver/receiver map (per net: driver pin(s), receiver pins)     | implemented |
 | P3  | Path tracing| `report_path -from <pin/net> -to <pin/net>`: text-only connectivity report  | implemented |
 |     |             | (report_timing-style listing of crossed cells/pins/nets, no timing)         |            |
-| P5  | Path tracing| `report_path ... -layout`: add an (x, y) coordinate column for crossed      | proposal   |
+| P5  | Path tracing| `report_path ... -layout`: add an (x, y) coordinate column for crossed      | implemented |
 |     |             | cells/pins; nets have no coordinate and stay blank.                        |            |
-| P6  | Path tracing| `report_path ... -net`: also print the logical nets crossed; by default only | proposal   |
+| P6  | Path tracing| `report_path ... -net`: also print the logical nets crossed; by default only | implemented |
 |     |             | the pins are reported.                                                      |            |
 | P4  | Path tracing| `report_path -from <pin/net>` (no `-to`): trace forward to the first sync   | proposal   |
 |     |             | endpoint (flop CP / SRAM CK via `_libsyncpin`); stop at first found, not the  |            |
@@ -196,8 +196,12 @@ After `build_design` (and `update_wire_db` / `build_net_conn` for the net
 queries), the following report connectivity. Patterns are globs
 (`*`, `?`, `[..]`); a hierarchical prefix scopes the match to one module.
 
-- `report_path -from <pin|net> -to <pin|net>` — text-only connectivity report
-  (report_timing-style, no timing) across the net driver/receiver map.
+- `report_path -from <pin|net> -to <pin|net> ?-net? ?-layout?` — text-only
+  connectivity report (report_timing-style, no timing) across the net
+  driver/receiver map. By default only the crossed pins are listed; `-net`
+  also prints the logical nets crossed, and `-layout` adds an `(x, y)`
+  coordinate column for placed crossed cells/pins (nets/ports/unplaced cells
+  stay blank).
 - `all_connected <net or pin>` — for a net, report that net with its driver and
   receiver pins; for an `inst/pin`, report that pin's net. The match is scoped
   like `get_net` (no `-hier`): a bare name (e.g. `all_connected n77`) reports

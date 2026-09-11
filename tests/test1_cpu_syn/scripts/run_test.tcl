@@ -69,6 +69,18 @@ build_net_conn
 report_path -from core0/w0/nv_c0/c0/iu0/r_reg_M__ADDRESS__49_/Q  -to  core0/w0/nv_c0/c0/iu0/n20719
 
 puts "=========================================="
+puts "report_path -net / -layout non-reg checks (P5/P6)"
+puts "=========================================="
+# P6 -net: also print the logical nets crossed (by default the Net column is
+# blank). Expect the crossed nets n84 and n20719 to appear.
+report_path -from core0/w0/nv_c0/c0/iu0/r_reg_M__ADDRESS__49_/Q -to core0/w0/nv_c0/c0/iu0/n20719 -net
+# P5 -layout: add an (x, y) column for placed crossed cells/pins. Cells are
+# placed by make_placement above, so coordinates must appear for the pins.
+report_path -from core0/w0/nv_c0/c0/iu0/r_reg_M__ADDRESS__49_/Q -to core0/w0/nv_c0/c0/iu0/n20719 -layout
+# Both options together.
+report_path -from core0/w0/nv_c0/c0/iu0/r_reg_M__ADDRESS__49_/Q -to core0/w0/nv_c0/c0/iu0/n20719 -net -layout
+
+puts "=========================================="
 puts "get_lib_cell non-reg checks"
 puts "=========================================="
 
