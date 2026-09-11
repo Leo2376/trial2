@@ -716,10 +716,11 @@ proc redraw { } {
 	 set szy [lindex $_libcell($refid) 2]
 	 set class [lindex $_libcell($refid) 4]
 
-         # Fast-draw filter: skip small std cells (CORE) cached as below the
-         # 1/200th-of-canvas threshold for the current view scale. Macros
-         # (BLOCK/PAD) are always drawn regardless of mode.
-         if { $_draw_mode eq "fast" && $class eq "CORE" && [info exists _smallcell_cache($refid)] && $_smallcell_cache($refid) } { continue }
+         # Fast-draw filter: small std cells (CORE) cached as below the
+         # 1/200th-of-canvas threshold for the current view scale are skipped,
+         # but 1 in 20 is still drawn so the floorplan does not look empty.
+         # Macros (BLOCK/PAD) are always drawn regardless of mode.
+         if { $_draw_mode eq "fast" && $class eq "CORE" && [info exists _smallcell_cache($refid)] && $_smallcell_cache($refid) && ($i % 20) != 1 } { continue }
 
          set outline "white" ; set blockfill "white"
          if {$class == "BLOCK"}  { set outline "#d0d0d0" ; set blockfill "#101010" }
