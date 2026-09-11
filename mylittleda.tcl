@@ -1151,6 +1151,18 @@ proc set_multithread_on { {nworkers ""} } {
  puts "Info : multithread ON with $_mt_workers workers (Thread [package present Thread])"
 }
 
+# Turn off internal multithreading so subsequent stages run single-threaded.
+# The worker count is kept so a later set_multithread_on can reuse it.
+proc set_multithread_off { } {
+ global _mt_on _mt_workers
+ if { ! $_mt_on } {
+  puts "Info : multithread already off"
+  return
+ }
+ set _mt_on 0
+ puts "Info : multithread OFF (placement now single-threaded)"
+}
+
 # Internal: scan one placement site's 20x20 utilization grid against the
 # utlzmap (read-only during this scan, so parallel scans are safe). Returns the
 # occupation count for that site. Factored out so it can run in a worker thread

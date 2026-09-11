@@ -95,23 +95,31 @@ report_path -from core0/w0/nv_c0/c0/iu0/r_reg_M__ADDRESS__49_/Q -to core0/w0/nv_
 report_path -from core0/w0/nv_c0/c0/iu0/r_reg_M__ADDRESS__49_/Q -to core0/w0/nv_c0/c0/iu0/n20719 -net -layout
 
 puts "=========================================="
-puts "set_multithread_on non-reg checks"
+puts "set_multithread_on/off non-reg checks"
 puts "=========================================="
 # set_multithread_on loads the Thread extension. If Thread is not installed
 # on the host it must report a clear Error and stay single-threaded (no crash).
-set _mt_before $_mt_on
+# A bad worker count must be rejected without enabling (check from a known off state).
+set_multithread_off
+set_multithread_on 0
+if { $_mt_on == 0 } {
+  puts "PASS: set_multithread_on rejects bad worker count"
+} else {
+  puts "FAIL: set_multithread_on 0 should not enable multithreading"
+}
+# set_multithread_on loads Thread if available.
 set_multithread_on
 if { $_mt_on == 0 } {
   puts "PASS: set_multithread_on stays off when Thread is unavailable"
 } else {
   puts "PASS: set_multithread_on enabled multithreading ($_mt_workers workers)"
-}
-# A bad worker count must be rejected without enabling.
-set_multithread_on 0
-if { $_mt_on == $_mt_before || $_mt_on == 0 } {
-  puts "PASS: set_multithread_on rejects bad worker count"
-} else {
-  puts "FAIL: set_multithread_on 0 should not enable multithreading"
+  # set_multithread_off explicitly turns multithreading off again.
+  set_multithread_off
+  if { $_mt_on == 0 } {
+    puts "PASS: set_multithread_off disabled multithreading"
+  } else {
+    puts "FAIL: set_multithread_off left multithreading on"
+  }
 }
 
 puts "=========================================="
