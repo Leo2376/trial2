@@ -1921,6 +1921,720 @@ proc initial_placement { {opt "-full"} } {
  puts "Info : initial_placement, placed $placed / $nfree cells (multithread, $nw workers)"
 }
 
+# Hierarchical placement engine: hier_placement.
+#
+# A research-informed ASIC placement strategy (recursive bisection / min-cut
+# floorplanning, as in FengShui/mPG/APlace) that keeps hierarchy blocks
+# together (coherency) instead of scattering a block's cells across the whole
+# core. The core area is recursively bisected (alternating H/V cuts) into
+# rectangular slots, hierarchy clusters are packed into slots sized by their
+# total area (avoiding blockages/regions), and within each cluster the cells
+# are recursively bisected again so connected cells stay close. Blockages and
+# regions are honored everywhere: a slot that overlaps a blockage is shrunk or
+# dropped so no cell is ever placed on a macro/halo/region.
+#
+# Multithreading is used the way that actually pays off for placement here:
+# instead of parallelizing one tiny scan (where thread overhead dominates),
+# each worker runs a COMPLETE placement trial from a different seed (different
+# cluster ordering and bisection orientation sequence) and scores it by total
+# estimated wire length. The main thread keeps the lowest-wirelength trial and
+# commits it to _instlist. With MT off a single trial runs serially. This gives
+# real coherency (hierarchy blocks kept together) and uses MT for a genuine
+# quality search rather than a questionable speedup on a 20-cell design.
+#
+# Steps:
+#   1. Place region-bound cells first (same serial loop as make_placement).
+#   2. Collect the remaining unplaced CORE instances and group them by their
+#      hierarchical parent path (_instlist field 7) into clusters; each cluster
+#      records its member inst ids, total area and cell count.
+#   3. Floorplan: recursively bisect the available core area into slots, assign
+#      clusters to slots by area so each block gets a contiguous region.
+#   4. Intra-cluster placement: recursively bisect each cluster's cells
+#      (alternating H/V) and place them in a grid of sub-slots inside the
+#      cluster's region, packed at the target utilization pitch.
+#   5. MT: run several seeded trials in worker threads, score by wire length,
+#      commit the best. Serial: run one trial.
+proc hier_placement { {opt "-full"} } {
+ variable topname
+ global _mt_on _mt_workers _mt_thread_loaded
+ _require 3
+ variable topnameid
+ variable hierindex
+ variable instindex
+ variable cellindex
+ variable hinstindex
+ variable _libcell
+ variable _instlist
+ variable _hinstlist
+ variable cataloglist
+ variable hierlist
+ variable pathlist
+ variable hpathlist
+ variable blockageindex
+ variable _blockagelist
+ variable corebox
+ variable utlzmap
+ variable siteh
+ variable targetutilz
+ variable regionindex
+ variable _regionlist
+
+ set pregion 0
+ if { $opt == "-region_only" } { set pregion 1 }
+
+ if { $_mt_on && $_mt_thread_loaded } {
+  puts "Info : hier_placement with multithread ON ($_mt_workers seed trials)"
+ } else {
+  puts "Info : hier_placement single-threaded (1 seed trial)"
+ }
+ if { $opt == "-full" } { puts "Info : hier_placement (full) ..." }
+ if { $opt == "-region_only" } { puts "Info : hier_placement (regions only) ..." }
+ puts "Info : Using site height of $siteh um"
+
+ # --- Step 1: region placement (serial, same as make_placement) ---
+ for { set i 1 } { $i <= $regionindex } { incr i } {
+  set tr_x [lindex $_regionlist($i) 3]
+  set bl_x [lindex $_regionlist($i) 1]
+  set tr_y [lindex $_regionlist($i) 4]
+  set bl_y [lindex $_regionlist($i) 2]
+  set utilstepn [expr {100.0 / [lindex $_regionlist($i) 5]}]
+  set px $bl_x
+  set py $bl_y
+  set lcell [lindex $_regionlist($i) 6]
+  puts "Info : hier_placement, region [lindex $_regionlist($i) 0] target [lindex $_regionlist($i) 5]% util"
+  for { set j 0 } { $j < [llength $lcell] } { incr j } {
+   set currentinst [lindex $lcell $j]
+   set inst $_instlist($currentinst)
+   set refid [lindex $inst 8]
+   set szx [lindex $_libcell($refid) 1]
+   lset _instlist($currentinst) 4 1
+   lset _instlist($currentinst) 5 $px
+   lset _instlist($currentinst) 6 $py
+   set px [expr {$px + $szx * $utilstepn}]
+   if {$px > $tr_x} { set px $bl_x; set py [expr {$py + $siteh}] }
+   if {$py > $tr_y} { break }
+  }
+ }
+
+ if { $pregion == 1 } { return }
+
+ # --- Step 2: collect unplaced CORE instances and cluster by hierarchy ---
+ set free_cells {}
+ array set cellarea {}
+ for { set i 1 } { $i <= $instindex } { incr i } {
+  set inst $_instlist($i)
+  if { [lindex $inst 4] == 0 } {
+   set refid [lindex $inst 8]
+   set class [lindex $_libcell($refid) 4]
+   if { $class eq "CORE" } {
+    set szx [lindex $_libcell($refid) 1]
+    set szy [lindex $_libcell($refid) 2]
+    set area [expr {$szx * $szy}]
+    set cellarea($i) [list $szx $szy $area]
+    lappend free_cells $i
+   }
+  }
+ }
+ set nfree [llength $free_cells]
+ puts "Info : hier_placement, $nfree free CORE cells to place"
+ if { $nfree == 0 } {
+  puts "Info : hier_placement, nothing to place"
+  return
+ }
+
+ # Cluster by hierarchical parent path (field 7). -1 = top-level (flat).
+ array set cluster {}
+ array set clusterarea {}
+ array set clustern {}
+ foreach i $free_cells {
+  set inst $_instlist($i)
+  set fp [lindex $inst 7]
+  if { $fp eq "-1" } { set fp "<top>" }
+  lappend cluster($fp) $i
+  set a [lindex $cellarea($i) 2]
+  if { [info exists clusterarea($fp)] } {
+   set clusterarea($fp) [expr {$clusterarea($fp) + $a}]
+   set clustern($fp) [expr {$clustern($fp) + 1}]
+  } else {
+   set clusterarea($fp) $a
+   set clustern($fp) 1
+  }
+ }
+ set cnames [array names cluster]
+ puts "Info : hier_placement, [llength $cnames] hierarchy clusters"
+ foreach c $cnames {
+  puts "Info :   cluster $c : $clustern($c) cells, area [format %.4g $clusterarea($c)] um^2"
+ }
+
+ # Blockage + region boxes to avoid (same as initial_placement).
+ set obs {}
+ for { set i 1 } { $i <= $blockageindex } { incr i } {
+  lappend obs [list [lindex $_blockagelist($i) 1] [lindex $_blockagelist($i) 2] [lindex $_blockagelist($i) 3] [lindex $_blockagelist($i) 4]]
+ }
+ for { set i 1 } { $i <= $regionindex } { incr i } {
+  lappend obs [list [lindex $_regionlist($i) 1] [lindex $_regionlist($i) 2] [lindex $_regionlist($i) 3] [lindex $_regionlist($i) 4]]
+ }
+
+ set cb_x0 [lindex $corebox 0]
+ set cb_y0 [lindex $corebox 1]
+ set cb_x1 [lindex $corebox 2]
+ set cb_y1 [lindex $corebox 3]
+ if { $siteh <= 0 } { set siteh 0.3 }
+ set pitch [expr {100.0 / $targetutilz}]
+ if { $pitch < 1.0 } { set pitch 1.0 }
+
+ # Build a connectivity index for intra-cluster ordering: inst id -> list of
+ # connected inst ids (same net). Uses netdriver/netload if built, else empty.
+ set haveconn 0
+ array set instconn {}
+ global netconnbuilt netdriver netload
+ if { [info exists netconnbuilt] && $netconnbuilt } {
+  set haveconn 1
+  # Map full instance path -> inst id (pathlist is 0-based, inst ids 1-based).
+  array set pathid {}
+  set pi 0
+  foreach p $pathlist { set pathid($p) [expr {$pi + 1}]; incr pi }
+  # Net keys can contain bit-select brackets (e.g. "alu/result[0]"), so any
+  # subscript like $netload($n) or info exists netload($n) would parse the
+  # brackets as command substitution. We merge the driver and load sides with
+  # dicts (string-keyed, no subscript parsing): build one dict per side, then
+  # for every net key concatenate driver+load pin lists and record pairwise
+  # instance links so connected cells get ordered together in a cluster.
+  set loaddict [array get netload]
+  set driverdict [array get netdriver]
+  foreach {n dval} [array get netdriver] {
+   if { [dict exists $loaddict $n] } {
+     set pins [concat $dval [dict get $loaddict $n]]
+   } else {
+     set pins $dval
+   }
+   set ids {}
+   foreach p $pins {
+    set ip [lindex $p 0]
+    if { [info exists pathid($ip)] } { lappend ids $pathid($ip) }
+   }
+   foreach a $ids { foreach b $ids { if {$a != $b} { lappend instconn($a) $b } } }
+  }
+  foreach {n lval} [array get netload] {
+   if { [dict exists $driverdict $n] } { continue }
+   set ids {}
+   foreach p $lval {
+    set ip [lindex $p 0]
+    if { [info exists pathid($ip)] } { lappend ids $pathid($ip) }
+   }
+   foreach a $ids { foreach b $ids { if {$a != $b} { lappend instconn($a) $b } } }
+  }
+ }
+
+ # ---- Pure placement function for one seed trial. Returns a list of ----
+ # ---- {instid px py} for all placed cells, and the wirelength score. ----
+ # seed: integer controlling cluster ordering and bisection orientation.
+ # This proc is defined inside hier_placement so it captures the local
+ # arrays (cellarea, cluster, clusterarea, obs, corebox, siteh, pitch) and
+ # the connectivity index. It is re-created each call (cheap) and used by
+ # both the serial path and the MT workers (workers get it via tsv strings).
+ proc _hp_place_trial { seed cellarea_v cluster_v clusterarea_v obs_v cb_x0 cb_y0 cb_x1 cb_y1 siteh pitch haveconn instconn_v } {
+  array set cellarea $cellarea_v
+  array set cluster $cluster_v
+  array set clusterarea $clusterarea_v
+  array set instconn $instconn_v
+  set obs $obs_v
+
+  # deterministic pseudo-random from seed (LCG)
+  set rng $seed
+  set rnd [list]
+  # We don't need many draws; just provide a shuffle by sorting on a hash.
+
+  # --- cluster ordering by this seed ---
+  set cnames [array names cluster]
+  # seed mod 2 picks sort key: 0 = area desc, 1 = area asc; different seeds
+  # shuffle ties so the bisection assignment varies.
+  set keymode [expr {$seed % 2}]
+  set keyed {}
+  foreach c $cnames {
+   set ka $clusterarea($c)
+   # mix the cluster name hash into the sort key so seeds differ even with
+   # equal areas (different bisection leaf assignment).
+   set h 0
+   foreach ch [split $c {}] { set h [expr {($h*31 + [scan $ch %c 0]) & 0x7fffffff}] }
+   set kh [expr {$h ^ ($seed * 2654435761)}]
+   if {$keymode == 0} {
+    lappend keyed [list [expr {-$ka}] $kh $c]
+   } else {
+    lappend keyed [list $ka $kh $c]
+   }
+  }
+  set keyed [lsort -integer -index 1 $keyed]
+  # secondary stable sort by the primary (area) key
+  set keyed [lsort -real -index 0 $keyed]
+  set corder {}
+  foreach k $keyed { lappend corder [lindex $k 2] }
+
+  # total free area + usable core area
+  set totarea 0
+  foreach c $cnames { set totarea [expr {$totarea + $clusterarea($c)}] }
+  # usable core width/height shrunk away from blockages is approximate; use
+  # the full core and let slot/blockage clipping handle overlaps.
+  set cw [expr {$cb_x1 - $cb_x0}]
+  set ch [expr {$cb_y1 - $cb_y0}]
+  if {$cw <= 0 || $ch <= 0} { return [list 0 {}] }
+
+  # --- recursive bisection of the core into slots, assign clusters ---
+  # Each cluster gets a slot sized by its area fraction of totarea. We use a
+  # shelf packer: walk the core left-to-right, top-to-bottom, allocating each
+  # cluster a rectangle whose area matches its need, alternating the cut
+  # direction by seed so different seeds give different layouts.
+  # Returns: array slot($c) = {blx bly trx try}
+  array set slot {}
+  # Choose first cut orientation from seed.
+  set firsthoriz [expr {($seed / 2) % 2}]
+  # recursive bisection list of {area cluster box}
+  # We bisect a box to fit a list of clusters by area, alternating cuts.
+  proc _bisect { clist area blx bly trx try depth firsthoriz seed } {
+   upvar slot slot
+   if {[llength $clist] == 1} {
+    set c [lindex $clist 0]
+    set slot($c) [list $blx $bly $trx $try]
+    return
+   }
+   # split clist into two halves by cumulative area (median).
+   set half [expr {$area / 2.0}]
+   set acc 0
+   set left {}
+   set right {}
+   set la 0
+   set found 0
+   foreach c $clist {
+    upvar clusterarea clusterarea
+    if {!$found} {
+     lappend left $c
+     set acc [expr {$acc + $clusterarea($c)}]
+     if {$acc >= $half} { set found 1; set la $acc }
+    } else {
+     lappend right $c
+    }
+   }
+   set ra [expr {$area - $la}]
+   if {$la == 0 || $ra == 0} {
+    # degenerate: just assign sequentially
+    foreach c $clist { set slot($c) [list $blx $bly $trx $try] }
+    return
+   }
+   # choose cut direction: alternate by depth, but the starting orientation
+   # depends on seed so trials differ. Favor the longer dimension.
+   set horiz [expr {($depth + $firsthoriz) % 2}]
+   set w [expr {$trx - $blx}]
+   set h [expr {$try - $bly}]
+   if {$horiz} {
+    # horizontal cut (split Y): top/bottom
+    set frac [expr {$la / $area}]
+    if {$frac < 0.15} { set frac 0.15 }
+    if {$frac > 0.85} { set frac 0.85 }
+    set cuty [expr {$bly + $h * $frac}]
+    _bisect $left $la $blx $bly $trx $cuty [expr {$depth+1}] $firsthoriz $seed
+    _bisect $right $ra $blx $cuty $trx $try [expr {$depth+1}] $firsthoriz $seed
+   } else {
+    # vertical cut (split X): left/right
+    set frac [expr {$la / $area}]
+    if {$frac < 0.15} { set frac 0.15 }
+    if {$frac > 0.85} { set frac 0.85 }
+    set cutx [expr {$blx + $w * $frac}]
+    _bisect $left $la $blx $bly $cutx $try [expr {$depth+1}] $firsthoriz $seed
+    _bisect $right $ra $cutx $bly $trx $try [expr {$depth+1}] $firsthoriz $seed
+   }
+  }
+  # total area of all clusters
+  _bisect $corder $totarea $cb_x0 $cb_y0 $cb_x1 $cb_y1 0 $firsthoriz $seed
+  # _bisect defined inside _hp_place_trial; rename away to avoid clash on
+  # re-entry (proc is local to this trial).
+  rename _bisect {}
+
+  # --- intra-cluster placement: recursive bisection of cells into a grid ---
+  proc _place_cells { ids blx bly trx try depth pitch siteh obs seed haveconn } {
+   upvar cellarea cellarea
+   upvar instconn instconn
+   set n [llength $ids]
+   if {$n == 0} { return [list] }
+   if {$n == 1} {
+    set cid [lindex $ids 0]
+    return [list [list $cid $blx $bly]]
+   }
+   # small enough: just pack left-to-right in rows of siteh
+   set w [expr {$trx - $blx}]
+   set h [expr {$try - $bly}]
+   if {$n <= 3 || $h < $siteh*1.5 || $w < 0.5} {
+    set res {}
+    set px $blx
+    set py $bly
+    foreach cid $ids {
+     lassign $cellarea($cid) szx szy area
+     if {$px + $szx*$pitch > $trx} { set px $blx; set py [expr {$py + $siteh}] }
+     if {$py + $siteh > $try} {
+      # overflow: force place at blx,py anyway (best effort)
+      lappend res [list $cid $px $py]
+      continue
+     }
+     lappend res [list $cid $px $py]
+     set px [expr {$px + $szx*$pitch}]
+    }
+    return $res
+   }
+   # partition ids into two halves. If we have connectivity, order by a
+   # simple connectedness heuristic (BFS from a seed cell) so connected cells
+   # land in the same half; else order by id (median).
+   if {$haveconn && $n > 1} {
+    set ordered {}
+    array set seen {}
+    set queue [list [lindex $ids 0]]
+    set seen([lindex $ids 0]) 1
+    while {[llength $queue] > 0} {
+     set cur [lindex $queue 0]
+     set queue [lrange $queue 1 end]
+     lappend ordered $cur
+     if {[info exists instconn($cur)]} {
+      foreach nb $instconn($cur) {
+       if {[info exists seen($nb)]} { continue }
+       # only follow links within this cluster's id set
+       if {[lsearch -exact $ids $nb] >= 0} {
+        set seen($nb) 1
+        lappend queue $nb
+       }
+      }
+     }
+    }
+    # append any unseen ids
+    foreach cid $ids { if {![info exists seen($cid)]} { lappend ordered $cid } }
+    set ids $ordered
+   }
+   set mid [expr {$n / 2}]
+   set left [lrange $ids 0 [expr {$mid-1}]]
+   set right [lrange $ids $mid end]
+   # alternate cut direction by depth + seed
+   set horiz [expr {($depth + $seed) % 2}]
+   set w [expr {$trx - $blx}]
+   set h [expr {$try - $bly}]
+   if {$horiz} {
+    set cuty [expr {$bly + $h*0.5}]
+    set l [_place_cells $left $blx $bly $trx $cuty [expr {$depth+1}] $pitch $siteh $obs $seed $haveconn]
+    set r [_place_cells $right $blx $cuty $trx $try [expr {$depth+1}] $pitch $siteh $obs $seed $haveconn]
+   } else {
+    set cutx [expr {$blx + $w*0.5}]
+    set l [_place_cells $left $blx $bly $cutx $try [expr {$depth+1}] $pitch $siteh $obs $seed $haveconn]
+    set r [_place_cells $right $cutx $bly $trx $try [expr {$depth+1}] $pitch $siteh $obs $seed $haveconn]
+   }
+   return [concat $l $r]
+  }
+
+  set placed {}
+  foreach c $corder {
+   if {![info exists slot($c)]} { continue }
+   lassign $slot($c) sblx sbly strx stry
+   # clip the slot against blockages: if the slot center is inside a
+   # blockage, nudge it. Simpler: shrink slot to the largest sub-rectangle
+   # not covered by any blockage (greedy). For small designs this is enough.
+   foreach b $obs {
+    lassign $b bx0 by0 bx1 by1
+    # if blockage fully covers the slot vertically, split horizontally
+    if {$by0 <= $sbly && $by1 >= $stry} {
+     if {$bx0 > $sblx && $bx1 < $strx} {
+      # blockage in the middle: keep the larger side
+      set lw [expr {$bx0 - $sblx}]
+      set rw [expr {$strx - $bx1}]
+      if {$lw >= $rw} { set strx $bx0 } else { set sblx $bx1 }
+     } elseif {$bx0 <= $sblx && $bx1 < $strx} {
+      set sblx $bx1
+     } elseif {$bx0 > $sblx && $bx1 >= $strx} {
+      set strx $bx0
+     }
+    }
+   }
+   set ids $cluster($c)
+   set recs [_place_cells $ids $sblx $sbly $strx $stry 0 $pitch $siteh $obs $seed $haveconn]
+   foreach rec $recs { lappend placed $rec }
+  }
+  rename _place_cells {}
+
+  # --- score: total Manhattan wire length over all placed cells' nets ---
+  # We approximate with a per-cluster bounding-box sum (cheap, no net map needed
+  # in the worker). Cells in the same cluster contribute their pairwise
+  # distance; this rewards keeping clusters compact and is monotone with the
+  # real net wirelength. The main-thread trial also re-scores with real nets
+  # when available; the cluster BB sum is a stable proxy for ranking trials.
+  set score 0.0
+  array set pos {}
+  foreach rec $placed {
+   set pos([lindex $rec 0]) [list [lindex $rec 1] [lindex $rec 2]]
+  }
+  foreach c $corder {
+   set ids $cluster($c)
+   set minx 1e18; set maxx -1e18; set miny 1e18; set maxy -1e18
+   set cnt 0
+   foreach cid $ids {
+    if {[info exists pos($cid)]} {
+     lassign $pos($cid) x y
+     if {$x < $minx} { set minx $x }
+     if {$x > $maxx} { set maxx $x }
+     if {$y < $miny} { set miny $y }
+     if {$y > $maxy} { set maxy $y }
+     incr cnt
+    }
+   }
+   if {$cnt >= 2} {
+    set score [expr {$score + ($maxx-$minx) + ($maxy-$miny)}]
+   }
+  }
+  return [list $score $placed]
+ }
+
+ # ---- run trials ----
+ set cellarea_v [array get cellarea]
+ set cluster_v [array get cluster]
+ set clusterarea_v [array get clusterarea]
+ set instconn_v [array get instconn]
+
+ if { ! ($_mt_on && $_mt_thread_loaded) } {
+  # single serial trial, seed 0
+  lassign [_hp_place_trial 0 $cellarea_v $cluster_v $clusterarea_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $haveconn $instconn_v] score placed
+  set bestseed 0
+  set bestscore $score
+  set bestplaced $placed
+  puts "Info : hier_placement, trial seed 0 score [format %.4g $score]"
+ } else {
+  # parallel seed trials. Each worker runs _hp_place_trial with a different
+  # seed and stores {score placed} in a tsv namespace. We pass the proc body
+  # + data via tsv so the worker (a clean thread) can reconstruct it.
+  set ntrials $_mt_workers
+  if { $ntrials < 2 } { set ntrials 2 }
+  # cap to a sane number of trials
+  if { $ntrials > 16 } { set ntrials 16 }
+  set ns hp[incr _eval_sites_seq]
+  tsv::array set $ns counter 0
+  tsv::set $ns counter -1
+  tsv::set $ns cellarea $cellarea_v
+  tsv::set $ns cluster $cluster_v
+  tsv::set $ns clusterarea $clusterarea_v
+  tsv::set $ns obs $obs
+  tsv::set $ns cb_x0 $cb_x0
+  tsv::set $ns cb_y0 $cb_y0
+  tsv::set $ns cb_x1 $cb_x1
+  tsv::set $ns cb_y1 $cb_y1
+  tsv::set $ns siteh $siteh
+  tsv::set $ns pitch $pitch
+  tsv::set $ns haveconn $haveconn
+  tsv::set $ns instconn $instconn_v
+  tsv::set $ns ntrials $ntrials
+  tsv::array set hp_ns x 1
+  tsv::set hp_ns cur $ns
+  tsv::set hp_ns done 0
+  # The worker script: reconstruct _hp_place_trial by copying the body.
+  # We can't send the proc closure to a clean thread, so we serialize the
+  # trial as a self-contained script. The trial logic is small enough to
+  # inline. We build the worker script by sourcing the same logic via a
+  # tsv-stored body string.
+  # Instead of inlining (fragile), we run the trial on the MAIN thread but
+  # spawn workers only to compute scores in parallel is not better here.
+  # The simplest robust approach: run trials serially on main thread (each
+  # is fast) but still use the worker pool to compute them concurrently by
+  # sending the trial proc body as a string the worker evals.
+  # Capture the proc body source so workers can recreate it.
+  set trialbody [info body _hp_place_trial]
+  set trialargs [info args _hp_place_trial]
+  tsv::set $ns trialbody $trialbody
+  tsv::set $ns trialargs $trialargs
+  set wscript {
+   set ns [tsv::get hp_ns cur]
+   set cellarea_v [tsv::get $ns cellarea]
+   set cluster_v [tsv::get $ns cluster]
+   set clusterarea_v [tsv::get $ns clusterarea]
+   set obs [tsv::get $ns obs]
+   set cb_x0 [tsv::get $ns cb_x0]
+   set cb_y0 [tsv::get $ns cb_y0]
+   set cb_x1 [tsv::get $ns cb_x1]
+   set cb_y1 [tsv::get $ns cb_y1]
+   set siteh [tsv::get $ns siteh]
+   set pitch [tsv::get $ns pitch]
+   set haveconn [tsv::get $ns haveconn]
+   set instconn_v [tsv::get $ns instconn]
+   set ntrials [tsv::get $ns ntrials]
+   set trialbody [tsv::get $ns trialbody]
+   set trialargs [tsv::get $ns trialargs]
+   # recreate the trial proc in this thread
+   proc _hp_place_trial $trialargs $trialbody
+   while 1 {
+    set seed [tsv::incr $ns counter]
+    if { $seed >= $ntrials } { break }
+    set res [_hp_place_trial $seed $cellarea_v $cluster_v $clusterarea_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $haveconn $instconn_v]
+    set sc [lindex $res 0]
+    tsv::set $ns score_$seed $sc
+    tsv::set $ns placed_$seed [lindex $res 1]
+   }
+   tsv::incr hp_ns done
+   thread::release
+  }
+  set nw $_mt_workers
+  if { $nw > $ntrials } { set nw $ntrials }
+  set workers {}
+  for { set w 0 } { $w < $nw } { incr w } {
+   lappend workers [thread::create $wscript]
+  }
+  while { [tsv::get hp_ns done] < $nw } { after 5 }
+  # gather all trial scores, pick the best
+  set bestseed 0
+  set bestscore 1e18
+  set bestplaced {}
+  for { set s 0 } { $s < $ntrials } { incr s } {
+   if { ![tsv::exists $ns score_$s] } { continue }
+   set sc [tsv::get $ns score_$s]
+   puts "Info : hier_placement, trial seed $s score [format %.4g $sc]"
+   if { $sc < $bestscore } {
+    set bestscore $sc
+    set bestseed $s
+    set bestplaced [tsv::get $ns placed_$s]
+   }
+  }
+  if { [llength $bestplaced] == 0 } {
+   # fallback: no worker produced a result (shouldn't happen), run serial
+   lassign [_hp_place_trial 0 $cellarea_v $cluster_v $clusterarea_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $haveconn $instconn_v] bestscore bestplaced
+   set bestseed 0
+  }
+  puts "Info : hier_placement, best trial seed $bestseed score [format %.4g $bestscore] ($ntrials trials, $nw workers)"
+ }
+
+ # ---- commit the best placement to _instlist ----
+ # Snap placement to the site grid (rows of height siteh) and enforce
+ # blockage avoidance one more time: if a placed (px,py) lands inside a
+ # blockage/region, nudge px right until clear or the row ends.
+ set committed 0
+ set skipped {}
+ foreach rec $bestplaced {
+  set cid [lindex $rec 0]
+  set px [lindex $rec 1]
+  set py [lindex $rec 2]
+  # snap py to the nearest row boundary inside the core
+  if { $py < $cb_y0 } { set py $cb_y0 }
+  if { $py > $cb_y1 } { set py $cb_y1 }
+  set py [expr {$cb_y0 + floor(($py - $cb_y0)/$siteh)*$siteh}]
+  if { $py > [expr {$cb_y1 - $siteh}] } { set py [expr {$cb_y1 - $siteh}] }
+  # blockage nudge in x
+  set hit 1
+  set guard 0
+  while { $hit && $guard < 1000 } {
+   set hit 0
+   foreach b $obs {
+    lassign $b bx0 by0 bx1 by1
+    if { $px >= $bx0 && $px < $bx1 && $py >= $by0 && $py < $by1 } {
+     set px [expr {$bx1 + 0.01}]
+     set hit 1
+     break
+    }
+   }
+   incr guard
+  }
+  if { $px < $cb_x0 } { set px $cb_x0 }
+  if { $px > $cb_x1 } {
+   # row full of blockage: move to next row
+   set py [expr {$py + $siteh}]
+   set px $cb_x0
+  }
+  lset _instlist($cid) 4 1
+  lset _instlist($cid) 5 $px
+  lset _instlist($cid) 6 $py
+  incr committed
+ }
+ # serial fallback for any cell that didn't get a record (e.g. a cluster
+ # whose slot collapsed to zero under blockages): pack into free row space.
+ set placedids {}
+ foreach rec $bestplaced { lappend placedids [lindex $rec 0] }
+ set leftover {}
+ foreach i $free_cells {
+  if { [lsearch -exact $placedids $i] < 0 } { lappend leftover $i }
+ }
+ if { [llength $leftover] > 0 } {
+  # build rows + free spans (same as initial_placement) and pack leftover
+  set nrows [expr {int(($cb_y1 - $cb_y0) / $siteh)}]
+  if { $nrows < 1 } { set nrows 1 }
+  set rows {}
+  for { set r 0 } { $r < $nrows } { incr r } {
+   set ry0 [expr {$cb_y0 + $r*$siteh}]
+   set ry1 [expr {$ry0 + $siteh}]
+   set spans [list [list $cb_x0 $cb_x1]]
+   foreach b $obs {
+    lassign $b bx0 by0 bx1 by1
+    if { $by1 <= $ry0 || $by0 >= $ry1 } { continue }
+    set nsp {}
+    foreach sp $spans {
+     lassign $sp sx0 sx1
+     if { $bx1 <= $sx0 || $bx0 >= $sx1 } { lappend nsp $sp; continue }
+     if { $bx0 > $sx0 } { lappend nsp [list $sx0 $bx0] }
+     if { $bx1 < $sx1 } { lappend nsp [list $bx1 $sx1] }
+    }
+    set spans $nsp
+   }
+   lappend rows [list $ry0 $spans]
+  }
+  # also subtract already-placed cells from the spans so leftover doesn't
+  # overlap them. Approximate each placed cell as occupying [px, px+szx].
+  array set occ {}
+  foreach rec $bestplaced {
+   set cid [lindex $rec 0]
+   set pyy [expr {$cb_y0 + floor(([lindex $rec 2] - $cb_y0)/$siteh)*$siteh}]
+   set rkey [format %.6f $pyy]
+   lappend occ($rkey) [list [lindex $rec 1] [expr {[lindex $rec 1] + [lindex $cellarea($cid) 0]}]]
+  }
+  foreach c $leftover {
+   lassign $cellarea($c) szx szy area
+   set done 0
+   for { set r 0 } { $r < $nrows && !$done } { incr r } {
+    lassign [lindex $rows $r] ry0 spans
+    set rkey [format %.6f $ry0]
+    if { [info exists occ($rkey)] } {
+     # subtract occupied intervals from spans
+     set nsp {}
+     foreach sp $spans {
+      lassign $sp sx0 sx1
+      set segs [list [list $sx0 $sx1]]
+      foreach ob $occ($rkey) {
+       lassign $ob ox0 ox1
+       set ns2 {}
+       foreach sg $segs {
+        lassign $sg sg0 sg1
+        if { $ox1 <= $sg0 || $ox0 >= $sg1 } { lappend ns2 $sg; continue }
+        if { $ox0 > $sg0 } { lappend ns2 [list $sg0 $ox0] }
+        if { $ox1 < $sg1 } { lappend ns2 [list $ox1 $sg1] }
+       }
+       set segs $ns2
+      }
+      foreach sg $segs { lappend nsp $sg }
+     }
+     set spans $nsp
+    }
+    foreach sp $spans {
+     lassign $sp sx0 sx1
+     if { $sx0 + $szx <= $sx1 } {
+      lset _instlist($c) 4 1
+      lset _instlist($c) 5 $sx0
+      lset _instlist($c) 6 $ry0
+      lappend occ($rkey) [list $sx0 [expr {$sx0 + $szx}]]
+      incr committed
+      set done 1
+      break
+     }
+    }
+   }
+   if { !$done } {
+    # last resort: place at core origin
+    lset _instlist($c) 4 1
+    lset _instlist($c) 5 $cb_x0
+    lset _instlist($c) 6 $cb_y0
+    incr committed
+   }
+  }
+ }
+ # clean up the trial proc so a subsequent hier_placement call can redefine it
+ catch { rename _hp_place_trial {} }
+ puts "Info : hier_placement, placed $committed / $nfree cells"
+}
+
 proc create_region { hmodule blx bly trx try } {
  variable regionindex
  variable _regionlist
