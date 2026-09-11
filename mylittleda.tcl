@@ -2042,26 +2042,66 @@ proc hier_placement { {opt "-full"} } {
   return
  }
 
- # Cluster by hierarchical parent path (field 7). -1 = top-level (flat).
+ # Cluster by hierarchical parent path (field 7), but at a COARSE level so a
+ # 100k+ cell flat-ish synthesis does not produce 100k single-cell clusters
+ # (which would make bisection and the score loop nonsensical). We bucket by
+ # the top two path segments of the parent path (the block-level hierarchy),
+ # so a deep path like "core0/w0/cmem1/.../cell" maps to "core0/w0". Top-level
+ # cells (fullpath == -1) map to "<top>". Tiny clusters (below a minimum cell
+ # count) are then merged into a single "<misc>" bucket so no cluster is a
+ # 1-cell fragment: the score loop and bisection only see meaningful blocks.
  array set cluster {}
  array set clusterarea {}
  array set clustern {}
+ # min cluster size: a fraction of the design, but at least 4 cells so we
+ # never keep single-cell clusters; cap so we don't merge everything on
+ # small designs.
+ set minc [expr {int($nfree / 50)}]
+ if { $minc < 4 } { set minc 4 }
+ if { $minc > 200 } { set minc 200 }
  foreach i $free_cells {
   set inst $_instlist($i)
   set fp [lindex $inst 7]
-  if { $fp eq "-1" } { set fp "<top>" }
-  lappend cluster($fp) $i
-  set a [lindex $cellarea($i) 2]
-  if { [info exists clusterarea($fp)] } {
-   set clusterarea($fp) [expr {$clusterarea($fp) + $a}]
-   set clustern($fp) [expr {$clustern($fp) + 1}]
+  if { $fp eq "-1" || $fp eq "" } {
+   set key "<top>"
   } else {
-   set clusterarea($fp) $a
-   set clustern($fp) 1
+   set segs [split $fp /]
+   if { [llength $segs] >= 2 } {
+    set key [join [lrange $segs 0 1] /]
+   } else {
+    set key $fp
+   }
+  }
+  lappend cluster($key) $i
+  set a [lindex $cellarea($i) 2]
+  if { [info exists clusterarea($key)] } {
+   set clusterarea($key) [expr {$clusterarea($key) + $a}]
+   set clustern($key) [expr {$clustern($key) + 1}]
+  } else {
+   set clusterarea($key) $a
+   set clustern($key) 1
+  }
+ }
+ # merge clusters below minc into <misc>, keeping the big blocks coherent.
+ set smallkeys {}
+  set bigkeys {}
+ foreach k [array names cluster] {
+  if { $clustern($k) < $minc } { lappend smallkeys $k } else { lappend bigkeys $k }
+ }
+ if { [llength $smallkeys] > 1 } {
+  set misc "<misc>"
+  set cluster($misc) {}
+  set clusterarea($misc) 0
+  set clustern($misc) 0
+  foreach k $smallkeys {
+   foreach i $cluster($k) { lappend cluster($misc) $i }
+   set clusterarea($misc) [expr {$clusterarea($misc) + $clusterarea($k)}]
+   set clustern($misc) [expr {$clustern($misc) + $clustern($k)}]
+   unset cluster($k) clusterarea($k) clustern($k)
   }
  }
  set cnames [array names cluster]
- puts "Info : hier_placement, [llength $cnames] hierarchy clusters"
+ puts "Info : hier_placement, [llength $cnames] hierarchy clusters (min cluster size $minc)"
  foreach c $cnames {
   puts "Info :   cluster $c : $clustern($c) cells, area [format %.4g $clusterarea($c)] um^2"
  }
@@ -2085,6 +2125,12 @@ proc hier_placement { {opt "-full"} } {
 
  # Build a connectivity index for intra-cluster ordering: inst id -> list of
  # connected inst ids (same net). Uses netdriver/netload if built, else empty.
+ # This index only ORDERS cells within a cluster (BFS) so connected cells land
+ # in the same bisection half; it is NOT a wirelength computation. To stay O(n)
+ # on 100k+ cell designs we record, per net, a single anchor link (each pin
+ # links to the first driver pin of that net) instead of the full O(k^2)
+ # pairwise graph -- enough to bias the BFS ordering without the quadratic
+ # blowup that hung large designs.
  set haveconn 0
  array set instconn {}
  global netconnbuilt netdriver netload
@@ -2096,33 +2142,44 @@ proc hier_placement { {opt "-full"} } {
   foreach p $pathlist { set pathid($p) [expr {$pi + 1}]; incr pi }
   # Net keys can contain bit-select brackets (e.g. "alu/result[0]"), so any
   # subscript like $netload($n) or info exists netload($n) would parse the
-  # brackets as command substitution. We merge the driver and load sides with
-  # dicts (string-keyed, no subscript parsing): build one dict per side, then
-  # for every net key concatenate driver+load pin lists and record pairwise
-  # instance links so connected cells get ordered together in a cluster.
+  # brackets as command substitution. We walk both arrays via array get and
+  # merge with dicts (string-keyed, no subscript parsing).
   set loaddict [array get netload]
   set driverdict [array get netdriver]
   foreach {n dval} [array get netdriver] {
-   if { [dict exists $loaddict $n] } {
-     set pins [concat $dval [dict get $loaddict $n]]
-   } else {
-     set pins $dval
-   }
-   set ids {}
-   foreach p $pins {
+   set anchor 0
+   set lval {}
+   if { [dict exists $loaddict $n] } { set lval [dict get $loaddict $n] }
+   foreach p $dval {
     set ip [lindex $p 0]
-    if { [info exists pathid($ip)] } { lappend ids $pathid($ip) }
+    if { [info exists pathid($ip)] } {
+     set id $pathid($ip)
+     if { $anchor == 0 } { set anchor $id }
+     if { $anchor != $id } { lappend instconn($id) $anchor }
+    }
    }
-   foreach a $ids { foreach b $ids { if {$a != $b} { lappend instconn($a) $b } } }
+   if { $anchor != 0 } {
+    foreach p $lval {
+     set ip [lindex $p 0]
+     if { [info exists pathid($ip)] } {
+      set id $pathid($ip)
+      if { $anchor != $id } { lappend instconn($id) $anchor }
+     }
+    }
+   }
   }
   foreach {n lval} [array get netload] {
    if { [dict exists $driverdict $n] } { continue }
-   set ids {}
+   # net with loads but no driver: chain loads to the first load.
+   set anchor 0
    foreach p $lval {
     set ip [lindex $p 0]
-    if { [info exists pathid($ip)] } { lappend ids $pathid($ip) }
+    if { [info exists pathid($ip)] } {
+     set id $pathid($ip)
+     if { $anchor == 0 } { set anchor $id }
+     if { $anchor != $id } { lappend instconn($id) $anchor }
+    }
    }
-   foreach a $ids { foreach b $ids { if {$a != $b} { lappend instconn($a) $b } } }
   }
  }
 
@@ -2501,135 +2558,106 @@ proc hier_placement { {opt "-full"} } {
  }
 
  # ---- commit the best placement to _instlist ----
- # Snap placement to the site grid (rows of height siteh) and enforce
- # blockage avoidance one more time: if a placed (px,py) lands inside a
- # blockage/region, nudge px right until clear or the row ends.
+ # Build the row-based free-span structure ONCE (core rows of height siteh,
+ # minus blockage/region overlaps). Then place every cell -- those that the
+ # trial positioned AND any leftovers -- by packing into these free spans,
+ # tracking each row's cursor. This is O(cells + rows*blockages): no per-cell
+ # blockage scan and no O(n^2) leftover search, so it scales to 100k+ cells.
+ # The trial placement guides which row each cell targets (cell -> target row
+ # from its trial py), so the hierarchy coherency is preserved; the free-span
+ # packing just enforces blockage avoidance and spacing.
+ set nrows [expr {int(($cb_y1 - $cb_y0) / $siteh)}]
+ if { $nrows < 1 } { set nrows 1 }
+ # rows: each entry {ry0 spans}; spans built once from blockages/regions.
+ set row_y {}
+ set row_spans {}
+ for { set r 0 } { $r < $nrows } { incr r } {
+  set ry0 [expr {$cb_y0 + $r*$siteh}]
+  set ry1 [expr {$ry0 + $siteh}]
+  set spans [list [list $cb_x0 $cb_x1]]
+  foreach b $obs {
+   lassign $b bx0 by0 bx1 by1
+   if { $by1 <= $ry0 || $by0 >= $ry1 } { continue }
+   set nsp {}
+   foreach sp $spans {
+    lassign $sp sx0 sx1
+    if { $bx1 <= $sx0 || $bx0 >= $sx1 } { lappend nsp $sp; continue }
+    if { $bx0 > $sx0 } { lappend nsp [list $sx0 $bx0] }
+    if { $bx1 < $sx1 } { lappend nsp [list $bx1 $sx1] }
+   }
+   set spans $nsp
+  }
+  lappend row_y $ry0
+  lappend row_spans $spans
+ }
+ # per-row cursor into its spans list: row_cursor(r) = {span_index x_pos}
+ set row_cursor {}
+ for { set r 0 } { $r < $nrows } { incr r } { lappend row_cursor [list 0 [lindex [lindex [lindex $row_spans $r] 0] 0]] }
+
  set committed 0
- set skipped {}
+ # target row per placed cell (from trial py), snapped into the core.
+ array set trowOf {}
  foreach rec $bestplaced {
-  set cid [lindex $rec 0]
-  set px [lindex $rec 1]
   set py [lindex $rec 2]
-  # snap py to the nearest row boundary inside the core
   if { $py < $cb_y0 } { set py $cb_y0 }
   if { $py > $cb_y1 } { set py $cb_y1 }
-  set py [expr {$cb_y0 + floor(($py - $cb_y0)/$siteh)*$siteh}]
-  if { $py > [expr {$cb_y1 - $siteh}] } { set py [expr {$cb_y1 - $siteh}] }
-  # blockage nudge in x
-  set hit 1
-  set guard 0
-  while { $hit && $guard < 1000 } {
-   set hit 0
-   foreach b $obs {
-    lassign $b bx0 by0 bx1 by1
-    if { $px >= $bx0 && $px < $bx1 && $py >= $by0 && $py < $by1 } {
-     set px [expr {$bx1 + 0.01}]
-     set hit 1
-     break
-    }
-   }
-   incr guard
-  }
-  if { $px < $cb_x0 } { set px $cb_x0 }
-  if { $px > $cb_x1 } {
-   # row full of blockage: move to next row
-   set py [expr {$py + $siteh}]
-   set px $cb_x0
-  }
-  lset _instlist($cid) 4 1
-  lset _instlist($cid) 5 $px
-  lset _instlist($cid) 6 $py
-  incr committed
+  set r [expr {int(($py - $cb_y0) / $siteh)}]
+  if { $r < 0 } { set r 0 }
+  if { $r >= $nrows } { set r [expr {$nrows - 1}] }
+  set trowOf([lindex $rec 0]) $r
  }
- # serial fallback for any cell that didn't get a record (e.g. a cluster
- # whose slot collapsed to zero under blockages): pack into free row space.
- set placedids {}
- foreach rec $bestplaced { lappend placedids [lindex $rec 0] }
- set leftover {}
+ # place a cell into a target row's free spans at the cursor, advancing the
+ # cursor; if the row is full, walk down to the next row with room.
+ proc _hp_pack { cid r rowsz szx pitch } {
+  upvar row_spans row_spans row_cursor row_cursor nrows nrows cb_x0 cb_x0 cb_y0 cb_y0 siteh siteh _instlist _instlist row_y row_y
+  for { set rr $r } { $rr < $nrows } { incr rr } {
+   lassign [lindex $row_cursor $rr] si xpos
+   set spans [lindex $row_spans $rr]
+   set nsp [llength $spans]
+   while { $si < $nsp } {
+    lassign [lindex $spans $si] sx0 sx1
+    if { $xpos < $sx0 } { set xpos $sx0 }
+    if { $xpos + $szx <= $sx1 } {
+     lset _instlist($cid) 4 1
+     lset _instlist($cid) 5 $xpos
+     lset _instlist($cid) 6 [lindex $row_y $rr]
+     set nx [expr {$xpos + $szx*$pitch}]
+     lset row_cursor $rr [list $si $nx]
+     return 1
+    }
+    incr si
+    if { $si < $nsp } { set xpos [lindex [lindex $spans $si] 0] }
+   }
+   # row full: reset cursor and try next row from its first span.
+   lset row_cursor $rr [list $nsp 0]
+  }
+  return 0
+ }
+ # commit trial-placed cells into their target rows first (keeps coherency).
+ set placedOk 0
+ foreach rec $bestplaced {
+  set cid [lindex $rec 0]
+  set szx [lindex $cellarea($cid) 0]
+  set r $trowOf($cid)
+  if { [_hp_pack $cid $r $nrows $szx $pitch] } { incr committed; incr placedOk }
+ }
+ # leftover: cells with no trial record (cluster collapsed under blockages).
+ # Build a fast membership set for placed cells.
+ array set placedset {}
+ foreach rec $bestplaced { set placedset([lindex $rec 0]) 1 }
  foreach i $free_cells {
-  if { [lsearch -exact $placedids $i] < 0 } { lappend leftover $i }
- }
- if { [llength $leftover] > 0 } {
-  # build rows + free spans (same as initial_placement) and pack leftover
-  set nrows [expr {int(($cb_y1 - $cb_y0) / $siteh)}]
-  if { $nrows < 1 } { set nrows 1 }
-  set rows {}
-  for { set r 0 } { $r < $nrows } { incr r } {
-   set ry0 [expr {$cb_y0 + $r*$siteh}]
-   set ry1 [expr {$ry0 + $siteh}]
-   set spans [list [list $cb_x0 $cb_x1]]
-   foreach b $obs {
-    lassign $b bx0 by0 bx1 by1
-    if { $by1 <= $ry0 || $by0 >= $ry1 } { continue }
-    set nsp {}
-    foreach sp $spans {
-     lassign $sp sx0 sx1
-     if { $bx1 <= $sx0 || $bx0 >= $sx1 } { lappend nsp $sp; continue }
-     if { $bx0 > $sx0 } { lappend nsp [list $sx0 $bx0] }
-     if { $bx1 < $sx1 } { lappend nsp [list $bx1 $sx1] }
-    }
-    set spans $nsp
-   }
-   lappend rows [list $ry0 $spans]
-  }
-  # also subtract already-placed cells from the spans so leftover doesn't
-  # overlap them. Approximate each placed cell as occupying [px, px+szx].
-  array set occ {}
-  foreach rec $bestplaced {
-   set cid [lindex $rec 0]
-   set pyy [expr {$cb_y0 + floor(([lindex $rec 2] - $cb_y0)/$siteh)*$siteh}]
-   set rkey [format %.6f $pyy]
-   lappend occ($rkey) [list [lindex $rec 1] [expr {[lindex $rec 1] + [lindex $cellarea($cid) 0]}]]
-  }
-  foreach c $leftover {
-   lassign $cellarea($c) szx szy area
-   set done 0
-   for { set r 0 } { $r < $nrows && !$done } { incr r } {
-    lassign [lindex $rows $r] ry0 spans
-    set rkey [format %.6f $ry0]
-    if { [info exists occ($rkey)] } {
-     # subtract occupied intervals from spans
-     set nsp {}
-     foreach sp $spans {
-      lassign $sp sx0 sx1
-      set segs [list [list $sx0 $sx1]]
-      foreach ob $occ($rkey) {
-       lassign $ob ox0 ox1
-       set ns2 {}
-       foreach sg $segs {
-        lassign $sg sg0 sg1
-        if { $ox1 <= $sg0 || $ox0 >= $sg1 } { lappend ns2 $sg; continue }
-        if { $ox0 > $sg0 } { lappend ns2 [list $sg0 $ox0] }
-        if { $ox1 < $sg1 } { lappend ns2 [list $ox1 $sg1] }
-       }
-       set segs $ns2
-      }
-      foreach sg $segs { lappend nsp $sg }
-     }
-     set spans $nsp
-    }
-    foreach sp $spans {
-     lassign $sp sx0 sx1
-     if { $sx0 + $szx <= $sx1 } {
-      lset _instlist($c) 4 1
-      lset _instlist($c) 5 $sx0
-      lset _instlist($c) 6 $ry0
-      lappend occ($rkey) [list $sx0 [expr {$sx0 + $szx}]]
-      incr committed
-      set done 1
-      break
-     }
-    }
-   }
-   if { !$done } {
-    # last resort: place at core origin
-    lset _instlist($c) 4 1
-    lset _instlist($c) 5 $cb_x0
-    lset _instlist($c) 6 $cb_y0
-    incr committed
-   }
+  if { [info exists placedset($i)] } { continue }
+  set szx [lindex $cellarea($i) 0]
+  # no target row: pack from the first row.
+  if { [_hp_pack $i 0 $nrows $szx $pitch] } { incr committed } else {
+   # absolute last resort: core origin.
+   lset _instlist($i) 4 1
+   lset _instlist($i) 5 $cb_x0
+   lset _instlist($i) 6 $cb_y0
+   incr committed
   }
  }
+ catch { rename _hp_pack {} }
  # clean up the trial proc so a subsequent hier_placement call can redefine it
  catch { rename _hp_place_trial {} }
  puts "Info : hier_placement, placed $committed / $nfree cells"
