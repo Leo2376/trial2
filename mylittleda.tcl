@@ -2470,9 +2470,12 @@ proc get_cell { args } {
 # Report library-cell references (refnames) whose name matches the glob
 # pattern (standard globs: *, ?, [..]). A bare refname with no wildcard is an
 # exact lookup. The reported info is the cell name, its class, its (LEF)
-# width x height, and its pin list with directions. Unlike get_cell/get_net this
-# queries the loaded library (cataloglist / _libcell), so it works as soon as
-# a LEF has been imported and does not require a design to be set or built.
+# width x height, and its pin list with directions. The list of matching cell
+# names is also RETURNED (a collection), so callers can capture it:
+#   set cells [get_lib_cell SP*]  ->  {SP128X33M2 SP128X33M4 SP512X40M2 SP512X40M4}
+# Unlike get_cell/get_net this queries the loaded library (cataloglist /
+# _libcell), so it works as soon as a LEF has been imported and does not
+# require a design to be set or built.
 proc get_lib_cell { pattern } {
  variable cellindex
  variable _libcell
@@ -2493,6 +2496,7 @@ proc get_lib_cell { pattern } {
  # _libcell/_libcellpindir array key. Iterate all lib cells and keep those
  # whose name matches the glob, in catalog order.
  set n 0
+ set names {}
  for { set i 1 } { $i <= $cellindex } { incr i } {
   if { ! [info exists _libcell($i)] } { continue }
   set info $_libcell($i)
@@ -2510,11 +2514,15 @@ proc get_lib_cell { pattern } {
    }
   }
   puts "  $cname  class=$cclass  size=${cw}x${ch}  pins: [join $pins { }]"
+  lappend names $cname
   incr n
  }
  puts "  -------------------------------------------------------"
  if { $n == 1 } { puts "$n lib cell matching $pattern." } else { puts "$n lib cells matching $pattern." }
  puts ""
+ # Return the list of matching cell names (a collection), so callers can
+ # capture it: set cells [get_lib_cell SP*] -> {SP128X33M2 SP128X33M4 ...}.
+ return $names
 }
 
 # get_net <pattern> ?-hier?

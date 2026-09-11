@@ -100,10 +100,18 @@ puts "=========================================="
 
 # get_lib_cell queries the loaded library (cataloglist), not the netlist, so
 # it works once a LEF is imported. Exact name, prefix wildcard and substring
-# wildcard are all supported.
+# wildcard are all supported. It also RETURNS the list (collection) of matching
+# cell names, so callers can capture it: set cells [get_lib_cell SP*].
 get_lib_cell BUFFD10
 get_lib_cell BUFF*
 get_lib_cell *DFF*
+# Return-value check: the 4 SRAM macros loaded from sram.lef match SP*.
+set _sp_cells [get_lib_cell SP*]
+if { [llength $_sp_cells] == 4 && [lsort $_sp_cells] eq [lsort {SP128X33M2 SP128X33M4 SP512X40M2 SP512X40M4}] } {
+  puts "PASS: get_lib_cell SP* returns collection of 4 SRAM macros: $_sp_cells"
+} else {
+  puts "FAIL: get_lib_cell SP* expected 4 SRAM macros, got $_sp_cells"
+}
 
 puts "=========================================="
 puts "get_cell / all_connected non-reg checks"
