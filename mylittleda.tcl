@@ -117,6 +117,14 @@ set hier_dontshow [ list clk_gate ]
 
 set siteh 0.3
 
+# Multithreading. Off by default: the Thread extension may not be installed on
+# the host, so nothing multithreaded runs until set_multithread_on is called
+# (which does 'package require Thread' and reports clearly if it is missing).
+# _mt_on is 1 when enabled; _mt_workers is the worker count (default 8).
+set _mt_on 0
+set _mt_workers 8
+set _mt_thread_loaded 0
+
 set fontsize 6
 
 set targetutilz 65
@@ -1112,6 +1120,120 @@ proc set_target_utilization { utilz } {
 set targetutilz $utilz
 }
 
+# set_multithread_on ?nworkers?
+# Turn on internal multithreading by loading the Thread extension. If Thread is
+# not installed on the host, report it clearly and stay single-threaded (no
+# crash). An optional argument sets the worker count (default 8). After a
+# successful call, multithreaded placement uses a pool of worker threads for
+# the parallelizable stages (e.g. the placement-site utilization scan).
+proc set_multithread_on { {nworkers ""} } {
+ global _mt_on _mt_workers _mt_thread_loaded
+ if { $_mt_on } {
+  puts "Info : multithread already on ($_mt_workers workers)"
+  return
+ }
+ if { $nworkers ne "" } {
+  if { ! [string is integer -strict $nworkers] || $nworkers < 1 } {
+   puts "Error : set_multithread_on requires a positive integer worker count (got '$nworkers')"
+   return
+  }
+  set _mt_workers $nworkers
+ }
+ if { [catch {package require Thread} err] } {
+  puts "Error : cannot enable multithread: the Thread extension is not installed ($err)"
+  puts "Info : the tool stays single-threaded; install the 'thread' Tcl package to enable it"
+  return
+ }
+ set _mt_thread_loaded 1
+ set _mt_on 1
+ puts "Info : multithread ON with $_mt_workers workers (Thread [package present Thread])"
+}
+
+# Internal: scan one placement site's 20x20 utilization grid against the
+# utlzmap (read-only during this scan, so parallel scans are safe). Returns the
+# occupation count for that site. Factored out so it can run in a worker thread
+# when multithreading is on.
+proc _scan_site_utilz { psite bx by utlzmap } {
+ set utlz 0
+ for { set searchx 0 } { $searchx < 20 } { set searchx [expr {$searchx + 1}] } {
+  for { set searchy 0 } { $searchy < 20 } { set searchy [expr {$searchy + 1}] } {
+   set gx [expr {$bx + $searchx}]
+   set gy [expr {$by + $searchy}]
+   if { [lindex $utlzmap [expr {$gy + 100*$gx}]] == 1 } { incr utlz }
+  }
+ }
+ return $utlz
+}
+
+# Internal: evaluate all placement-site occupation counts. site_coords is a list
+# of {psite bx by} triples; utlzmap is read-only. Returns the per-site
+# occupation list (in site order) and prints each site's percentage. Uses a
+# worker pool when multithreading is on (Thread loaded), otherwise runs the
+# scans serially. The scan is a pure read of utlzmap, so parallel execution is
+# safe; results are gathered back on the main thread.
+proc _eval_sites { site_coords utlzmap } {
+ global _mt_on _mt_workers _mt_thread_loaded
+ set msite {}
+ if { $_mt_on && $_mt_thread_loaded } {
+  tsv::array unset site_result
+  tsv::set site_counter 0
+  set n [llength $site_coords]
+  set nw [expr {$_mt_workers < $n ? $_mt_workers : $n}]
+  # Worker script: a self-contained string sent to each fresh worker
+  # interpreter (which has neither _site_worker nor _scan_cell). The data is
+  # passed via tsv so the script body has no free variables to interpolate,
+  # keeping brace nesting simple and parse-safe.
+  tsv::set site_coords $site_coords
+  tsv::set site_utlzmap $utlzmap
+  set wscript {
+   proc _wscan { bx by utlzmap } {
+    set utlz 0
+    for { set sx 0 } { $sx < 20 } { incr sx } {
+     for { set sy 0 } { $sy < 20 } { incr sy } {
+      set gx [expr {$bx + $sx}]
+      set gy [expr {$by + $sy}]
+      if { [lindex $utlzmap [expr {$gy + 100*$gx}]] == 1 } { incr utlz }
+     }
+    }
+    return $utlz
+   }
+   set coords [tsv::get site_coords]
+   set utzmap [tsv::get site_utlzmap]
+   while 1 {
+    set i [tsv::incr site_counter]
+    if { $i >= [llength $coords] } { break }
+    set trip [lindex $coords $i]
+    set psite [lindex $trip 0]
+    set bx [lindex $trip 1]
+    set by [lindex $trip 2]
+    tsv::set site_result $psite [_wscan $bx $by $utzmap]
+   }
+   thread::wait
+  }
+  set workers {}
+  for { set w 0 } { $w < $nw } { incr w } {
+   lappend workers [thread::create $wscript]
+  }
+  foreach tid $workers { thread::join $tid }
+  foreach trip $site_coords {
+   set psite [lindex $trip 0]
+   set utlz [tsv::get site_result $psite]
+   puts "Info : placement site $psite has occupation of [expr {$utlz/4}] %"
+   lappend msite $utlz
+  }
+ } else {
+  foreach trip $site_coords {
+   set psite [lindex $trip 0]
+   set bx [lindex $trip 1]
+   set by [lindex $trip 2]
+   set utlz [_scan_site_utilz $psite $bx $by $utlzmap]
+   puts "Info : placement site $psite has occupation of [expr {$utlz/4}] %"
+   lappend msite $utlz
+  }
+ }
+ return $msite
+}
+
 proc make_placement { {opt "-full"} } {
  variable topname
  _require 3
@@ -1188,43 +1310,17 @@ proc make_placement { {opt "-full"} } {
 if { $pregion == 0 } {
  set msite [ list ]
  puts "Info : make_placement, placement sites evaluation "
+ # Build the 25 site (bx,by) coordinate pairs once, then evaluate them.
+ # _eval_sites scans each site's 20x20 grid against utlzmap (read-only),
+ # using a worker pool when multithreading is on, otherwise serially. It
+ # returns the per-site occupation list and prints each site's percentage.
+ set site_coords {}
  for { set psite 0 } { $psite < 25 } { set psite [expr $psite + 1] } {
-  if { $psite == 0 } { set bx 0  ;  set by 0  }
-  if { $psite == 1 } { set bx 20 ;  set by 0  }
-  if { $psite == 2 } { set bx 40 ;  set by 0  }
-  if { $psite == 3 } { set bx 60 ;  set by 0  }
-  if { $psite == 4 } { set bx 80 ;  set by 0  }
-  if { $psite == 5 } { set bx 0  ;  set by 20  }
-  if { $psite == 6 } { set bx 20 ;  set by 20  }
-  if { $psite == 7 } { set bx 40 ;  set by 20  }
-  if { $psite == 8 } { set bx 60 ;  set by 20  }
-  if { $psite == 9 } { set bx 80 ;  set by 20  }
-  if { $psite == 10 } { set bx 0  ;  set by 40  }
-  if { $psite == 11 } { set bx 20 ;  set by 40  }
-  if { $psite == 12 } { set bx 40 ;  set by 40  }
-  if { $psite == 13 } { set bx 60 ;  set by 40  }
-  if { $psite == 14 } { set bx 80 ;  set by 40  }
-  if { $psite == 15 } { set bx 0  ;  set by 60  }
-  if { $psite == 16 } { set bx 20 ;  set by 60  }
-  if { $psite == 17 } { set bx 40 ;  set by 60  }
-  if { $psite == 18 } { set bx 60 ;  set by 60  }
-  if { $psite == 19 } { set bx 80 ;  set by 60  }
-  if { $psite == 20 } { set bx 0  ;  set by 80  }
-  if { $psite == 21 } { set bx 20 ;  set by 80  }
-  if { $psite == 22 } { set bx 40 ;  set by 80  }
-  if { $psite == 23 } { set bx 60 ;  set by 80  }
-  if { $psite == 24 } { set bx 80 ;  set by 80  }
-  set utlz 0 
- for { set searchx 0 } { $searchx < 20 } { set searchx [expr $searchx + 1] } {
-     for { set searchy 0 } { $searchy < 20 } { set searchy [expr $searchy + 1] } {	
-        set gx [ expr $bx + $searchx  ]	        
-        set gy [ expr $by + $searchy  ]
-        if { [lindex $utlzmap [expr $gy+100*$gx]] == 1 } { incr utlz }	
-      }
+  set bx [expr {($psite % 5) * 20}]
+  set by [expr {($psite / 5) * 20}]
+  lappend site_coords [list $psite $bx $by]
  }
-    puts "Info : placement site $psite has occupation of [expr $utlz/4] %"
-    lappend msite $utlz
- }
+ set msite [_eval_sites $site_coords $utlzmap]
 
  set currentinst 0
 
