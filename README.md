@@ -99,7 +99,7 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | endpoints using the `_libsyncpin` attribute                                |            |
 | R2  | Reporting   | `trace_clock <pin/net>`: tree-like report tracing from a pin or net to all  | proposal   |
 |     |             | branches down to leaf sync pins (flop CP / SRAM CK). Depends on L2.        |            |
-| R3  | Reporting   | `all_connected <net or pin>`: report all nets connected to a net/pin;      | proposal   |
+| R3  | Reporting   | `all_connected <net or pin>`: report all nets connected to a net/pin;      | implemented |
 |     |             | accepts wildcards (e.g. `all_connected n2*`).                           |            |
 | R4  | Reporting   | `get_cell <pattern>`: report all cells matching a pattern (e.g. `*reg*`);   | implemented |
 |     |             | handles hierarchy by scope (e.g. `get_cell core0/c0/*reg*` lists cells in  |            |
