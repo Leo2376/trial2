@@ -116,6 +116,15 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | (modules, ports, wires, leaf-cell instances and hierarchical instances,   |            |
 |     |             | `assign` statements). Preserves hierarchy so a `read_netlist` ->           |            |
 |     |             | `write_verilog` round-trip is the verification testcase.                   |            |
+| N2  | Netlist I/O | `write_db <file>`: dump a binary database containing 100% of the in-memory | proposal   |
+|     |             | design state - instances, wires, positions, the net connectivity map,    |            |
+|     |             | the loaded library (LEF) info, ports, assigns - everything, ready to be   |            |
+|     |             | reloaded. The goal is to skip the slow read_netlist / build_design path    |            |
+|     |             | and load the whole database faster.                                        |            |
+| N3  | Netlist I/O | `restore_db <file>`: reload a binary database written by `write_db`,        | proposal   |
+|     |             | restoring all variables (instances, wires, positions, connectivity, LEF    |            |
+|     |             | library, ports, assigns) so the session is ready immediately without      |            |
+|     |             | re-parsing the source netlist or rebuilding the design.                    |            |
 | O1  | Optimization| `set_max_fanout <n>`: set a global fanout threshold (max receivers per net)  | proposal   |
 |     |             | for `fix_max_fanout`.                                                       |            |
 | O2  | Optimization| `fix_max_fanout -cell <buffer>`: insert buffers of the given lib cell on   | proposal   |
@@ -156,6 +165,14 @@ Notes:
   the two dumps are byte-identical, so the structure is preserved. Comments
   and line wrapping may differ from the source, but the structural content
   is stable across the round-trip.
+- N2 + N3 (binary DB save/restore) are verified by a test that loads a design
+  fully (read_netlist -> set_top_design -> build_design -> build_net_conn),
+  runs `write_db`, then in a fresh session runs `restore_db` and checks that
+  every query command (`get_cell`, `get_net`, `all_connected`, `get_lib_cell`)
+  returns identical results to the original session. The saved file must
+  contain 100% of the database (instances, wires, positions, the net
+  connectivity map, LEF library, ports, assigns) so `restore_db` is a strict
+  faster substitute for the parse/build path.
 - O1 + O2 (buffer insertion) are verified by a test that builds a net with a
   high-fanout driver, runs `set_max_fanout <n>` then `fix_max_fanout -cell
   <buf>`, and checks via `get_net`/`all_connected` that every net now has at
