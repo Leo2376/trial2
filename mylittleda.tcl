@@ -2308,13 +2308,7 @@ proc get_cell { args } {
   set iname [lindex $_instlist($i) 0]
   if { $fullp eq "-1" } { set ipath $iname } else { set ipath "$fullp/$iname" }
   if { [string match $pattern $ipath] } {
-   set refid [lindex $_instlist($i) 8]
-   if { [info exists _libcell($refid)] } {
-    set refname [lindex $_libcell($refid) 0]
-   } else {
-    set refname [lindex $_instlist($i) 1]
-   }
-   puts "  $ipath ($refname)"
+   puts "  $ipath"
    incr n
   }
  }
@@ -2324,8 +2318,7 @@ proc get_cell { args } {
   set iname [lindex $_hinstlist($i) 0]
   if { $fullp eq "-1" } { set ipath $iname } else { set ipath "$fullp/$iname" }
   if { [string match $pattern $ipath] } {
-   set refname [lindex $_hinstlist($i) 1]
-   puts "  $ipath ($refname) hierarchical"
+   puts "  $ipath hierarchical"
    incr n
   }
  }
@@ -2448,11 +2441,7 @@ proc get_net { args } {
  }
 
  foreach n $nets {
-  set d [_net_drivers $n]
-  set nd [llength $d]
-  set l [_net_loads $n]
-  set nl [llength $l]
-  puts "  $n  (drivers:$nd receivers:$nl)"
+  puts "  $n"
  }
  puts "  -------------------------------------------------------"
  set hdr $pattern

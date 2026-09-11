@@ -222,12 +222,17 @@ queries), the following report connectivity. Patterns are globs
 - `get_cell <pattern> ?-hier?` — list cells (leaf and hierarchical) whose
   full instance path matches. Without `-hier` only the direct children of
   the scope implied by the pattern are reported (`get_cell *` = top level
-  only); `-hier` matches across the whole hierarchy.
-- `get_net <pattern> ?-hier?` — list nets whose scoped name matches, with
-  their driver/receiver counts. Without `-hier` only the nets of the single
-  scope implied by the pattern are reported (`get_net *` = top-level nets
-  only, `get_net core0/w0/nv_c0/c0/*` = nets in that module); `-hier`
-  matches across the whole hierarchy.
+  only); `-hier` matches across the whole hierarchy. Like `get_lib_cell`, it is
+  a getter: it prints just the matching instance path (with a `hierarchical`
+  marker for hierarchical instances) per line plus a match count; per-cell
+  detail lives in `report_cell`.
+- `get_net <pattern> ?-hier?` — list nets whose scoped name matches. Without
+  `-hier` only the nets of the single scope implied by the pattern are
+  reported (`get_net *` = top-level nets only, `get_net core0/w0/nv_c0/c0/*`
+  = nets in that module); `-hier` matches across the whole hierarchy. Like
+  `get_cell`/`get_lib_cell`, it is a getter: it prints just the matching net
+  name per line plus a match count; driver/receiver detail lives in
+  `report_net`.
 - `get_lib_cell <refname>` — list library-cell references whose name matches
   the glob (`get_lib_cell BUFF*`, `get_lib_cell *DFF*`, or an exact name).
   Reports each cell's class, LEF width x height and pin list with directions.

@@ -106,8 +106,10 @@ get_cell core0/w0/nv_c0/c0/iu0/*
 
 # get_net mirrors get_cell's scope semantics but for nets. Without -hier it
 # reports only the nets of the single scope implied by the pattern; with
-# -hier it matches across the whole hierarchy. Expect a single net for the
-# exact reference (driver: U28571/ZN).
+# -hier it matches across the whole hierarchy. get_net now reports just the
+# net name per match (a getter, like get_cell/get_lib_cell); the driver /
+# receiver detail lives in report_net. Expect a single net for the exact
+# reference (use report_net to see driver U28571/ZN).
 get_net *
 get_net * -hier
 get_net core0/w0/nv_c0/c0/*
