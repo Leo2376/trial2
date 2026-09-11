@@ -1599,6 +1599,282 @@ if { $pregion == 0 } {
  
 }
 
+# Alternative placement engine: initial_placement. A row-based, blockage-aware
+# placer that keeps the design within the target utilization but uses the
+# available freedom to pack cells more evenly than the fixed 25-site scan of
+# make_placement. Blockages and regions are honored: each row's usable spans
+# are the gaps between blockages/regions that intersect that row, so no cell is
+# ever placed on top of a macro/halo/region. The orientation is preserved (N).
+#
+# Algorithm:
+#   1. Place region-bound cells first (same serial loop as make_placement) so
+#      region constraints are respected.
+#   2. Collect the remaining unplaced CORE instances.
+#   3. Slice the core into horizontal rows of height $siteh. For each row build
+#      the free spans (core bounds minus blockage/region overlaps at that row).
+#   4. Distribute the free CORE cells across rows (longest-free-span first) and
+#      pack each row left-to-right inside its spans, scaling the packing pitch
+#      by the target utilization so density tracks $targetutilz.
+#   5. When multithreading is on, the per-row packing runs across $mt_workers
+#      worker threads (each owns a contiguous block of rows, with its own row
+#      cursor, so no shared mutable state); workers stash (instid,px,py) in a
+#      unique tsv namespace and the main thread commits _instlist in instance
+#      order. Otherwise it runs serially.
+#
+# This is intentionally a separate command so make_placement stays available.
+proc initial_placement { {opt "-full"} } {
+ variable topname
+ global _mt_on _mt_workers _mt_thread_loaded
+ _require 3
+ variable topnameid
+ variable hierindex
+ variable instindex
+ variable cellindex
+ variable hinstindex
+ variable _libcell
+ variable _instlist
+ variable _hinstlist
+ variable cataloglist
+ variable hierlist
+ variable pathlist
+ variable hpathlist
+ variable blockageindex
+ variable _blockagelist
+ variable corebox
+ variable utlzmap
+ variable siteh
+ variable targetutilz
+ variable regionindex
+ variable _regionlist
+
+ set pregion 0
+ if { $opt == "-region_only" } { set pregion 1 }
+
+ # Threading mode banner.
+ if { $_mt_on && $_mt_thread_loaded } {
+  puts "Info : initial_placement with multithread ON ($_mt_workers workers)"
+ } else {
+  puts "Info : initial_placement single-threaded"
+ }
+ if { $opt == "-full" } { puts "Info : initial_placement (full) ..." }
+ if { $opt == "-region_only" } { puts "Info : initial_placement (regions only) ..." }
+ puts "Info : Using site height of $siteh um"
+
+ # --- Step 1: region placement (serial, same as make_placement) ---
+ for { set i 1 } { $i <= $regionindex } { incr i } {
+  set tr_x [lindex $_regionlist($i) 3]
+  set bl_x [lindex $_regionlist($i) 1]
+  set tr_y [lindex $_regionlist($i) 4]
+  set bl_y [lindex $_regionlist($i) 2]
+  set utilstepn [expr {100.0 / [lindex $_regionlist($i) 5]}]
+  set px $bl_x
+  set py $bl_y
+  set lcell [lindex $_regionlist($i) 6]
+  puts "Info : initial_placement, region [lindex $_regionlist($i) 0] target [lindex $_regionlist($i) 5]% util"
+  for { set j 0 } { $j < [llength $lcell] } { incr j } {
+   set currentinst [lindex $lcell $j]
+   set inst $_instlist($currentinst)
+   set refid [lindex $inst 8]
+   set szx [lindex $_libcell($refid) 1]
+   lset _instlist($currentinst) 4 1
+   lset _instlist($currentinst) 5 $px
+   lset _instlist($currentinst) 6 $py
+   set px [expr {$px + $szx * $utilstepn}]
+   if {$px > $tr_x} { set px $bl_x; set py [expr {$py + $siteh}] }
+   if {$py > $tr_y} { break }
+  }
+ }
+
+ if { $pregion == 1 } { return }
+
+ # --- Step 2: collect unplaced CORE instances ---
+ set free_cells {}
+ for { set i 1 } { $i <= $instindex } { incr i } {
+  set inst $_instlist($i)
+  if { [lindex $inst 4] == 0 } {
+   set refid [lindex $inst 8]
+   set class [lindex $_libcell($refid) 4]
+   if { $class eq "CORE" } {
+    set szx [lindex $_libcell($refid) 1]
+    lappend free_cells [list $i $szx]
+   }
+  }
+ }
+ set nfree [llength $free_cells]
+ puts "Info : initial_placement, $nfree free CORE cells to place"
+ if { $nfree == 0 } {
+  puts "Info : initial_placement, nothing to place"
+  return
+ }
+
+ # --- Step 3: build rows and their free spans ---
+ set cb_x0 [lindex $corebox 0]
+ set cb_y0 [lindex $corebox 1]
+ set cb_x1 [lindex $corebox 2]
+ set cb_y1 [lindex $corebox 3]
+ set core_w [expr {$cb_x1 - $cb_x0}]
+ if { $siteh <= 0 } { set siteh 0.3 }
+ set nrows [expr {int(($cb_y1 - $cb_y0) / $siteh)}]
+ if { $nrows < 1 } { set nrows 1 }
+
+ # Precompute blockage/region boxes for span subtractions.
+ set obs {}
+ for { set i 1 } { $i <= $blockageindex } { incr i } {
+  lappend obs [list [lindex $_blockagelist($i) 1] [lindex $_blockagelist($i) 2] [lindex $_blockagelist($i) 3] [lindex $_blockagelist($i) 4]]
+ }
+ for { set i 1 } { $i <= $regionindex } { incr i } {
+  lappend obs [list [lindex $_regionlist($i) 1] [lindex $_regionlist($i) 2] [lindex $_regionlist($i) 3] [lindex $_regionlist($i) 4]]
+ }
+
+ # rows: each entry is {y0 spans} where spans is a list of {x0 x1} free spans.
+ set rows {}
+ for { set r 0 } { $r < $nrows } { incr r } {
+  set ry0 [expr {$cb_y0 + $r * $siteh}]
+  set ry1 [expr {$ry0 + $siteh}]
+  # free spans start as the whole core width
+  set spans [list [list $cb_x0 $cb_x1]]
+  foreach b $obs {
+   set bx0 [lindex $b 0]; set by0 [lindex $b 1]; set bx1 [lindex $b 2]; set by1 [lindex $b 3]
+   if { $by1 <= $ry0 || $by0 >= $ry1 } { continue }
+   set nsp {}
+   foreach sp $spans {
+    set sx0 [lindex $sp 0]; set sx1 [lindex $sp 1]
+    if { $bx1 <= $sx0 || $bx0 >= $sx1 } { lappend nsp $sp; continue }
+    if { $bx0 > $sx0 } { lappend nsp [list $sx0 $bx0] }
+    if { $bx1 < $sx1 } { lappend nsp [list $bx1 $sx1] }
+   }
+   set spans $nsp
+  }
+  set rowlen 0
+  foreach sp $spans { set rowlen [expr {$rowlen + [lindex $sp 1] - [lindex $sp 0]}] }
+  lappend rows [list $ry0 $spans $rowlen]
+ }
+
+ # --- Step 4: distribute cells to rows and pack ---
+ # Target utilization drives the packing pitch: a row's capacity is its free
+ # length / (targetutilz/100). Distribute cells to the longest rows first.
+ set row_order {}
+ for { set r 0 } { $r < $nrows } { incr r } { lappend row_order $r }
+ # sort rows by free span length (longest first) via a key list so the
+ # round-robin distribution below prefers rows with the most room.
+ set keyed {}
+ for { set r 0 } { $r < $nrows } { incr r } {
+  lappend keyed [list [lindex [lindex $rows $r] 2] $r]
+ }
+ set keyed [lsort -real -decreasing -index 0 $keyed]
+ set row_order {}
+ foreach k $keyed { lappend row_order [lindex $k 1] }
+ # simple round-robin by cell count into rows (keeps rows balanced)
+ set row_cells {}
+ for { set r 0 } { $r < $nrows } { incr r } { lappend row_cells {} }
+ set ri 0
+ foreach c $free_cells {
+  set idx [lindex $row_order $ri]
+  lset row_cells $idx [linsert [lindex $row_cells $idx] end $c]
+  set ri [expr {($ri + 1) % $nrows}]
+ }
+
+ # Pack each row. The pitch scales cell width by 100/targetutilz so a higher
+ # target packs tighter; freedom: we cap pitch at 1.0 so cells never spread
+ # beyond their natural width (no artificial gaps beyond utilization).
+ set pitch [expr {100.0 / $targetutilz}]
+ if { $pitch < 1.0 } { set pitch 1.0 }
+
+ # result map: instid -> {px py}
+ set result {}
+
+ if { ! ($_mt_on && $_mt_thread_loaded) } {
+  # --- Serial pack ---
+  for { set r 0 } { $r < $nrows } { incr r } {
+   set ry0 [lindex [lindex $rows $r] 0]
+   set spans [lindex [lindex $rows $r] 1]
+   set cells [lindex $row_cells $r]
+   set ci 0
+   set ncell [llength $cells]
+   if { $ncell == 0 } { continue }
+   foreach sp $spans {
+    set sx0 [lindex $sp 0]; set sx1 [lindex $sp 1]
+    set px $sx0
+    while { $ci < $ncell && $px + [lindex [lindex $cells $ci] 1] <= $sx1 } {
+     set cid [lindex [lindex $cells $ci] 0]
+     lappend result [list $cid $px $ry0]
+     set px [expr {$px + [lindex [lindex $cells $ci] 1] * $pitch}]
+     incr ci
+    }
+    if { $ci >= $ncell } { break }
+   }
+  }
+  foreach rec $result {
+   set cid [lindex $rec 0]
+   lset _instlist($cid) 4 1
+   lset _instlist($cid) 5 [lindex $rec 1]
+   lset _instlist($cid) 6 [lindex $rec 2]
+  }
+  puts "Info : initial_placement, placed [llength $result] / $nfree cells (serial)"
+  return
+ }
+
+ # --- Parallel pack: each worker owns a contiguous block of rows ---
+ set ns ipl[incr _eval_sites_seq]
+ tsv::array set $ns counter 0
+ tsv::set $ns counter -1
+ tsv::set $ns rows $rows
+ tsv::set $ns rowcells $row_cells
+ tsv::set $ns pitch $pitch
+ tsv::array set ipl_ns x 1
+ tsv::set ipl_ns cur $ns
+ tsv::set ipl_ns done 0
+ set nw $_mt_workers
+ if { $nw > $nrows } { set nw $nrows }
+ set wscript {
+  set ns [tsv::get ipl_ns cur]
+  set rows [tsv::get $ns rows]
+  set rowcells [tsv::get $ns rowcells]
+  set pitch [tsv::get $ns pitch]
+  set nrows [llength $rows]
+  while 1 {
+   set r [tsv::incr $ns counter]
+   if { $r >= $nrows } { break }
+   set ry0 [lindex [lindex $rows $r] 0]
+   set spans [lindex [lindex $rows $r] 1]
+   set cells [lindex $rowcells $r]
+   set ci 0
+   set ncell [llength $cells]
+   if { $ncell == 0 } { continue }
+   foreach sp $spans {
+    set sx0 [lindex $sp 0]; set sx1 [lindex $sp 1]
+    set px $sx0
+    while { $ci < $ncell && $px + [lindex [lindex $cells $ci] 1] <= $sx1 } {
+     set cid [lindex [lindex $cells $ci] 0]
+     tsv::set $ns pl_$cid [list $px $ry0]
+     set px [expr {$px + [lindex [lindex $cells $ci] 1] * $pitch}]
+     incr ci
+    }
+    if { $ci >= $ncell } { break }
+   }
+  }
+  tsv::incr ipl_ns done
+  thread::release
+ }
+ set workers {}
+ for { set w 0 } { $w < $nw } { incr w } {
+  lappend workers [thread::create $wscript]
+ }
+ while { [tsv::get ipl_ns done] < $nw } { after 5 }
+ set placed 0
+ foreach c $free_cells {
+  set cid [lindex $c 0]
+  set pos [tsv::get $ns pl_$cid]
+  if { [llength $pos] == 2 } {
+   lset _instlist($cid) 4 1
+   lset _instlist($cid) 5 [lindex $pos 0]
+   lset _instlist($cid) 6 [lindex $pos 1]
+   incr placed
+  }
+ }
+ puts "Info : initial_placement, placed $placed / $nfree cells (multithread, $nw workers)"
+}
+
 proc create_region { hmodule blx bly trx try } {
  variable regionindex
  variable _regionlist
