@@ -78,7 +78,7 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | cells/pins; nets have no coordinate and stay blank.                        |            |
 | P6  | Path tracing| `report_path ... -net`: also print the logical nets crossed; by default only | implemented |
 |     |             | the pins are reported.                                                      |            |
-| P4  | Path tracing| `report_path -from <pin/net>` (no `-to`): trace forward to the first sync   | proposal   |
+| P4  | Path tracing| `report_path -from <pin/net>` (no `-to`): trace forward to the first sync   | implemented |
 |     |             | endpoint (flop CP / SRAM CK via `_libsyncpin`); stop at first found, not the  |            |
 |     |             | longest, and report how many paths reach a sync endpoint. Depends on L2.   |            |
 | S1  | Performance | Convert `wiresearch` list to an array/dict map for O(1) net lookup          | implemented |
@@ -202,6 +202,11 @@ queries), the following report connectivity. Patterns are globs
   also prints the logical nets crossed, and `-layout` adds an `(x, y)`
   coordinate column for placed crossed cells/pins (nets/ports/unplaced cells
   stay blank).
+- `report_path -from <pin|net> ?-net? ?-layout?` (no `-to`, P4) — trace
+  forward from the start point across all branches and stop each branch at
+  the first sync load pin (flop CP / SRAM CK via the `_libsyncpin` map); report
+  the path(s) to every reached sync endpoint and the count of sync endpoints
+  reached. Requires `build_net_conn` (P2) and `add_lib` (L2).
 - `trace_clock <pin|net>` — tree-like report tracing from a pin or net down
   through combinational logic and across hierarchy to all leaf sync load pins
   (flop CP / SRAM CK via the `_libsyncpin` map). Each branch is followed (not

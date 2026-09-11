@@ -1773,6 +1773,131 @@ proc _report_path_pin_line { pin opt_layout } {
 }
 
 # report_path -from <pin|net> -to <pin|net> ?-net? ?-layout?
+# P4 helper: forward-only report_path (no -to). Traces forward from -from
+# across all branches (BFS) and stops each branch at the first sync load pin
+# (flop CP / SRAM CK via _libsyncpin). Reports every reached sync endpoint's
+# path and the count of sync endpoints reached. Requires build_net_conn (P2)
+# and add_lib (L2).
+proc _report_path_forward { from cur_net start_point opt_net opt_layout } {
+ global netdriver netload netconnbuilt
+ variable pathlist
+ variable hpathlist
+ variable _libsyncpin
+
+ if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
+  puts "Error : build_net_conn must run before report_path -from"
+  return
+ }
+ # add_lib (L2) is required for the sync-pin map; without it no leaf can be a
+ # sync endpoint, so the forward trace would reach nothing.
+ if { [llength [array names _libsyncpin]] == 0 } {
+  puts "Warning : no sync pins loaded (run add_lib before report_path -from)"
+ }
+
+ puts "************************************************************"
+ set h " report_path : -from $from"
+ if { $opt_net }    { append h " -net" }
+ if { $opt_layout } { append h " -layout" }
+ puts $h
+ puts "************************************************************"
+ if { $start_point eq "" } {
+  puts "Startpoint : <net> $cur_net"
+ } else {
+  puts "Startpoint : [_fmt_pin $start_point]"
+ }
+ puts "Path type  : functional, forward to sync endpoint (no timing)"
+ puts ""
+ if { $opt_layout } {
+  puts "  Point                                   (x, y)            Fanout   Net"
+  puts "  ---------------------------------------------------------------"
+ } else {
+  puts "  Point                                   Fanout   Net"
+  puts "  -------------------------------------------------------"
+ }
+
+ # BFS across all branches. Each reached sync load pin becomes a discovered
+ # endpoint; the parent map records how each net was reached so the path can
+ # be reconstructed. A net is visited once (combinational loops cannot recurse).
+ array set seen_net {}
+ array set parent_net {}
+ array set via_inst {}
+ array set via_pin {}
+ set q [list $cur_net]
+ set seen_net($cur_net) 1
+ set endpoints [list]
+ while {[llength $q]} {
+  set net [lindex $q 0]
+  set q [lrange $q 1 end]
+  set loads [_net_loads $net]
+  foreach lp $loads {
+   set ln [lindex $lp 0]
+   set lpin [lindex $lp 1]
+   if { $ln eq "<port>" } { continue }
+   if { $ln eq "<assign>" } {
+    set out_net $lpin
+   } elseif { [lsearch -exact $hpathlist $ln] >= 0 } {
+    set out_net [_hier_pin_inner_net $ln $lpin]
+   } elseif { [_is_sync_pin $ln $lpin] } {
+    # First sync endpoint on this branch: record it and stop the branch.
+    lappend endpoints [list $net $ln $lpin]
+    continue
+   } else {
+    set out_net [_cell_out_net $ln $lpin]
+   }
+   if { $out_net eq "" } { continue }
+   if { [info exists seen_net($out_net)] } { continue }
+   set seen_net($out_net) 1
+   set parent_net($out_net) $net
+   set via_inst($out_net) $ln
+   set via_pin($out_net) $lpin
+   lappend q $out_net
+  }
+ }
+
+ # Emit one path block per reached sync endpoint, plus a count.
+ set nendp [llength $endpoints]
+ set idx 0
+ foreach ep $endpoints {
+  incr idx
+  set ep_net [lindex $ep 0]
+  set ep_inst [lindex $ep 1]
+  set ep_pin [lindex $ep 2]
+  puts "--- path $idx to [_fmt_pin "$ep_inst $ep_pin"] (sync endpoint) ---"
+  if { $start_point ne "" } {
+   _report_path_pin_line $start_point $opt_layout
+  }
+  set path [list]
+  set n $ep_net
+  while { $n ne $cur_net && [info exists parent_net($n)] } {
+   set path [list $n {*}$path]
+   set n $parent_net($n)
+  }
+  set prev_net $cur_net
+  foreach seg $path {
+   set fanout [llength [_net_loads $prev_net]]
+   set ln $via_inst($seg)
+   set lpin $via_pin($seg)
+   _report_path_net_line $prev_net $fanout $opt_net $opt_layout
+   _report_path_pin_line "$ln $lpin" $opt_layout
+   set prev_net $seg
+  }
+  set fanout [llength [_net_loads $ep_net]]
+  _report_path_net_line $ep_net $fanout $opt_net $opt_layout
+  _report_path_pin_line "$ep_inst $ep_pin" $opt_layout
+  if { $opt_layout } {
+   puts "  ---------------------------------------------------------------"
+  } else {
+   puts "  -------------------------------------------------------"
+  }
+ }
+ if { ! $nendp } {
+  puts "No sync endpoint reached from $from."
+ } else {
+  puts "$nendp sync endpoint(s) reached."
+ }
+ puts ""
+}
+
 # Text-only connectivity report (report_timing-style, no timing). Traces a path
 # from a source point to a sink point across the net connectivity map built by
 # build_net_conn. A point is either a net name or a pin "inst/pin".
@@ -1787,8 +1912,10 @@ proc report_path { args } {
  variable _hinstlist
  variable instindex
  variable hinstindex
- global netdriver netload
+ global netdriver netload netconnbuilt
  variable pathlist
+ variable hpathlist
+ variable _libsyncpin
 
  set from ""
  set to ""
@@ -1802,11 +1929,13 @@ proc report_path { args } {
   if { $a eq "-layout" } { set opt_layout 1 ; continue }
   puts "Error : unknown option '$a'"
   puts "Usage: report_path -from <pin|net> -to <pin|net> ?-net? ?-layout?"
+  puts "       report_path -from <pin|net> ?-net? ?-layout?"
   return
  }
- if { $from eq "" || $to eq "" } {
-  puts "Error : report_path requires -from and -to"
+ if { $from eq "" } {
+  puts "Error : report_path requires -from"
   puts "Usage: report_path -from <pin|net> -to <pin|net> ?-net? ?-layout?"
+  puts "       report_path -from <pin|net> ?-net? ?-layout?"
   return
  }
 
@@ -1830,6 +1959,15 @@ proc report_path { args } {
   if { [llength $d] } { set start_point [lindex $d 0] }
  }
  if { $cur_net eq "" } { puts "Error : -from point $from not found" ; return }
+
+ # P4: with only -from (no -to), trace forward to the nearest sync load pin
+ # (flop CP / SRAM CK via _libsyncpin) along every branch, stop at the first
+ # sync endpoint found on each branch, and report the path(s) reached plus the
+ # count of sync endpoints. Requires build_net_conn (P2) and add_lib (L2).
+ if { $to eq "" } {
+  _report_path_forward $from $cur_net $start_point $opt_net $opt_layout
+  return
+ }
 
  # Resolve the -to point similarly.
  set end_net ""

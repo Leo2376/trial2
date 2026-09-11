@@ -50,6 +50,17 @@ trace_clock rf/clk
 # A net with no clock path forward reports 0 endpoints without error.
 trace_clock alu_result
 
+puts "=========================================="
+puts "report_path -from non-reg checks (P4)"
+puts "=========================================="
+# P4: forward-only report_path (no -to) traces from -from across all branches
+# and stops each branch at the first sync load pin. From clk the same 4 flop
+# CP endpoints as trace_clock are reached, each as its own path block.
+report_path -from clk
+# A net with no clock path forward reports 0 sync endpoints reached without
+# error.
+report_path -from alu_result
+
 report_hierarchy_tree
 
 exit
