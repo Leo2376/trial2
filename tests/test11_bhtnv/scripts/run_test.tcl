@@ -117,4 +117,49 @@ if { $nplaced == $ncore && $nover == 0 && $nout == 0 } {
   puts "FAIL: hier_placement placed $nplaced/$ncore CORE cells, $nover blockage hits, $nout out-of-core (MT)"
 }
 
+# --- placeOpt: iterative wire-length optimizer on the placed layout ---
+# Runs after hier_placement so the optimizer starts from a legal placement
+# and reduces total wire length by moving the cells of the longest nets
+# toward their centroid. Default 3 iterations; verify the placement stays
+# legal (no blockage hits, no out-of-core) afterward.
+puts "=========================================="
+puts "placeOpt wire-length optimization"
+puts "=========================================="
+set to0 [clock milliseconds]
+placeOpt
+set to1 [clock milliseconds]
+puts "Info : test11 placeOpt (default 3 iters) took [expr {$to1-$to0}] ms"
+
+# verify placement still legal after placeOpt.
+set ncore 0
+set nplaced 0
+set nover 0
+set nout 0
+for { set i 1 } { $i <= $instindex } { incr i } {
+  set inst $_instlist($i)
+  set refid [lindex $inst 8]
+  set class [lindex $_libcell($refid) 4]
+  if { $class ne "CORE" } { continue }
+  incr ncore
+  if { [lindex $inst 4] != 1 } { continue }
+  incr nplaced
+  set px [lindex $inst 5]
+  set py [lindex $inst 6]
+  if { $px < $cb_x0 || $px > $cb_x1 || $py < $cb_y0 || $py > $cb_y1 } { incr nout }
+  foreach b $obs {
+    if { $px >= [lindex $b 0] && $px < [lindex $b 2] && $py >= [lindex $b 1] && $py < [lindex $b 3] } { incr nover; break }
+  }
+}
+if { $nplaced == $ncore && $nover == 0 && $nout == 0 } {
+  puts "PASS: placeOpt kept all $nplaced/$ncore CORE cells placed, $nover blockage hits, $nout out-of-core"
+} else {
+  puts "FAIL: placeOpt left $nplaced/$ncore CORE cells placed, $nover blockage hits, $nout out-of-core"
+}
+
+# also exercise the -iter option.
+set to2 [clock milliseconds]
+placeOpt -iter 5
+set to3 [clock milliseconds]
+puts "Info : test11 placeOpt -iter 5 took [expr {$to3-$to2}] ms"
+
 exit

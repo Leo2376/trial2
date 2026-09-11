@@ -2663,6 +2663,222 @@ proc hier_placement { {opt "-full"} } {
  puts "Info : hier_placement, placed $committed / $nfree cells"
 }
 
+# Iterative wire-length optimizer: placeOpt ?-iter n?
+#
+# Reduces total estimated wire length by working on the worst nets first. At
+# each iteration it ranks every net by its Manhattan bounding-box wire length,
+# takes the top 20% longest, and for each of those nets tries to move its
+# moveable CORE cells toward the net's pin centroid: the cell is relocated to
+# the nearest free site on the centroid's row (blockage/core-aware) provided the
+# move actually reduces THAT net's length. Wire lengths are recomputed after
+# each iteration so the next ranking reflects the new layout. Default 3
+# iterations; pass -iter n to change. Requires build_net_conn (netdriver/
+# netload) and a placed design.
+proc placeOpt { args } {
+ variable topname
+ _require 3
+ variable instindex
+ variable _instlist
+ variable _libcell
+ variable pathlist
+ variable blockageindex
+ variable _blockagelist
+ variable corebox
+ variable siteh
+ variable regionindex
+ variable _regionlist
+ global netconnbuilt netdriver netload _wirelen_cache
+
+ set niter 3
+ for { set i 0 } { $i < [llength $args] } { incr i } {
+  set a [lindex $args $i]
+  if { $a eq "-iter" } {
+   incr i
+   set niter [lindex $args $i]
+   if { ![string is integer -strict $niter] || $niter < 1 } {
+    puts "Error : placeOpt -iter requires a positive integer"
+    return
+   }
+  } else {
+   puts "Error : unknown option $a"
+   puts "Usage: placeOpt ?-iter n?"
+   return
+  }
+ }
+ if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
+  puts "Error : build_net_conn must run before placeOpt"
+  return
+ }
+ if { $siteh <= 0 } { set siteh 0.3 }
+
+ set cb_x0 [lindex $corebox 0]
+ set cb_y0 [lindex $corebox 1]
+ set cb_x1 [lindex $corebox 2]
+ set cb_y1 [lindex $corebox 3]
+
+ # Blockage + region boxes to avoid.
+ set obs {}
+ for { set i 1 } { $i <= $blockageindex } { incr i } {
+  lappend obs [list [lindex $_blockagelist($i) 1] [lindex $_blockagelist($i) 2] [lindex $_blockagelist($i) 3] [lindex $_blockagelist($i) 4]]
+ }
+ for { set i 1 } { $i <= $regionindex } { incr i } {
+  lappend obs [list [lindex $_regionlist($i) 1] [lindex $_regionlist($i) 2] [lindex $_regionlist($i) 3] [lindex $_regionlist($i) 4]]
+ }
+
+ # Map full instance path -> inst id (pathlist is 0-based, ids 1-based).
+ array set pathid {}
+ set pi 0
+ foreach p $pathlist { set pathid($p) [expr {$pi + 1}]; incr pi }
+
+ # Build net -> list of moveable CORE inst ids. Net keys can contain bit-
+ # select brackets, so walk via array get (no subscript parsing). A pin's
+ # inst is the first token of the pin entry; ports/assigns are skipped.
+ array set netinsts {}
+ foreach {n dval} [array get netdriver] {
+  foreach p $dval {
+   set ip [lindex $p 0]
+   if { [info exists pathid($ip)] } {
+    set id $pathid($ip)
+    if { [info exists _libcell([lindex $_instlist($id) 8])] } {
+     if { [lindex $_libcell([lindex $_instlist($id) 8]) 4] eq "CORE" } { lappend netinsts($n) $id }
+    }
+   }
+  }
+ }
+ foreach {n lval} [array get netload] {
+  foreach p $lval {
+   set ip [lindex $p 0]
+   if { [info exists pathid($ip)] } {
+    set id $pathid($ip)
+    if { [info exists _libcell([lindex $_instlist($id) 8])] } {
+     if { [lindex $_libcell([lindex $_instlist($id) 8]) 4] eq "CORE" } { lappend netinsts($n) $id }
+    }
+   }
+  }
+ }
+
+ # Helper: is point (px,py) clear of all blockages/regions?
+ proc _po_clear { px py obs } {
+  foreach b $obs {
+   if { $px >= [lindex $b 0] && $px < [lindex $b 2] && $py >= [lindex $b 1] && $py < [lindex $b 3] } { return 0 }
+  }
+  return 1
+ }
+
+ # total wire length over all nets (uses cache, computes lazily).
+ proc _po_total {} {
+  global netdriver _wirelen_cache
+  set tot 0
+  foreach {n v} [array get netdriver] {
+   set w [_net_wirelen_scalar $n]
+   if { $w > 0 } { set tot [expr {$tot + $w}] }
+  }
+  return $tot
+ }
+
+ # wire length of one net given current placement (force recompute, bypass cache).
+ proc _po_netlen { n } {
+  global _wirelen_cache
+  # invalidate cache for this net then recompute.
+  catch { unset _wirelen_cache($n) }
+  set w [_net_wirelen_scalar $n]
+  if { $w < 0 } { return 0 }
+  return $w
+ }
+
+ set total0 [_po_total]
+  puts "Info : placeOpt, initial total wire length = [format %.2f $total0]"
+
+ for { set iter 1 } { $iter <= $niter } { incr iter } {
+  # Rank nets by current wire length (descending). Walk all nets, compute
+  # scalar length, collect {len net} pairs.
+  set ranked {}
+  foreach {n v} [array get netdriver] {
+   set w [_net_wirelen_scalar $n]
+   if { $w > 0 } { lappend ranked [list $w $n] }
+  }
+  set ranked [lsort -real -decreasing -index 0 $ranked]
+  set nn [llength $ranked]
+  if { $nn == 0 } { puts "Info : placeOpt, no estimable nets"; break }
+  set topk [expr {int(ceil($nn * 0.2))}]
+  if { $topk < 1 } { set topk 1 }
+  set work [lrange $ranked 0 [expr {$topk - 1}]]
+  puts "Info : placeOpt, iter $iter: working on top $topk / $nn longest nets"
+
+  set nmoved 0
+  foreach rec $work {
+   set n [lindex $rec 1]
+   if { ![info exists netinsts($n)] } { continue }
+   # collect placed pin coords + the moveable inst ids on this net.
+   set ids $netinsts($n)
+   set coords {}
+   set placedids {}
+   foreach id $ids {
+    if { [lindex $_instlist($id) 4] != 1 } { continue }
+    lappend placedids $id
+    lappend coords [list [lindex $_instlist($id) 5] [lindex $_instlist($id) 6]]
+   }
+   if { [llength $coords] < 2 } { continue }
+   # net centroid (mean of pin coords).
+   set sx 0; set sy 0
+   foreach c $coords { set sx [expr {$sx + [lindex $c 0]}]; set sy [expr {$sy + [lindex $c 1]}] }
+   set cx [expr {$sx / [llength $coords]}]
+   set cy [expr {$sy / [llength $coords]}]
+   # target row snapped to the site grid inside the core.
+   set tr [expr {int(($cy - $cb_y0) / $siteh)}]
+   if { $tr < 0 } { set tr 0 }
+   set nrows [expr {int(($cb_y1 - $cb_y0) / $siteh)}]
+   if { $nrows < 1 } { set nrows 1 }
+   if { $tr >= $nrows } { set tr [expr {$nrows - 1}] }
+   set ty [expr {$cb_y0 + $tr * $siteh}]
+   set before [_po_netlen $n]
+   # try to move each moveable cell on the net to the centroid row at cx,
+   # snapped to a blockage-free x. Keep the move only if it reduces the
+   # net's length; otherwise revert.
+   foreach id $placedids {
+    set ox [lindex $_instlist($id) 5]
+    set oy [lindex $_instlist($id) 6]
+    # candidate x = centroid x, clamped to core, nudged past blockages.
+    set nx $cx
+    if { $nx < $cb_x0 } { set nx $cb_x0 }
+    if { $nx > $cb_x1 } { set nx $cb_x1 }
+    # if inside a blockage, nudge right in siteh steps up to a few tries.
+    for { set g 0 } { $g < 50 && ! [_po_clear $nx $ty $obs] } { incr g } { set nx [expr {$nx + $siteh}] }
+    # strict validation: final position must be inside core AND clear of
+    # every blockage/region; otherwise skip the move (no overlap with a
+    # macro/halo). This keeps placeOpt's result legal even though it does
+    # not track cell-cell overlap.
+    if { $nx < $cb_x0 || $nx > $cb_x1 || $ty < $cb_y0 || $ty > $cb_y1 } { continue }
+    if { ! [_po_clear $nx $ty $obs] } { continue }
+    if { [expr {abs($nx - $ox)}] < 0.01 && [expr {abs($ty - $oy)}] < 0.01 } { continue }
+    # apply tentative move and re-measure this net.
+    lset _instlist($id) 5 $nx
+    lset _instlist($id) 6 $ty
+    set after [_po_netlen $n]
+    if { $after < $before } {
+     incr nmoved
+     set before $after
+    } else {
+     # revert
+     lset _instlist($id) 5 $ox
+     lset _instlist($id) 6 $oy
+     catch { unset _wirelen_cache($n) }
+     set _wirelen_cache($n) $before
+    }
+   }
+  }
+  # recompute the global cache after the iteration (positions changed).
+  global _wirelen_cache
+  array unset _wirelen_cache
+  set total [_po_total]
+  puts "Info : placeOpt, iter $iter: moved $nmoved cells, total wire length = [format %.2f $total]"
+ }
+ catch { rename _po_clear {} }
+ catch { rename _po_total {} }
+ catch { rename _po_netlen {} }
+ puts "Info : placeOpt, done: total [format %.2f $total0] -> [format %.2f $total] ([expr {$total0>0?int(($total0-$total)*100/$total0):0}]% reduction)"
+}
+
 proc create_region { hmodule blx bly trx try } {
  variable regionindex
  variable _regionlist
