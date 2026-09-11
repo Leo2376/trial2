@@ -355,8 +355,25 @@ proc set_top_design { name } {
  variable _hinstlist
  variable cataloglist
  variable hierlist
+ variable hierlistdef
  variable _gui_mode
- 
+
+ if { $name eq "" } {
+  puts "Error : set_top_design requires a module name"
+  puts "Usage: set_top_design <module>"
+  return
+ }
+ # A netlist must have been read first: hierlistdef holds the parsed module
+ # names. Reject an unknown top so build_design does not fail later on an
+ # empty / mistyped reference.
+ if { [llength $hierlistdef] == 0 } {
+  puts "Error : no netlist loaded, call 'read_netlist' before set_top_design"
+  return
+ }
+ if { [lsearch -exact $hierlistdef $name] < 0 } {
+  puts "Error : module $name not found in the loaded netlist"
+  return
+ }
 
  set topname $name
 
@@ -693,6 +710,7 @@ proc place_instance { cellinst posx posy orientation } {
 }
 
 proc remove_all_blockage { } {
+ _require 2
  variable topname
  variable topnameid
  variable hierindex
@@ -1185,6 +1203,7 @@ proc remove_all_region { } {
 
 
 proc list_region_instances { region } {
+ _require 2
  variable instindex
  variable _instlist
  variable _libcell
@@ -1207,6 +1226,7 @@ proc list_region_instances { region } {
 }
 
 proc report_unplaced { } {
+ _require 2
  variable instindex
  variable _instlist
  variable _libcell
@@ -1233,6 +1253,7 @@ proc report_unplaced { } {
 #############################################################
 
 proc swap_refcell { instname refname } {
+ _require 2
  variable _instlist
  variable pathlist
 
@@ -1250,6 +1271,7 @@ proc swap_refcell { instname refname } {
 
 
 proc all_macro { } {
+ _require 2
  variable topname
  variable hierindex
  variable instindex
@@ -1281,6 +1303,7 @@ proc all_macro { } {
 }
 
 proc report_all_macro { } {
+ _require 2
  variable topname
  variable hierindex
  variable instindex
@@ -1312,6 +1335,7 @@ proc report_all_macro { } {
 
 
 proc all_pad { } {
+ _require 2
  variable topname
  variable hierindex
  variable instindex
@@ -1482,6 +1506,7 @@ proc report_area_stats { } {
 
 
 proc update_wire_db { } {
+ _require 2
  variable hinstindex
  variable _hinstlist
  variable wireindex
@@ -1535,6 +1560,7 @@ for { set j 1 } { $j <= $wireindex } { incr j } {
 }
 
 proc list_all_pins { } {
+ _require 2
  variable instindex
  variable hinstindex
  variable _instlist
@@ -1613,6 +1639,7 @@ proc list_all_pins { } {
 #   netload(net)   = list of {instname pin} that read the net (input pins)
 # Top input ports act as net drivers; top output ports act as net sinks.
 proc build_net_conn { } {
+ _require 2
  variable topname
  variable topnameid
  variable instindex
@@ -1907,6 +1934,7 @@ proc _report_path_forward { from cur_net start_point opt_net opt_layout } {
 #   -layout : add an (x, y) coordinate column for placed crossed cells/pins;
 #             nets/ports/unplaced cells stay blank (P5).
 proc report_path { args } {
+ _require 2
  variable topname
  variable _libcell
  variable _instlist
@@ -1937,6 +1965,11 @@ proc report_path { args } {
   puts "Error : report_path requires -from"
   puts "Usage: report_path -from <pin|net> -to <pin|net> ?-net? ?-layout?"
   puts "       report_path -from <pin|net> ?-net? ?-layout?"
+  return
+ }
+ # Both modes trace the net connectivity map, so build_net_conn must have run.
+ if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
+  puts "Error : build_net_conn must run before report_path"
   return
  }
 
@@ -2462,10 +2495,15 @@ proc get_net { args } {
 # reused in submodules), and "all_connected core0/w0/n77" reports only that
 # scope's net. If the net is not in that hierarchy, nothing is found.
 proc all_connected { pattern } {
- global netdriver netload
+ _require 2
+ global netdriver netload netconnbuilt
  variable pathlist
  variable hpathlist
 
+ if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
+  puts "Error : build_net_conn must run before all_connected"
+  return
+ }
  puts "************************************************************"
  puts " all_connected : $pattern"
  puts "************************************************************"

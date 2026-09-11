@@ -5,6 +5,20 @@ puts "Test 1: CPU Synthesis (Large Design)"
 puts "=========================================="
 puts ""
 
+# G1 non-reg checks: state-touching commands must refuse to run out of order
+# with a clear error rather than crashing or producing nonsense. These are
+# expected to print Error lines and return cleanly.
+puts "G1 _require guard non-reg checks"
+puts "=========================================="
+# set_top_design before any netlist is read.
+set_top_design cpucore5nvstrb_nl2
+# build_design before set_top_design (no top set yet).
+build_design
+# build_net_conn before build_design.
+build_net_conn
+# get_cell before build_design.
+get_cell *
+
 # Load LEF libraries
 puts "Loading LEF libraries..."
 add_lef ../../../lef_files/std_cell.lef
@@ -14,6 +28,8 @@ add_lef ../../../lef_files/tsdn7lvta128x64m4wbzhocp.lef
 
 
 read_netlist ../inputs/cpu_syn.v
+# set_top_design on an unknown module after a netlist is loaded.
+set_top_design no_such_module
 set_top_design cpucore5nvstrb_nl2
 build_design
 

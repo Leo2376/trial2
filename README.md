@@ -86,7 +86,7 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 | S2  | Performance | Convert `pathlist` / `hpathlist` to index maps for O(1) instance lookup    | proposal   |
 | S3  | Performance | Convert `hierlist` / `cataloglist` to refname->index maps                  | proposal   |
 | S4  | Performance | Pair `_instpinconn1/2` into single per-instance lists for direct `foreach` | proposal   |
-| G1  | Robustness  | Add consistent `_require` guards to all state-touching commands            | proposal   |
+| G1  | Robustness  | Add consistent `_require` guards to all state-touching commands            | implemented |
 | G6  | Robustness  | Better options handling: let multi-arg commands take options in any order  | proposal   |
 |     |             | (e.g. `report_path -to <p> -from <p>` same as `-from <p> -to <p>`)           |            |
 | G4  | Reporting   | `report_net` / `report_pin` helper (driver, receivers, connected insts)    | implemented |
