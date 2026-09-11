@@ -126,6 +126,12 @@ set _mt_workers 8
 set _mt_thread_loaded 0
 # Counter for unique per-call tsv namespaces in the parallel site scan.
 set _eval_sites_seq 0
+# Parallel redraw: only the CORE std-cell rectangles are computed across
+# worker threads (blockages/macros/bumps stay on the main thread so they stay
+# in the background and Tk canvas calls are never made off-thread). The workers
+# only compute screen coordinates and return them; the main thread issues the
+# .can create calls in instance order. 4 slices, fixed.
+set _redraw_seq 0
 
 set fontsize 6
 
@@ -721,6 +727,10 @@ proc redraw { args } {
 
  # cell placed 
  if { $verbose } { puts "Info : REDRAW placed instance .." }
+ # Macros (BLOCK/PAD) are drawn on the main thread first so they stay in the
+ # background; CORE std cells are collected and drawn afterwards (in parallel
+ # when multithreading is on) so they sit on top of the macros.
+ set core_list {}
   for { set i 1} { $i<= $instindex } { set i [expr $i +1] } {
    set inst $_instlist($i)
    if {  [lindex $inst 4] == 1 } {
@@ -730,18 +740,23 @@ proc redraw { args } {
 	 set szy [lindex $_libcell($refid) 2]
 	 set class [lindex $_libcell($refid) 4]
 
-         # Fast-draw filter: small std cells (CORE) cached as below the
-         # 1/200th-of-canvas threshold for the current view scale are skipped,
-         # but 1 in 20 is still drawn so the floorplan does not look empty.
-         # Macros (BLOCK/PAD) are always drawn regardless of mode.
-         if { $_draw_mode eq "fast" && $class eq "CORE" && [info exists _smallcell_cache($refid)] && $_smallcell_cache($refid) && ($i % 20) != 1 } { continue }
-
          set outline "white" ; set blockfill "white"
          if {$class == "BLOCK"}  { set outline "#d0d0d0" ; set blockfill "#101010" }
          if {$class == "CORE" }  { set outline "#4888b8" ; set blockfill "#305074" }
          if {$class == "PAD"  }  { set outline "#339999" ; set blockfill "#305074" }
-        
-	 
+
+         # Fast-draw filter: small std cells (CORE) cached as below the
+         # 1/200th-of-canvas threshold for the current view scale are skipped,
+         # but 1 in 20 is still drawn so the floorplan does not look empty.
+         # Macros (BLOCK/PAD) are always drawn regardless of mode. CORE cells
+         # that survive the filter are queued for the (optionally parallel)
+         # std-cell draw below, not drawn here.
+         if { $class eq "CORE" } {
+          if { $_draw_mode eq "fast" && [info exists _smallcell_cache($refid)] && $_smallcell_cache($refid) && ($i % 20) != 1 } { continue }
+          lappend core_list [list $i [lindex $inst 5] [lindex $inst 6] $szx $szy $orient $refid]
+          continue
+         }
+        	 
          if { $orient == "N" } {
           set bl_x [lindex $inst 5]
           set bl_y [lindex $inst 6]
@@ -818,6 +833,11 @@ proc redraw { args } {
 	 }
          }
  }
+
+ # CORE std cells: drawn after the macros so they sit on top. Computed across
+ # 4 worker threads when multithreading is on (workers only compute coords; the
+ # .can create calls run on the main thread in instance order), else serially.
+ _redraw_core_cells $core_list $offset_x $offset_y $scale_f $wsizey "#4888b8"
 
 
  if { $verbose } { puts "Info : Bump redraw  .." }
@@ -1258,6 +1278,123 @@ proc _eval_sites { site_coords utlzmap } {
   }
  }
  return $msite
+}
+
+# Internal: draw the CORE std-cell rectangles in parallel when multithreading is
+# on, otherwise serially. blockages, macros (BLOCK/PAD) and bumps are NOT drawn
+# here -- they are drawn on the main thread by redraw before/after this call so
+# they stay in the background/foreground and Tk canvas calls are never made off
+# the main thread. Workers only compute the screen coordinates of each CORE
+# rectangle; the main thread issues the .can create rectangle calls in instance
+# order so the layering is deterministic.
+# core_list is a list of {i px py szx szy orient refid} entries (already filtered
+# for the fast-draw small-cell cache); the transform params (offset_x, offset_y,
+# scale_f, wsizey) are the same ones used everywhere else in redraw. The outline
+# color is the CORE rectangle outline.
+proc _redraw_core_cells { core_list offset_x offset_y scale_f wsizey outline } {
+ global _mt_on _mt_thread_loaded _redraw_seq
+ set n [llength $core_list]
+ if { $n == 0 } { return }
+ if { ! ($_mt_on && $_mt_thread_loaded) } {
+  foreach c $core_list {
+   set i [lindex $c 0]
+   set px [lindex $c 1]
+   set py [lindex $c 2]
+   set szx [lindex $c 3]
+   set szy [lindex $c 4]
+   set orient [lindex $c 5]
+   if { $orient == "N" } {
+    set bl_x $px; set bl_y $py; set tr_x [expr {$px+$szx}]; set tr_y [expr {$py+$szy}]
+   } elseif { $orient == "FN" } {
+    set bl_x $px; set bl_y $py; set tr_x [expr {$px-$szx}]; set tr_y [expr {$py+$szy}]
+   } elseif { $orient == "MY" } {
+    set bl_x $px; set bl_y $py; set tr_x [expr {$px+$szx}]; set tr_y [expr {$py+$szy}]
+   } elseif { $orient == "S" } {
+    set bl_x $px; set bl_y $py; set tr_x [expr {$px+$szx}]; set tr_y [expr {$py-$szy}]
+   } elseif { $orient == "FS" } {
+    set bl_x $px; set bl_y $py; set tr_x [expr {$px-$szx}]; set tr_y [expr {$py-$szy}]
+   } else {
+    set bl_x $px; set bl_y $py; set tr_x [expr {$px+$szx}]; set tr_y [expr {$py+$szy}]
+   }
+   set bl_x [expr {$offset_x+$scale_f*$bl_x}]
+   set bl_y [expr {$offset_y+$scale_f*$bl_y}]
+   set tr_x [expr {$offset_x+$scale_f*$tr_x}]
+   set tr_y [expr {$offset_y+$scale_f*$tr_y}]
+   set bl_y [expr {$wsizey-$bl_y}]
+   set tr_y [expr {$wsizey-$tr_y}]
+   .can create rectangle $bl_x $bl_y $tr_x $tr_y -width 1 -outline $outline
+  }
+  return
+ }
+ # Parallel: 4 slices. Workers compute coords and stash them per index; the
+ # main thread draws in instance order. Shared state via a unique tsv namespace.
+ set ns rdraw[incr _redraw_seq]
+ tsv::array set $ns counter 0
+ tsv::set $ns counter -1
+ tsv::set $ns corelist $core_list
+ tsv::set $ns offx $offset_x
+ tsv::set $ns offy $offset_y
+ tsv::set $ns sf $scale_f
+ tsv::set $ns wsy $wsizey
+ tsv::array set rdraw_ns x 1
+ tsv::set rdraw_ns cur $ns
+ tsv::set rdraw_ns done 0
+ set nw 4
+ if { $nw > $n } { set nw $n }
+ set wscript {
+  set ns [tsv::get rdraw_ns cur]
+  set corelist [tsv::get $ns corelist]
+  set offx [tsv::get $ns offx]
+  set offy [tsv::get $ns offy]
+  set sf [tsv::get $ns sf]
+  set wsy [tsv::get $ns wsy]
+  set n [llength $corelist]
+  while 1 {
+   set i [tsv::incr $ns counter]
+   if { $i >= $n } { break }
+   set c [lindex $corelist $i]
+   set idx [lindex $c 0]
+   set px [lindex $c 1]
+   set py [lindex $c 2]
+   set szx [lindex $c 3]
+   set szy [lindex $c 4]
+   set orient [lindex $c 5]
+   if { $orient == "N" } {
+    set bl_x $px; set bl_y $py; set tr_x [expr {$px+$szx}]; set tr_y [expr {$py+$szy}]
+   } elseif { $orient == "FN" } {
+    set bl_x $px; set bl_y $py; set tr_x [expr {$px-$szx}]; set tr_y [expr {$py+$szy}]
+   } elseif { $orient == "MY" } {
+    set bl_x $px; set bl_y $py; set tr_x [expr {$px+$szx}]; set tr_y [expr {$py+$szy}]
+   } elseif { $orient == "S" } {
+    set bl_x $px; set bl_y $py; set tr_x [expr {$px+$szx}]; set tr_y [expr {$py-$szy}]
+   } elseif { $orient == "FS" } {
+    set bl_x $px; set bl_y $py; set tr_x [expr {$px-$szx}]; set tr_y [expr {$py-$szy}]
+   } else {
+    set bl_x $px; set bl_y $py; set tr_x [expr {$px+$szx}]; set tr_y [expr {$py+$szy}]
+   }
+   set bl_x [expr {$offx+$sf*$bl_x}]
+   set bl_y [expr {$offy+$sf*$bl_y}]
+   set tr_x [expr {$offx+$sf*$tr_x}]
+   set tr_y [expr {$offy+$sf*$tr_y}]
+   set bl_y [expr {$wsy-$bl_y}]
+   set tr_y [expr {$wsy-$tr_y}]
+   tsv::set $ns crd_$idx [list $bl_x $bl_y $tr_x $tr_y]
+  }
+  tsv::incr rdraw_ns done
+  thread::release
+ }
+ set workers {}
+ for { set w 0 } { $w < $nw } { incr w } {
+  lappend workers [thread::create $wscript]
+ }
+ while { [tsv::get rdraw_ns done] < $nw } { after 5 }
+ # Draw in instance order so layering is deterministic regardless of which
+ # worker computed which slice.
+ foreach c $core_list {
+  set idx [lindex $c 0]
+  set crd [tsv::get $ns crd_$idx]
+  .can create rectangle [lindex $crd 0] [lindex $crd 1] [lindex $crd 2] [lindex $crd 3] -width 1 -outline $outline
+ }
 }
 
 proc make_placement { {opt "-full"} } {
