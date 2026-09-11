@@ -502,35 +502,38 @@ proc redraw { } {
  set bl_y [lindex $topbox 1]
  set tr_x [lindex $topbox 2]
  set tr_y [lindex $topbox 3]
- 
- set scale_fx [expr ($wsizex-2.0*$offset_x) / $tr_x ]
- set scale_fy [expr ($wsizey-2.0*$offset_y) / $tr_y ]
+
  set scale_f  1
-  
- if { $scale_fx <  $scale_fy } { set scale_f $scale_fx }
- if { $scale_fx >= $scale_fy } { set scale_f $scale_fy }
- 
- set bound_x [expr $offset_x+$scale_f*$tr_x]
- set bound_y [expr $offset_y+$scale_f*$tr_y]
- 
- .can create rectangle $offset_x [expr $wsizey-$offset_y] $bound_x [expr $wsizey-$bound_y] -width 2 -outline "#b0b0b0"
+ if { $tr_x > 0 && $tr_y > 0 } {
+  set scale_fx [expr ($wsizex-2.0*$offset_x) / $tr_x ]
+  set scale_fy [expr ($wsizey-2.0*$offset_y) / $tr_y ]
+  if { $scale_fx <  $scale_fy } { set scale_f $scale_fx }
+  if { $scale_fx >= $scale_fy } { set scale_f $scale_fy }
+
+  set bound_x [expr $offset_x+$scale_f*$tr_x]
+  set bound_y [expr $offset_y+$scale_f*$tr_y]
+
+  .can create rectangle $offset_x [expr $wsizey-$offset_y] $bound_x [expr $wsizey-$bound_y] -width 2 -outline "#b0b0b0"
 
  # core Boundary
  puts "Info : REDRAW top boundary .."
- set bl_x [lindex $corebox 0]
- set bl_y [lindex $corebox 1]
- set tr_x [lindex $corebox 2]
- set tr_y [lindex $corebox 3]
+  set bl_x [lindex $corebox 0]
+  set bl_y [lindex $corebox 1]
+  set tr_x [lindex $corebox 2]
+  set tr_y [lindex $corebox 3]
 
- set bl_x [expr $offset_x+$scale_f*$bl_x]
- set bl_y [expr $offset_y+$scale_f*$bl_y]
- set tr_x [expr $offset_x+$scale_f*$tr_x]
- set tr_y [expr $offset_y+$scale_f*$tr_y]
+  set bl_x [expr $offset_x+$scale_f*$bl_x]
+  set bl_y [expr $offset_y+$scale_f*$bl_y]
+  set tr_x [expr $offset_x+$scale_f*$tr_x]
+  set tr_y [expr $offset_y+$scale_f*$tr_y]
 
- set bl_y [expr $wsizey-$bl_y]
- set tr_y [expr $wsizey-$tr_y]
-  
- .can create rectangle $bl_x $bl_y $tr_x $tr_y -width 1 -outline "#606060" -fill "#303030"
+  set bl_y [expr $wsizey-$bl_y]
+  set tr_y [expr $wsizey-$tr_y]
+
+  .can create rectangle $bl_x $bl_y $tr_x $tr_y -width 1 -outline "#606060" -fill "#303030"
+ } else {
+  puts "Info : no floorplan defined (run make_floorplan before redraw)"
+ }
  
  puts "Info : REDRAW placement blockage .."
   for { set i 1} { $i<= $blockageindex } { set i [expr $i +1] } {
