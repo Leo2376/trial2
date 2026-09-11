@@ -2380,17 +2380,19 @@ proc _net_loads { n } {
 }
 
 # get_cell <pattern> ?-hier?
-# Report cells (leaf and hierarchical) whose full hierarchical instance path
-# matches the glob pattern. Wildcards are the standard glob ones (*, ?, [..]).
+# Return the list (collection) of cells (leaf and hierarchical) whose full
+# hierarchical instance path matches the glob pattern. Wildcards are the
+# standard glob ones (*, ?, [..]). Nothing is printed; callers capture the
+# returned list, e.g. 'set cells [get_cell core0/w0/*]'.
 #
 # By default (no -hier) only the DIRECT children of the scope implied by the
-# pattern are reported:
+# pattern are returned:
 #   get_cell *             -> top-level instances only
 #   get_cell core0/w0/*    -> direct children of core0/w0 only
 #   get_cell *reg*         -> top-level instances matching *reg* only
 # This matches the common EDA convention that a non-hierarchical query stays
 # within one scope. With -hier the match is cross-hierarchy (the previous
-# behaviour): every instance whose full path matches the pattern is reported,
+# behaviour): every instance whose full path matches the pattern is returned,
 # at any depth.
 proc get_cell { args } {
  variable instindex
@@ -2417,10 +2419,6 @@ proc get_cell { args } {
   return
  }
 
- puts "************************************************************"
- puts " get_cell : $pattern"
- puts "************************************************************"
-
  # In the default (non-hier) mode, restrict the match to the direct children
  # of the scope implied by the pattern. The scope is the literal prefix of
  # the pattern up to the last component that still contains no wildcard; a
@@ -2438,15 +2436,14 @@ proc get_cell { args } {
   }
  }
 
- set n 0
+ set cells {}
  for { set i 1 } { $i <= $instindex } { incr i } {
   set fullp [lindex $_instlist($i) 7]
   if { ! $hier && $fullp ne $scope } { continue }
   set iname [lindex $_instlist($i) 0]
   if { $fullp eq "-1" } { set ipath $iname } else { set ipath "$fullp/$iname" }
   if { [string match $pattern $ipath] } {
-   puts "  $ipath"
-   incr n
+   lappend cells $ipath
   }
  }
  for { set i 1 } { $i <= $hinstindex } { incr i } {
@@ -2455,27 +2452,20 @@ proc get_cell { args } {
   set iname [lindex $_hinstlist($i) 0]
   if { $fullp eq "-1" } { set ipath $iname } else { set ipath "$fullp/$iname" }
   if { [string match $pattern $ipath] } {
-   puts "  $ipath hierarchical"
-   incr n
+   lappend cells $ipath
   }
  }
- puts "  -------------------------------------------------------"
- set hdr $pattern
- if { $hier } { append hdr " -hier" }
- if { $n == 1 } { puts "$n cell matching $hdr." } else { puts "$n cells matching $hdr." }
- puts ""
+ return $cells
 }
 
 # get_lib_cell <refname>
-# Report library-cell references (refnames) whose name matches the glob
-# pattern (standard globs: *, ?, [..]). A bare refname with no wildcard is an
-# exact lookup. The reported info is the cell name, its class, its (LEF)
-# width x height, and its pin list with directions. The list of matching cell
-# names is also RETURNED (a collection), so callers can capture it:
-#   set cells [get_lib_cell SP*]  ->  {SP128X33M2 SP128X33M4 SP512X40M2 SP512X40M4}
-# Unlike get_cell/get_net this queries the loaded library (cataloglist /
-# _libcell), so it works as soon as a LEF has been imported and does not
-# require a design to be set or built.
+# Return the list (collection) of library-cell references (refnames) whose
+# name matches the glob pattern (standard globs: *, ?, [..]). A bare refname
+# with no wildcard is an exact lookup. Nothing is printed; callers capture the
+# returned list, e.g. 'set cells [get_lib_cell SP*]' ->
+# {SP128X33M2 SP128X33M4 SP512X40M2 SP512X40M4}. Unlike get_cell/get_net this
+# queries the loaded library (cataloglist / _libcell), so it works as soon as
+# a LEF has been imported and does not require a design to be set or built.
 proc get_lib_cell { pattern } {
  variable cellindex
  variable _libcell
@@ -2488,56 +2478,31 @@ proc get_lib_cell { pattern } {
   return
  }
 
- puts "************************************************************"
- puts " get_lib_cell : $pattern"
- puts "************************************************************"
-
- # Catalog refid == lsearch index in cataloglist + 1, and matches the
- # _libcell/_libcellpindir array key. Iterate all lib cells and keep those
- # whose name matches the glob, in catalog order.
- set n 0
  set names {}
  for { set i 1 } { $i <= $cellindex } { incr i } {
   if { ! [info exists _libcell($i)] } { continue }
   set info $_libcell($i)
   set cname [lindex $info 0]
   if { ! [string match $pattern $cname] } { continue }
-  set cw [lindex $info 1]
-  set ch [lindex $info 2]
-  set cclass [lindex $info 4]
-  set npin [lindex $info 3]
-  set pins {}
-  if { [info exists _libcellpindir($i)] } {
-   set dirs $_libcellpindir($i)
-   for { set j 0 } { $j < $npin } { incr j } {
-    lappend pins "[lindex $info [expr {5+$j}]]/[lindex $dirs $j]"
-   }
-  }
-  puts "  $cname  class=$cclass  size=${cw}x${ch}  pins: [join $pins { }]"
   lappend names $cname
-  incr n
  }
- puts "  -------------------------------------------------------"
- if { $n == 1 } { puts "$n lib cell matching $pattern." } else { puts "$n lib cells matching $pattern." }
- puts ""
- # Return the list of matching cell names (a collection), so callers can
- # capture it: set cells [get_lib_cell SP*] -> {SP128X33M2 SP128X33M4 ...}.
  return $names
 }
 
 # get_net <pattern> ?-hier?
-# Report nets whose (scoped) name matches the glob pattern. Net names are
-# stored scoped by their containing module's hierarchical path
-# (e.g. "core0/w0/nv_c0/c0/iu0/n20719"); top-level nets keep the bare name.
-# Wildcards are the standard glob ones (*, ?, [..]).
+# Return the list (collection) of nets whose (scoped) name matches the glob
+# pattern. Net names are stored scoped by their containing module's
+# hierarchical path (e.g. "core0/w0/nv_c0/c0/iu0/n20719"); top-level nets keep
+# the bare name. Wildcards are the standard glob ones (*, ?, [..]). Nothing is
+# printed; callers capture the returned list, e.g. 'set nets [get_net n2*]'.
 #
 # By default (no -hier) only the nets of the SINGLE scope implied by the
-# pattern are reported:
+# pattern are returned:
 #   get_net *                    -> top-level nets only
 #   get_net core0/w0/nv_c0/c0/*  -> nets declared in core0/w0/nv_c0/c0 only
 #   get_net n2*                  -> top-level nets matching n2* only
 # With -hier the match is cross-hierarchy: every net whose full scoped name
-# matches the pattern is reported, at any depth.
+# matches the pattern is returned, at any depth.
 proc get_net { args } {
  global netdriver netload
 
@@ -2556,10 +2521,6 @@ proc get_net { args } {
   puts "Usage: get_net <pattern> ?-hier?"
   return
  }
-
- puts "************************************************************"
- puts " get_net : $pattern"
- puts "************************************************************"
 
  # In the default (non-hier) mode, restrict the match to nets whose scope
  # equals the scope implied by the pattern: the pattern minus its last path
@@ -2585,15 +2546,7 @@ proc get_net { args } {
   if { [string match $pattern $k] } { lappend nets $k }
  }
 
- foreach n $nets {
-  puts "  $n"
- }
- puts "  -------------------------------------------------------"
- set hdr $pattern
- if { $hier } { append hdr " -hier" }
- set nm [llength $nets]
- if { $nm == 1 } { puts "$nm net matching $hdr." } else { puts "$nm nets matching $hdr." }
- puts ""
+ return $nets
 }
 
 # all_connected <net or pin>

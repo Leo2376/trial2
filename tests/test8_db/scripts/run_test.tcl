@@ -44,6 +44,7 @@ puts $qf {proc puts {args} {
   if {$nl} { _puts_orig -nonewline $_qf $s } else { _puts_orig $_qf $s }
 }}
 puts $qf {proc _emit {cmd} { global _qf _puts_orig; set rc [catch {uplevel 1 $cmd} res]; if {$rc} { _puts_orig $_qf $res } }}
+puts $qf {proc _emit_ret {cmd} { global _qf _puts_orig; set rc [catch {uplevel 1 $cmd} res]; if {$rc} { _puts_orig $_qf $res } else { _puts_orig $_qf $res } }}
 puts $qf {set sep ===========================================================}
 foreach q {
   {get_cell *}
@@ -58,7 +59,11 @@ foreach q {
 } {
   puts $qf "_puts_orig \$_qf \$sep"
   puts $qf "_puts_orig \$_qf {CMD: $q}"
-  puts $qf "_emit {$q}"
+  if { [regexp {^get_(cell|net|lib_cell)} $q] } {
+    puts $qf "_emit_ret {$q}"
+  } else {
+    puts $qf "_emit {$q}"
+  }
 }
 puts $qf {close $_qf}
 puts $qf {rename puts _puts_gone}
