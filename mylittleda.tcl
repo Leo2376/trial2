@@ -95,6 +95,13 @@ array set wiresearch_map {}
 
 set scale_f 0
 
+# GUI view state for pan/zoom. _view_scale multiplies the auto-fit scale_f
+# (1.0 = fit, 2.0 = zoomed in 2x, 0.5 = zoomed out 2x). _pan_dx/_pan_dy are
+# the pan offset in screen pixels added on top of the scale transform.
+set _view_scale 1.0
+set _pan_dx 0.0
+set _pan_dy 0.0
+
 set gridutil [ list ]
 
 set utlzmap  [ list ]
@@ -427,6 +434,7 @@ proc gui_start { } {
   canvas .can -background black -height $app_height -width $app_width
   pack .can
  }
+ _build_view_toolbar
  if { $topname ne "" } { wm title . "Layout : $topname" }
  puts "Info : GUI started"
  if { $hierindex > 0 } { redraw }
@@ -440,7 +448,8 @@ proc set_font_size { sz } {
 
 proc scalepx { sx } {
  variable scale_f
- set offset_x 20.0
+ global _pan_dx
+ set offset_x [expr {20.0 + $_pan_dx}]
  set bl_x [expr $offset_x+$scale_f*$sx]
  return $bl_x
  }
@@ -448,14 +457,68 @@ proc scalepx { sx } {
 proc scalepy { sy } {
  variable scale_f
  variable app_height
+ global _pan_dy
  set wsizey $app_height
- set offset_y 20.0
+ set offset_y [expr {20.0 + $_pan_dy}]
  set bl_y [expr $offset_y+$scale_f*$sy]
  set bl_y [expr $wsizey-$bl_y]
  return $bl_y
  }
 
 
+# GUI pan/zoom. Panning shifts the view by 10% of the canvas display size in
+# the requested direction; zooming multiplies the current view scale by 2x
+# (in) or 0.5 (out). Each helper updates the view state and redraws. The
+# pan amount is 10% of app_width/app_height so the step scales with the window.
+proc _view_pan { dir } {
+ global _pan_dx _pan_dy app_width app_height
+ set sx [expr {$app_width / 10.0}]
+ set sy [expr {$app_height / 10.0}]
+ switch -exact -- $dir {
+  left  { set _pan_dx [expr {$_pan_dx - $sx}] }
+  right { set _pan_dx [expr {$_pan_dx + $sx}] }
+  up    { set _pan_dy [expr {$_pan_dy + $sy}] }
+  down  { set _pan_dy [expr {$_pan_dy - $sy}] }
+ }
+ redraw
+}
+
+proc _view_zoom { factor } {
+ global _view_scale
+ set _view_scale [expr {$_view_scale * $factor}]
+ redraw
+}
+
+proc _view_reset { } {
+ global _view_scale _pan_dx _pan_dy
+ set _view_scale 1.0
+ set _pan_dx 0.0
+ set _pan_dy 0.0
+ redraw
+}
+
+# Build the pan/zoom toolbar (a frame of buttons) on top of the canvas. Idempotent:
+# created once, then left in place across redraws. The six buttons are arranged
+# on a single row at the very top of the window.
+proc _build_view_toolbar { } {
+ if { [winfo exists .tb] } { return }
+ frame .tb -background "#202020"
+ button .tb.up    -text "\u2191" -command {_view_pan up}    -width 3
+ button .tb.down  -text "\u2193" -command {_view_pan down}  -width 3
+ button .tb.left  -text "\u2190" -command {_view_pan left}  -width 3
+ button .tb.right -text "\u2192" -command {_view_pan right} -width 3
+ button .tb.zin   -text "Zoom In 2x"  -command {_view_zoom 2.0}   -width 10
+ button .tb.zout  -text "Zoom Out 2x" -command {_view_zoom 0.5}   -width 10
+ button .tb.fit   -text "Fit" -command {_view_reset} -width 5
+ pack .tb -side top -fill x -before .can
+ pack .tb.left -side left -padx 1 -pady 1
+ pack .tb.up   -side left -padx 1 -pady 1
+ pack .tb.down -side left -padx 1 -pady 1
+ pack .tb.right -side left -padx 1 -pady 1
+ pack .tb.zin  -side left -padx 4 -pady 1
+ pack .tb.zout -side left -padx 4 -pady 1
+ pack .tb.fit  -side right -padx 4 -pady 1
+}
 
 proc redraw { } {
  variable _gui_mode
@@ -463,6 +526,7 @@ proc redraw { } {
     puts "Info: REDRAW (batch mode - no GUI)"
     return
  }
+ _build_view_toolbar
  variable topname
  variable hierindex
  variable instindex
@@ -486,6 +550,7 @@ proc redraw { } {
  variable fontsize
  variable app_width
  variable app_height
+ global _view_scale _pan_dx _pan_dy
  
  .can delete all
 
@@ -494,9 +559,16 @@ proc redraw { } {
  # APR objects
  set wsizex $app_width
  set wsizey $app_height
- set offset_x 20.0
- set offset_y 20.0
- 
+ # Fit-to-window is computed against the base 20px margins (independent of
+ # pan/zoom). _view_scale then multiplies that fit scale (1.0 = fit, 2.0 =
+ # zoomed in 2x), and _pan_dx/_pan_dy shift the rendered view in screen
+ # pixels by being folded into the margins used by every transform below.
+ set base_off 20.0
+ # Default margins with user pan folded in; the floorplan branch refines
+ # offset_x/offset_y (and scale_f) below, but these defaults keep the
+ # blockage/region/bump loops valid even with no floorplan.
+ set offset_x [expr {$base_off + $_pan_dx}]
+ set offset_y [expr {$base_off + $_pan_dy}]
  # top Boudary
  puts "Info : REDRAW top boundary .."
  set bl_x [lindex $topbox 0]
@@ -506,10 +578,15 @@ proc redraw { } {
 
  set scale_f  1
  if { $tr_x > 0 && $tr_y > 0 } {
-  set scale_fx [expr ($wsizex-2.0*$offset_x) / $tr_x ]
-  set scale_fy [expr ($wsizey-2.0*$offset_y) / $tr_y ]
+  set scale_fx [expr ($wsizex-2.0*$base_off) / $tr_x ]
+  set scale_fy [expr ($wsizey-2.0*$base_off) / $tr_y ]
   if { $scale_fx <  $scale_fy } { set scale_f $scale_fx }
   if { $scale_fx >= $scale_fy } { set scale_f $scale_fy }
+  # Apply the user zoom factor (1.0 = fit-to-window).
+  set scale_f [expr {$scale_f * $_view_scale}]
+  # Fold the user pan into the margins used by every transform below.
+  set offset_x [expr {$base_off + $_pan_dx}]
+  set offset_y [expr {$base_off + $_pan_dy}]
 
   set bound_x [expr $offset_x+$scale_f*$tr_x]
   set bound_y [expr $offset_y+$scale_f*$tr_y]
