@@ -210,6 +210,16 @@ all_connected core0/w0/nv_c0/c0/iu0/n_eco
 get_net core0/w0/nv_c0/c0/iu0/n_eco
 get_cell core0/w0/nv_c0/c0/iu0/u_*
 
+puts "=========================================="
+puts "gui_start non-reg checks (G1/GUI)"
+puts "=========================================="
+# gui_start brings up the Tk GUI from a batch session. In this headless test
+# environment Tk/a display are unavailable, so gui_start must fail gracefully
+# (print an Error and Info line) and the session must continue normally after.
+gui_start
+# Confirm the session is unaffected: a normal query still runs.
+get_cell *
+
 set hier_dontshow { SNPS_CLOCK grnand2_tech68_ }
 report_hierarchy_tree
 

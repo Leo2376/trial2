@@ -33,6 +33,15 @@ screen):
 xvfb-run -a tclsh mylittleda.tcl -gui
 ```
 
+A session started in batch mode can switch to the GUI at any time with
+`gui_start`: it loads Tk, switches to GUI mode, creates the layout canvas,
+sets the window title (to the loaded top design if one is set) and redraws if
+a design has been built, so `redraw` and the canvas then behave exactly as if
+the tool had been launched with `-gui`. In an interactive (REPL) session the
+window stays up while the prompt continues; in a scripted session it lives as
+long as the process runs. If Tk or a display is unavailable it prints an
+`Error`/`Info` line and stays in batch mode without aborting the session.
+
 Run the full regression suite:
 
 ```sh
@@ -141,7 +150,7 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | argument is `<inst>/<pin>`. Updates the netload/netdriver map (P2).         |            |
 | E4  | ECO         | `connect_net <net> <pin>`: attach an instance pin to a net; the pin         | implemented|
 |     |             | argument is `<inst>/<pin>`. Updates the netload/netdriver map (P2).         |            |
-| G1  | GUI         | `gui_start`: bring up the Tk GUI after a session that was started in       | proposal   |
+| G1  | GUI         | `gui_start`: bring up the Tk GUI after a session that was started in       | implemented |
 |     |             | batch mode (e.g. `tclsh ... -no-gui`), so a design can be loaded and         |            |
 |     |             | inspected interactively without relaunching the tool.                        |            |
 | H1  | Help        | `help <command>`: print the help/usage of a command; accepts wildcards, so  | proposal   |

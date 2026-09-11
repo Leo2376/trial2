@@ -393,6 +393,44 @@ if { $_gui_mode } { wm title . "Layout : $name" }
 #
 #############################################################
 
+# G1 (GUI) gui_start
+# Bring up the Tk GUI from a session that was started in batch mode (i.e. not
+# launched with -gui). Loads Tk if it is not already loaded, switches to GUI
+# mode, creates the layout canvas, sets the window title (to the loaded top
+# design if one is set, else a generic title) and redraws if a design has been
+# built. After gui_start the session is in GUI mode: redraw and the canvas are
+# available exactly as if the tool had been launched with -gui. In an
+# interactive (REPL) session the window stays up while the prompt continues; in
+# a scripted session the window lives for as long as the process runs.
+proc gui_start { } {
+ global _gui_mode app_width app_height app_dimension
+ variable topname
+ variable hierindex
+
+ if { $_gui_mode } {
+  puts "Info : GUI already active"
+  if { [winfo exists .can] } { redraw }
+  return
+ }
+ # Load Tk. If this fails (no display / Tk not installed) report and stay in
+ # batch mode rather than aborting the session.
+ if { [catch {package require Tk} err] } {
+  puts "Error : cannot start GUI ($err)"
+  puts "Info : a display is required (run under a physical display or xvfb-run)"
+  return
+ }
+ set _gui_mode 1
+ wm title . "Layout"
+ wm geometry . $app_dimension
+ if { ! [winfo exists .can] } {
+  canvas .can -background black -height $app_height -width $app_width
+  pack .can
+ }
+ if { $topname ne "" } { wm title . "Layout : $topname" }
+ puts "Info : GUI started"
+ if { $hierindex > 0 } { redraw }
+}
+
 proc set_font_size { sz } {
  variable fontsize
  
