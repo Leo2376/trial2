@@ -125,9 +125,9 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | restoring all variables (instances, wires, positions, connectivity, LEF    |            |
 |     |             | library, ports, assigns) so the session is ready immediately without      |            |
 |     |             | re-parsing the source netlist or rebuilding the design.                    |            |
-| O1  | Optimization| `set_max_fanout <n>`: set a global fanout threshold (max receivers per net)  | proposal   |
+| O1  | Optimization| `set_max_fanout <n>`: set a global fanout threshold (max receivers per net)  | implemented |
 |     |             | for `fix_max_fanout`.                                                       |            |
-| O2  | Optimization| `fix_max_fanout -cell <buffer>`: insert buffers of the given lib cell on   | proposal   |
+| O2  | Optimization| `fix_max_fanout -cell <buffer>`: insert buffers of the given lib cell on   | implemented |
 |     |             | nets whose fanout exceeds `set_max_fanout`, splitting the receivers across |            |
 |     |             | the buffers so each driver sees at most <n> loads. Uses the netload map     |            |
 |     |             | from `build_net_conn`. Depends on P2.                                       |            |
@@ -258,6 +258,23 @@ containing hierarchical scope; a bare name targets the top level.
 - `connect_net <net> <pin>` — attach an instance pin (`<inst>/<pin>`) to a net;
   the pin's direction selects the driver or receiver list. The net must exist
   (`create_net` or an existing net).
+
+## Optimization commands
+
+After `build_net_conn` (P2), buffer insertion can fix high-fanout nets:
+
+- `set_max_fanout <n>` (O1) — set the global fanout threshold (max receivers per
+  net) used by `fix_max_fanout`. `<n>` must be a positive integer; it is stored
+  in the `maxfanout` global and is also saved/restored by `write_db`/`restore_db`.
+- `fix_max_fanout -cell <buffer>` (O2) — insert buffers of the given lib cell on
+  every net whose receiver count exceeds `maxfanout` and which has at least one
+  driver (ports/constants/hierarchical pin nets with no driver are skipped).
+  Each over-fanout net's receivers are split into groups of at most `maxfanout`:
+  one buffer is created per group in the net's scope, the buffer input loads the
+  original net, a new net per buffer is created and driven by the buffer
+  output, and the group's receivers are moved from the original net to the new
+  net. After insertion every net involved has at most `maxfanout` receivers.
+  Uses the `netload` map from `build_net_conn`, so P2 must run first.
 
 ## Netlist I/O commands
 

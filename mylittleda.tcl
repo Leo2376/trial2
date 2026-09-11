@@ -105,6 +105,7 @@ set fontsize 6
 
 set targetutilz 65
 
+set maxfanout 0
 
 proc _require { level } {
  variable topname
@@ -3004,6 +3005,198 @@ proc connect_net { net pin } {
  puts ""
 }
 
+# O1 set_max_fanout <n>
+# Set the global fanout threshold (max receivers per net) used by
+# fix_max_fanout (O2). A net whose receiver count exceeds this threshold is a
+# candidate for buffer insertion. <n> must be a positive integer. The value is
+# stored in the global maxfanout variable. Requires no design state by itself.
+proc set_max_fanout { n } {
+ global maxfanout
+ if { $n eq "" } {
+  puts "Error : set_max_fanout requires a positive integer"
+  puts "Usage: set_max_fanout <n>"
+  return
+ }
+ if { ! [string is integer -strict $n] || $n < 1 } {
+  puts "Error : set_max_fanout requires a positive integer"
+  return
+ }
+ set maxfanout $n
+ puts "************************************************************"
+ puts " set_max_fanout : $n"
+ puts "************************************************************"
+ puts "  max fanout threshold is now $n"
+ puts ""
+}
+
+# Helper: return the {input output} pin names of a lib cell by refid, using the
+# _libcellpindir map (the first INPUT pin is treated as the buffer input and
+# the first OUTPUT pin as the buffer output). Returns {} if either is missing.
+proc _buf_pins { refid } {
+ variable _libcellpindir
+ variable _libcell
+ if { ! [info exists _libcellpindir($refid)] } { return {} }
+ set dirs $_libcellpindir($refid)
+ set pins [_libcell_pins $refid]
+ set ipin ""
+ set opin ""
+ for {set j 0} {$j < [llength $dirs]} {incr j} {
+  if { [lindex $dirs $j] eq "INPUT"  && $ipin eq "" } { set ipin [lindex $pins $j] }
+  if { [lindex $dirs $j] eq "OUTPUT" && $opin eq "" } { set opin [lindex $pins $j] }
+ }
+ if { $ipin eq "" || $opin eq "" } { return {} }
+ return [list $ipin $opin]
+}
+
+# O2 fix_max_fanout -cell <buffer>
+# Insert buffers of the given lib cell on nets whose receiver count exceeds the
+# threshold set by set_max_fanout (O1). For each over-fanout net the receivers
+# are split into groups of at most maxfanout: one buffer is created per group,
+# the buffer input loads the original net, a new net per buffer is created,
+# the group's receivers are moved from the original net to the new net, and the
+# buffer output drives the new net. After insertion every net involved has at
+# most maxfanout receivers. Uses the netload map from build_net_conn (P2), so
+# build_net_conn must have run first. The buffer cell type must be present in
+# cataloglist.
+proc fix_max_fanout { args } {
+ global netdriver netload netconnbuilt maxfanout
+ variable instindex
+ variable _instlist
+ variable _instpinconn1
+ variable _instpinconn2
+ variable _libcell
+ variable _libcellpindir
+ variable cataloglist
+ variable pathlist
+ variable topname
+
+ _require 2
+ if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
+  puts "Error : build_net_conn must run before fix_max_fanout"
+  return
+ }
+ set bufcell ""
+ for {set i 0} {$i < [llength $args]} {incr i} {
+  set a [lindex $args $i]
+  if { $a eq "-cell" } { set bufcell [lindex $args [incr i]] ; continue }
+  puts "Error : unknown option '$a'"
+  puts "Usage: fix_max_fanout -cell <buffer>"
+  return
+ }
+ if { $bufcell eq "" } {
+  puts "Error : fix_max_fanout requires -cell <buffer>"
+  puts "Usage: fix_max_fanout -cell <buffer>"
+  return
+ }
+ if { $maxfanout < 1 } {
+  puts "Error : max fanout threshold not set (run set_max_fanout <n> first)"
+  return
+ }
+
+ set refid [lsearch -exact $cataloglist $bufcell]
+ incr refid
+ if { ! [info exists _libcell($refid)] } {
+  puts "Error : buffer cell $bufcell not found in library"
+  return
+ }
+ set bp [_buf_pins $refid]
+ if { $bp eq "" } {
+  puts "Error : buffer cell $bufcell has no input/output pin pair"
+  return
+ }
+ set b_ipin [lindex $bp 0]
+ set b_opin [lindex $bp 1]
+
+ puts "************************************************************"
+ puts " fix_max_fanout : -cell $bufcell  (max $maxfanout)"
+ puts "************************************************************"
+
+ # Snapshot the over-fanout nets before any mutation so the loop is not
+ # disturbed by the receivers we move around. A net with no driver (no
+ # netdriver entry, or an empty one) is skipped: ports/constants/hierarchical
+ # pin nets have no real driver to buffer.
+ set targets {}
+ foreach k [array names netload] {
+  if { ! [info exists netdriver($k)] } { continue }
+  if { [llength $netdriver($k)] == 0 } { continue }
+  set nl [llength $netload($k)]
+  if { $nl > $maxfanout } { lappend targets $k }
+ }
+
+ set nbuf 0
+ set nnet [llength $targets]
+ set gi 0
+ foreach net $targets {
+  set loads $netload($net)
+  set nl [llength $loads]
+  # Split the receiver list into groups of at most maxfanout.
+  set groups {}
+  for {set s 0} {$s < $nl} {incr s $maxfanout} {
+   lappend groups [lrange $loads $s [expr {$s + $maxfanout - 1}]]
+  }
+  set nb [llength $groups]
+  # Move every receiver off the original net: it will keep only the buffer
+  # inputs as its new receivers.
+  set netload($net) {}
+  set gi 0
+  foreach grp $groups {
+   incr gi
+   incr nbuf
+   # Create a buffer instance in the same scope as the net. The net key is
+   # already "scope/netname"; the buffer instance path is "scope/buf_<net>_<n>".
+   set binst "${net}___b${gi}"
+   if { [string match {*/*} $net] } {
+    set scope [join [lrange [split $net /] 0 end-1] /]
+    set bpath "${scope}/${binst}"
+   } else {
+    set bpath $binst
+    set scope "-1"
+   }
+   # Ensure a unique instance path (defensive: collisions should not happen).
+   while { [lsearch -exact $pathlist $bpath] >= 0 } {
+    append bpath "x"
+   }
+   incr instindex
+   set _instlist($instindex) [list $binst $bufcell $topname 0 0 0 0 $scope $refid "N"]
+   lappend pathlist $bpath
+   set _instpinconn1($instindex) [_libcell_pins $refid]
+   set _instpinconn2($instindex) {}
+   foreach p [_libcell_pins $refid] { lappend _instpinconn2($instindex) "<unconnected>" }
+   # Buffer input loads the original net.
+   set pk [lsearch -exact $_instpinconn1($instindex) $b_ipin]
+   lappend netload($net) "$bpath $b_ipin"
+   lset _instpinconn2($instindex) $pk [lindex [split $net /] end]
+   # Create the new net driven by the buffer output.
+   set newnet "${net}_b${gi}"
+   set netdriver($newnet) [list "$bpath $b_opin"]
+   set netload($newnet) {}
+   set ok [lsearch -exact $_instpinconn1($instindex) $b_opin]
+   lset _instpinconn2($instindex) $ok [lindex [split $newnet /] end]
+   # Move the group's receivers from the original net to the new net,
+   # and update their per-pin net record to the new net's trailing token.
+   set newtail [lindex [split $newnet /] end]
+   foreach lp $grp {
+    set linst [lindex $lp 0]
+    set lpin [lindex $lp 1]
+    lappend netload($newnet) $lp
+    set lid [lsearch -exact $pathlist $linst]
+    if { $lid >= 0 } {
+     incr lid
+     if { [info exists _instpinconn1($lid)] } {
+      set lpk [lsearch -exact $_instpinconn1($lid) $lpin]
+      if { $lpk >= 0 } { lset _instpinconn2($lid) $lpk $newtail }
+     }
+    }
+   }
+  }
+  puts "  net $net: $nl receivers -> $nb buffer(s), each <= $maxfanout loads"
+ }
+ puts "  -------------------------------------------------------"
+ if { $nnet == 1 } { set nkw net } else { set nkw nets }
+ if { $nbuf == 1 } { puts "$nbuf buffer inserted on $nnet $nkw." } else { puts "$nbuf buffers inserted on $nnet $nkw." }
+ puts ""
+}
+
 # Helper: map the internal short port-direction token to the Verilog keyword.
 proc _port_kw { t } {
  if { $t eq "in" }  { return "input" }
@@ -3175,6 +3368,9 @@ proc write_db { filename } {
   variable $v
   puts $fo "S $v [list [set $v]]"
  }
+ # maxfanout is a global threshold (set via `set`, not `variable`).
+ global maxfanout
+ puts $fo "S maxfanout [list $maxfanout]"
 
  # Lists that hold design state.
  foreach v {cataloglist hierlistdef hierlist pathlist hpathlist corebox topbox instrefsearch hinstrefsearch wiresearch _assignlist _libcellsync gridutil utlzmap hier_dontshow} {
@@ -3250,8 +3446,13 @@ proc restore_db { filename } {
   set name [lindex $line 1]
   set val [lrange $line 2 end]
   if { $tag eq "S" } {
-   variable $name
-   set $name [lindex $val 0]
+   if { $name eq "maxfanout" } {
+    global maxfanout
+    set maxfanout [lindex $val 0]
+   } else {
+    variable $name
+    set $name [lindex $val 0]
+   }
   } elseif { $tag eq "L" } {
    variable $name
    set $name [lindex $val 0]
