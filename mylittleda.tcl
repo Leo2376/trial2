@@ -1791,7 +1791,7 @@ proc report_path { args } {
  }
  if { ! $from_is_pin } {
   set cur_net [_resolve_net $from]
-  set d [lindex [array get netdriver $cur_net] 1]
+  set d [_net_drivers $cur_net]
   if { [llength $d] } { set start_point [lindex $d 0] }
  }
  if { $cur_net eq "" } { puts "Error : -from point $from not found" ; return }
@@ -1810,7 +1810,7 @@ proc report_path { args } {
  }
  if { ! $to_is_pin } {
   set end_net [_resolve_net $to]
-  set l [lindex [array get netload $end_net] 1]
+  set l [_net_loads $end_net]
   if { [llength $l] } { set end_point [lindex $l 0] }
   if { $end_point eq "" } { set end_point "<net> $end_net" }
  }
@@ -1849,7 +1849,7 @@ proc report_path { args } {
   set net [lindex $q 0]
   set q [lrange $q 1 end]
   if { $net eq $end_net } { set found 1 ; break }
-  set loads [lindex [array get netload $net] 1]
+  set loads [_net_loads $net]
   foreach lp $loads {
    set ln [lindex $lp 0]
    set lpin [lindex $lp 1]
@@ -1885,7 +1885,7 @@ proc report_path { args } {
  }
  set prev_net $cur_net
  foreach seg $path {
-  set fanout [llength [lindex [array get netload $prev_net] 1]]
+  set fanout [llength [_net_loads $prev_net]]
   set ln $via_inst($seg)
   set lpin $via_pin($seg)
   puts "  $prev_net                                   $fanout"
@@ -1893,7 +1893,7 @@ proc report_path { args } {
   set prev_net $seg
  }
  if { $found } {
-  set fanout [llength [lindex [array get netload $end_net] 1]]
+  set fanout [llength [_net_loads $end_net]]
   puts "  $end_net                                   $fanout"
  }
  puts "  -------------------------------------------------------"
@@ -2001,6 +2001,22 @@ proc _resolve_net { s } {
   if { [info exists netdriver($tail)] || [info exists netload($tail)] } { return $tail }
  }
  return ""
+}
+
+# Helpers: return the driver/load list of a net by EXACT key. Net keys can
+# contain bit-select brackets (e.g. "alu/result[0]"), and `array get` treats the
+# argument as a glob pattern so the brackets would be parsed as a character
+# class and the lookup silently fails. These helpers use info exists + direct
+# indexing instead, so bracket keys look up correctly.
+proc _net_drivers { n } {
+ global netdriver
+ if { [info exists netdriver($n)] } { return $netdriver($n) }
+ return {}
+}
+proc _net_loads { n } {
+ global netload
+ if { [info exists netload($n)] } { return $netload($n) }
+ return {}
 }
 
 # get_cell <pattern> ?-hier?
@@ -2209,9 +2225,9 @@ proc get_net { args } {
  }
 
  foreach n $nets {
-  set d [lindex [array get netdriver $n] 1]
+  set d [_net_drivers $n]
   set nd [llength $d]
-  set l [lindex [array get netload $n] 1]
+  set l [_net_loads $n]
   set nl [llength $l]
   puts "  $n  (drivers:$nd receivers:$nl)"
  }
@@ -2288,20 +2304,207 @@ proc all_connected { pattern } {
 proc _report_net { n } {
  global netdriver netload
  puts "  net $n"
- set d [lindex [array get netdriver $n] 1]
+ set d [_net_drivers $n]
  if { [llength $d] } {
   puts "    drivers :"
   foreach p $d { puts "      [_fmt_pin $p]" }
  } else {
   puts "    drivers : (none)"
  }
- set l [lindex [array get netload $n] 1]
+ set l [_net_loads $n]
  if { [llength $l] } {
   puts "    receivers :"
   foreach p $l { puts "      [_fmt_pin $p]" }
  } else {
   puts "    receivers : (none)"
  }
+}
+
+# G4 report_net <net>
+# Report a single net: its driver(s), receiver(s) and the full list of
+# connected instance pins. The net is scoped like get_net/all_connected: the
+# trailing token is the net name and the prefix (the path before the last
+# '/') is the containing hierarchical scope; a bare name with no '/' is a
+# top-level net. Requires build_net_conn (P2) to have run first.
+proc report_net { net } {
+ global netdriver netload netconnbuilt
+
+ _require 2
+ if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
+  puts "Error : build_net_conn must run before report_net"
+  return
+ }
+ if { $net eq "" } {
+  puts "Error : report_net requires a net name"
+  puts "Usage: report_net <net>"
+  return
+ }
+
+ # Resolve the scoped net key the same way get_net/all_connected scope a
+ # net: only nets whose containing scope equals the scope implied by the
+ # argument (the path before the last '/') are considered, so a same-named
+ # net reused in a sibling submodule is never collapsed onto another. A
+ # bare name scopes to the top level. The first matching key (preferably an
+ # exact match) is reported.
+ set key [_report_net_resolve $net]
+ if { $key eq "" } {
+  puts "Error : net $net not found"
+  return
+ }
+
+ puts "************************************************************"
+ puts " report_net : $net"
+ puts "************************************************************"
+ _report_net_detail $key
+ puts ""
+}
+
+# Helper for report_net: resolve a net argument to a single scoped net key,
+# using the same scope rule as get_net/all_connected (scope = path before the
+# last '/', top level for a bare name). The exact scoped name is preferred; if
+# not present, any net of that scope whose name matches the glob is accepted.
+# A bus base name (e.g. "alu/result") also aggregates its per-bit members
+# (alu/result[0]..[31]); this is reported only when no scalar key exists.
+proc _report_net_resolve { net } {
+ global netdriver netload
+
+ if { [info exists netdriver($net)] || [info exists netload($net)] } {
+  return $net
+ }
+
+ set scope "-1"
+ if { [string match {*/*} $net] } {
+  set parts [split $net /]
+  set scope [join [lrange $parts 0 end-1] /]
+ }
+
+ foreach k [array names netdriver] {
+  if { [_net_scope $k] ne $scope } { continue }
+  if { [string match $net $k] } { return $k }
+ }
+ foreach k [array names netload] {
+  if { [_net_scope $k] ne $scope } { continue }
+  if { [string match $net $k] } { return $k }
+ }
+ return ""
+}
+
+# G4 report_pin <inst>/<pin>
+# Report a single instance pin: its direction, the net it is on, and that
+# net's driver(s), receiver(s) and connected instance pins. Requires
+# build_net_conn (P2) to have run first. For a leaf cell the direction comes
+# from the LEF (_libcellpindir); for a hierarchical instance the direction
+# comes from the module's port declaration (_porttype), since a hierarchical
+# instance has no LEF entry.
+proc report_pin { pin } {
+ global netdriver netload netconnbuilt
+ variable _instlist
+ variable _instpinconn1
+ variable _instpinconn2
+ variable _hinstlist
+ variable _hinstpinconn1
+ variable _hinstpinconn2
+ variable _libcellpindir
+ variable _portlist
+ variable _porttype
+ variable pathlist
+ variable hpathlist
+ variable hierlistdef
+
+ _require 2
+ if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
+  puts "Error : build_net_conn must run before report_pin"
+  return
+ }
+ if { $pin eq "" } {
+  puts "Error : report_pin requires an instance pin"
+  puts "Usage: report_pin <inst>/<pin>"
+  return
+ }
+ if { ! [regexp {^(.*)/([^/]+)$} $pin -> inst pinname] } {
+  puts "Error : pin must be given as <inst>/<pin>"
+  return
+ }
+
+ # Look up the pin direction and the net it is on.
+ set dir ""
+ set netkey [_pin_net $inst $pinname]
+ set iid [lsearch -exact $pathlist $inst]
+ if { $iid >= 0 } {
+  incr iid
+  set k [lsearch -exact $_instpinconn1($iid) $pinname]
+  if { $k >= 0 } {
+   set refid [lindex $_instlist($iid) 8]
+   set dirs [lindex [array get _libcellpindir $refid] 1]
+   set dir [lindex $dirs $k]
+  }
+ } else {
+  set hid [lsearch -exact $hpathlist $inst]
+  if { $hid >= 0 } {
+   incr hid
+   if { [info exists _hinstpinconn1($hid)] } {
+    set k [lsearch -exact $_hinstpinconn1($hid) $pinname]
+    if { $k >= 0 } {
+     # Hierarchical instance: direction comes from the module's port
+     # declaration, not from a LEF entry (refid is 0 here). The instance's
+     # own module is at _hinstlist index 1; its portindex is its position
+     # in hierlistdef (1-based) + 1.
+     set modname [lindex $_hinstlist($hid) 1]
+     set mid [lsearch -exact $hierlistdef $modname]
+     if { $mid >= 0 } {
+      set pid [expr {$mid + 1}]
+      set pnames [lindex [array get _portlist $pid] 1]
+      set ptypes [lindex [array get _porttype $pid] 1]
+      set pk [lsearch -exact $pnames $pinname]
+      if { $pk >= 0 } {
+       set pt [lindex $ptypes $pk]
+       if { [lindex $pt 0] eq "bus" } {
+        set dir [_port_kw [lindex $pt 1]]
+       } else {
+        set dir [_port_kw $pt]
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+
+ puts "************************************************************"
+ puts " report_pin : $pin"
+ puts "************************************************************"
+ if { $dir eq "" } { set dir "(unknown)" }
+ puts "  pin $pin  direction: $dir"
+ if { $netkey eq "" } {
+  puts "  not connected to a scalar net"
+  puts ""
+  return
+ }
+ puts "  net $netkey"
+ _report_net_detail $netkey
+ puts ""
+}
+
+# Helper: print a net's drivers, receivers and the connected instance pins
+# (drivers + receivers grouped), with counts.
+proc _report_net_detail { n } {
+ global netdriver netload
+ set d [_net_drivers $n]
+ set l [_net_loads $n]
+ if { [llength $d] } {
+  puts "    drivers ([llength $d]) :"
+  foreach p $d { puts "      [_fmt_pin $p]" }
+ } else {
+  puts "    drivers : (none)"
+ }
+ if { [llength $l] } {
+  puts "    receivers ([llength $l]) :"
+  foreach p $l { puts "      [_fmt_pin $p]" }
+ } else {
+  puts "    receivers : (none)"
+ }
+ set nc [expr {[llength $d] + [llength $l]}]
+ puts "    connected pins: $nc"
 }
 
 # E1 create_net <netname>
@@ -2476,14 +2679,14 @@ proc disconnect_net { net pin } {
  set entry "$inst $pinname"
  set removed 0
  if { $dr eq "OUTPUT" } {
-  set d [lindex [array get netdriver $key] 1]
+  set d [_net_drivers $key]
   set k [lsearch -exact $d $entry]
   if { $k >= 0 } {
    set netdriver($key) [lreplace $d $k $k]
    set removed 1
   }
  } else {
-  set l [lindex [array get netload $key] 1]
+  set l [_net_loads $key]
   set k [lsearch -exact $l $entry]
   if { $k >= 0 } {
    set netload($key) [lreplace $l $k $k]
@@ -2559,7 +2762,7 @@ proc connect_net { net pin } {
  set entry "$inst $pinname"
  if { $dr eq "OUTPUT" } {
   if { [info exists netdriver($key)] } {
-   set d [lindex [array get netdriver $key] 1]
+   set d [_net_drivers $key]
    if { [lsearch -exact $d $entry] >= 0 } {
     puts "Error : pin $pin already drives net $net"
     return
@@ -2570,7 +2773,7 @@ proc connect_net { net pin } {
   }
  } else {
   if { [info exists netload($key)] } {
-   set l [lindex [array get netload $key] 1]
+   set l [_net_loads $key]
    if { [lsearch -exact $l $entry] >= 0 } {
     puts "Error : pin $pin already loads net $net"
     return

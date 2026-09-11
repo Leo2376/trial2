@@ -89,7 +89,7 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 | G1  | Robustness  | Add consistent `_require` guards to all state-touching commands            | proposal   |
 | G6  | Robustness  | Better options handling: let multi-arg commands take options in any order  | proposal   |
 |     |             | (e.g. `report_path -to <p> -from <p>` same as `-from <p> -to <p>`)           |            |
-| G4  | Reporting   | `report_net` / `report_pin` helper (driver, receivers, connected insts)    | proposal   |
+| G4  | Reporting   | `report_net` / `report_pin` helper (driver, receivers, connected insts)    | implemented |
 | G5  | Robustness  | Harden `read_netlist` `/`-skip parsing                                       | proposal   |
 | L1  | Liberty     | Static technology `.lib` for std cells + SRAMs (sync pins only, no timing)  | implemented |
 |     |             | (`CP` for flops, `CLK` for SRAMs) via `clock : true;` (see `liberty_files/`)  |            |

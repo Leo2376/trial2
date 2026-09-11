@@ -119,6 +119,34 @@ all_connected nv_entropy_valid
 # n77 nets. A hierarchical reference scopes to that module.
 all_connected n77
 all_connected core0/w0/nv_c0/c0/bht0/n77
+puts "=========================================="
+puts "report_net / report_pin non-reg checks (G4)"
+puts "=========================================="
+# report_net reports a single scoped net: drivers, receivers and the full
+# connected-pin list. It is scoped like get_net/all_connected (no -hier), so a
+# full hierarchical reference reports only that scope's net.
+#   core0/w0/nv_c0/c0/iu0/n20719 has a single driver U28571/ZN and one receiver
+#   U28630/A1 (must NOT collapse same-named nets from sibling scopes).
+report_net core0/w0/nv_c0/c0/iu0/n20719
+# A top input-port net: driver is the port, receiver is the core0 input pin.
+# Bus-concatenation pins must not misalign the parser.
+report_net nv_entropy_valid
+# report_net is scoped like get_net (no -hier): a bare name matches only the
+# top-level net, not same-named nets reused in submodules.
+report_net n77
+report_net core0/w0/nv_c0/c0/bht0/n77
+# A net that does not exist reports an error.
+report_net core0/w0/nv_c0/c0/iu0/no_such_net
+# report_pin reports a single instance pin: its direction, the net it is on,
+# and that net's drivers/receivers. Leaf-cell pin directions come from LEF.
+#   core0/w0/nv_c0/c0/iu0/U28571/ZN is the OUTPUT driver of n20719.
+report_pin core0/w0/nv_c0/c0/iu0/U28571/ZN
+#   core0/w0/nv_c0/c0/iu0/U28630/A1 is an INPUT receiver on n20719.
+report_pin core0/w0/nv_c0/c0/iu0/U28630/A1
+# Hierarchical-instance pin directions come from the module port declaration.
+#   core0/nv_entropy_valid is an INPUT pin of the core0 hierarchical instance
+#   on the nv_entropy_valid net.
+report_pin core0/nv_entropy_valid
 
 puts "=========================================="
 puts "ECO non-reg checks (E1-E4)"
