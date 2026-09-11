@@ -12,7 +12,7 @@ puts "=========================================="
 puts ""
 
 add_lef ../../../lef_files/std_cell.lef
-add_lef ../../../lef_files/ts1n7hslvta128x33m2wbzhocp.lef
+add_lef ../../../lef_files/sram.lef
 add_lib ../../../liberty_files/n7_tech.lib
 
 puts "=========================================="

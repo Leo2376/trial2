@@ -10,8 +10,7 @@ puts "=========================================="
 puts ""
 
 add_lef ../../../lef_files/std_cell.lef
-add_lef ../../../lef_files/ts1n7hslvta128x33m2wbzhocp.lef
-add_lef ../../../lef_files/ts1n7hslvta512x40m2wbzhocp.lef
+add_lef ../../../lef_files/sram.lef
 read_netlist ../inputs/medium_design.v
 
 set_top_design medium_cpu

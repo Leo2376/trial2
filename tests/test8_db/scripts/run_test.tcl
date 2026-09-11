@@ -15,7 +15,7 @@ puts "=========================================="
 puts ""
 
 add_lef ../../../lef_files/std_cell.lef
-add_lef ../../../lef_files/ts1n7hslvta128x33m2wbzhocp.lef
+add_lef ../../../lef_files/sram.lef
 read_netlist ../inputs/medium_design.v
 set_top_design medium_cpu
 build_design
@@ -71,7 +71,7 @@ close $qf
 set s1 [open /tmp/test8_s1.tcl w]
 puts $s1 "source [file join $repo mylittleda.tcl]"
 puts $s1 "add_lef [file join $lefdir std_cell.lef]"
-puts $s1 "add_lef [file join $lefdir ts1n7hslvta128x33m2wbzhocp.lef]"
+puts $s1 "add_lef [file join $lefdir sram.lef]"
 puts $s1 "read_netlist [file normalize ../inputs/medium_design.v]"
 puts $s1 "set_top_design medium_cpu"
 puts $s1 "build_design"

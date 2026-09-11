@@ -22,9 +22,7 @@ get_cell *
 # Load LEF libraries
 puts "Loading LEF libraries..."
 add_lef ../../../lef_files/std_cell.lef
-add_lef ../../../lef_files/ts1n7hslvta128x33m2wbzhocp.lef
-add_lef ../../../lef_files/ts1n7hslvta512x40m4wbzhocp.lef
-add_lef ../../../lef_files/tsdn7lvta128x64m4wbzhocp.lef
+add_lef ../../../lef_files/sram.lef
 
 
 read_netlist ../inputs/cpu_syn.v

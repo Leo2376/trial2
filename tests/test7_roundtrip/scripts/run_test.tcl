@@ -15,8 +15,7 @@ puts "=========================================="
 puts ""
 
 add_lef ../../../lef_files/std_cell.lef
-add_lef ../../../lef_files/ts1n7hslvta128x33m2wbzhocp.lef
-add_lef ../../../lef_files/ts1n7hslvta512x40m2wbzhocp.lef
+add_lef ../../../lef_files/sram.lef
 
 # First pass: read the source netlist and dump it.
 read_netlist ../inputs/medium_design.v
