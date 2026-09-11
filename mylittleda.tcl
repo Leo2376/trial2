@@ -57,6 +57,7 @@ array set _wirelist {}
 array set _wiretype {}
 array set _wiremaster {}
 array set _wireinst {}
+array set _wirelen_cache {}
 array set _instpinconn1 {}
 array set _instpinconn2 {}
 array set _hinstpinconn1 {}
@@ -1466,9 +1467,14 @@ proc report_cell_properties { instname } {
 
  
 
-proc report_area_stats { } {
+proc report_area_stats { args } {
  variable topname
  variable topnameid
+ # -wire: also report the accumulated estimated wire length of the design.
+ set opt_wire 0
+ foreach a $args {
+  if { $a eq "-wire" } { set opt_wire 1 }
+ }
  _require 2
  variable hierindex
  variable instindex
@@ -1542,6 +1548,33 @@ proc report_area_stats { } {
  
  puts "Info : total core available area [expr $corearea ] um2" 
  puts "Info : Expected utilization for std cell is [expr 100*$carea/($corearea-$marea)]"
+
+ # -wire: report the accumulated estimated wire length of the whole design.
+ # Sums the per-net estimate over every net built by build_net_conn. Each
+ # net's length is cached in _wirelen_cache (computed lazily, -1 = unknown /
+ # not estimable) so repeated reports are cheap. Requires build_net_conn.
+ if { $opt_wire } {
+  global netdriver netload netconnbuilt _wirelen_cache
+  if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
+   puts "Info : wire length : (build_net_conn must run before -wire)"
+  } else {
+   set total 0
+   set nets 0
+   set unknown 0
+   foreach n [array names netdriver] {
+    set v [_net_wirelen_scalar $n]
+    if { $v >= 0 } { set total [expr {$total + $v}] } else { incr unknown }
+   }
+   foreach n [array names netload] {
+    if { [info exists netdriver($n)] } { continue }
+    set v [_net_wirelen_scalar $n]
+    if { $v >= 0 } { set total [expr {$total + $v}] } else { incr unknown }
+   }
+   set nets [llength [array names netdriver]]
+   puts "Info : total estimated wire length [format %.4g $total] um"
+   puts "Info : estimated nets $nets, unknown/unestimable nets $unknown"
+  }
+ }
  puts "" 
 }
 
@@ -1784,6 +1817,11 @@ proc build_net_conn { } {
  puts "Info : built net connectivity ([llength [array names netdriver]] driver nets, [llength [array names netload]] load nets)"
  global netconnbuilt
  set netconnbuilt 1
+ # Invalidate the per-net wire-length cache: connectivity/placement may have
+ # changed, so any previously cached length is stale. report_net and
+ # report_area_stats -wire recompute lazily and refill the cache.
+ global _wirelen_cache
+ array unset _wirelen_cache
 }
 
 # Helper: scope a net name by its containing module's hierarchical path. The
@@ -2843,12 +2881,17 @@ proc _report_net_detail { n } {
 # report_net_wirelen getter. Unplaced pins, hierarchical pins, ports and
 # assigns have no coordinate and are skipped.
 proc _net_wirelen { n } {
- global netdriver netload
+ global netdriver netload _wirelen_cache
  set d [_net_drivers $n]
  set l [_net_loads $n]
  set coords {}
  foreach p [concat $d $l] { set c [_pin_xy $p]; if { $c ne "" } { lappend coords $c } }
- if { [llength $coords] < 2 } { return "" }
+ if { [llength $coords] < 2 } {
+  # Cache as unknown (-1) so report_area_stats -wire can sum without
+  # recomputing the geometry for every net on each call.
+  set _wirelen_cache($n) -1
+  return ""
+ }
  set minx [lindex [lindex $coords 0] 0]
  set maxx $minx
  set miny [lindex [lindex $coords 0] 1]
@@ -2864,7 +2907,23 @@ proc _net_wirelen { n } {
  set deltax [expr {$maxx - $minx}]
  set deltay [expr {$maxy - $miny}]
  set est [expr {$deltax + $deltay}]
+ set _wirelen_cache($n) $est
  return [list [format %.4g $est] [format %.4g $deltax] [format %.4g $deltay] [format %.4g $minx] [format %.4g $miny] [format %.4g $maxx] [format %.4g $maxy]]
+}
+
+# Helper: return the cached scalar wire-length estimate for a scoped net key,
+# computing it on first use. Returns the numeric estimate, or -1 when the net
+# has fewer than 2 placed pins (unknown / not estimable). Used by
+# report_area_stats -wire and report_net_wirelen. The cache (_wirelen_cache)
+# is invalidated by build_net_conn.
+proc _net_wirelen_scalar { n } {
+ global _wirelen_cache
+ if { [info exists _wirelen_cache($n)] } {
+  return $_wirelen_cache($n)
+ }
+ set w [_net_wirelen $n]
+ if { $w eq "" } { return -1 }
+ return [lindex $w 0]
 }
 
 # W1 report_net_wirelen <net>
@@ -2889,9 +2948,9 @@ proc report_net_wirelen { net } {
   puts "Error : net $net not found"
   return ""
  }
- set w [_net_wirelen $key]
- if { $w eq "" } { return "" }
- return [lindex $w 0]
+ set v [_net_wirelen_scalar $key]
+ if { $v < 0 } { return "" }
+ return $v
 }
 
 # E1 create_net <netname>
@@ -3555,7 +3614,7 @@ proc write_db { filename } {
  # Arrays: emit each array as a flat list of {key value key value ...} so the
  # whole array is restored with array set. Iterate over a fixed name list so
  # the set is explicit and stable (no incidental globals leak in).
- foreach v {_libcell _libcellpindir _libsyncpin _instlist _hinstlist _blockagelist _regionlist _portlist _porttype _portmaster _wirelist _wiretype _wiremaster _wireinst _instpinconn1 _instpinconn2 _hinstpinconn1 _hinstpinconn2 _wirepinconn _bumplist wiresearch_map} {
+ foreach v {_libcell _libcellpindir _libsyncpin _instlist _hinstlist _blockagelist _regionlist _portlist _porttype _portmaster _wirelist _wiretype _wiremaster _wireinst _instpinconn1 _instpinconn2 _hinstpinconn1 _hinstpinconn2 _wirepinconn _bumplist wiresearch_map _wirelen_cache} {
   variable $v
   set names [array names $v]
   set pairs {}

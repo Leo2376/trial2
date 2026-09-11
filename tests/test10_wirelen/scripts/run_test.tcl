@@ -7,6 +7,27 @@
 # estimation as unavailable.
 source ../../../mylittleda.tcl
 
+# Helper: capture the stdout produced by a script (any `puts` inside the
+# script) into a string, so the test can parse the Info lines printed by
+# report_area_stats -wire. Renames puts for the duration of the script.
+proc capture_stdout { script } {
+  rename puts _orig_puts
+  set ::_cap_buf ""
+  proc puts { args } {
+    if { [llength $args] >= 2 && [lindex $args 0] eq "-nonewline" } {
+      append ::_cap_buf [lindex $args 1]
+    } elseif { [llength $args] >= 1 } {
+      append ::_cap_buf [lindex $args 0]
+      append ::_cap_buf "\n"
+    }
+  }
+  uplevel 1 $script
+  set data $::_cap_buf
+  rename puts {}
+  rename _orig_puts puts
+  return $data
+}
+
 puts "=========================================="
 puts "Test 10: report_net wire-length estimation"
 puts "=========================================="
@@ -72,6 +93,45 @@ if { $wl3 ne "" } {
   set pass 0
 } else {
   puts "PASS: n_buf wire length is unavailable (fewer than 2 placed pins)"
+}
+
+# report_area_stats -wire: prints the accumulated estimated wire length over
+# all nets. n_and (30) + n_inv (35) = 65 are the only estimable nets; the 4
+# remaining nets (in_a, in_b, n_buf, out_y) have fewer than 2 placed pins and
+# are reported as unknown/unestimable. The total must be 65.
+puts "-- report_area_stats -wire --"
+set out [capture_stdout { report_area_stats -wire }]
+set total -1
+set unknown -1
+foreach line [split $out "\n"] {
+  if { [regexp {total estimated wire length ([^ ]+)} $line -> t] } { set total $t }
+  if { [regexp {unknown/unestimable nets ([0-9]+)} $line -> u] } { set unknown $u }
+}
+if { $total != 65 } {
+  puts "FAIL: accumulated wire length expected 65, got $total"
+  set pass 0
+} else {
+  puts "PASS: report_area_stats -wire total is $total (n_and 30 + n_inv 35)"
+}
+if { $unknown != 4 } {
+  puts "FAIL: unknown nets expected 4, got $unknown"
+  set pass 0
+} else {
+  puts "PASS: report_area_stats -wire reports $unknown unknown/unestimable nets"
+}
+
+# Cache check: report_area_stats -wire populates the per-net cache, so a
+# second report_area_stats -wire must still report 65 (cache reuse).
+set out2 [capture_stdout { report_area_stats -wire }]
+set total2 -1
+foreach line [split $out2 "\n"] {
+  if { [regexp {total estimated wire length ([^ ]+)} $line -> t] } { set total2 $t }
+}
+if { $total2 != 65 } {
+  puts "FAIL: cached accumulated wire length expected 65, got $total2"
+  set pass 0
+} else {
+  puts "PASS: cached report_area_stats -wire total is $total2"
 }
 
 if { $pass } {
