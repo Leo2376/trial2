@@ -1999,6 +1999,20 @@ proc _pin_net { inst pin } {
 }
 
 # Helper: output net of a cell given one of its (input) pins.
+proc _hier_pin_inner_net { inst pin } {
+ variable _hinstlist
+ variable _hinstpinconn1
+ variable _hinstpinconn2
+ variable hpathlist
+ set hid [lsearch -exact $hpathlist $inst]
+ if { $hid < 0 } { return "" }
+ incr hid
+ # The inner net is the pin name scoped by the instance's OWN full path
+ # (e.g. core0/w0/clk), which is the $inst argument itself.
+ return "$inst/$pin"
+}
+
+# Helper: output net of a cell given one of its (input) pins.
 proc _cell_out_net { inst pin } {
  variable _instlist
  variable _instpinconn1
@@ -3639,6 +3653,126 @@ proc get_sync_pins { cellname } {
  variable _libsyncpin
  if { ! [info exists _libsyncpin($cellname)] } { return "" }
  return $_libsyncpin($cellname)
+}
+
+# Helper: is the given instance pin a sync (clock) load pin of its cell?
+# Uses the _libsyncpin map (flop CP / SRAM CK) built by add_lib (L2).
+proc _is_sync_pin { inst pin } {
+ variable _instlist
+ variable pathlist
+ variable _libsyncpin
+ set iid [lsearch -exact $pathlist $inst]
+ if { $iid < 0 } { return 0 }
+ incr iid
+ set refname [lindex $_instlist($iid) 1]
+ if { ! [info exists _libsyncpin($refname)] } { return 0 }
+ set sp [lsearch -exact $_libsyncpin($refname) $pin]
+ return [expr {$sp >= 0}]
+}
+
+# R2 trace_clock <pin|net>
+# Tree-like report tracing from a pin or net down through combinational logic
+# to all leaf sync load pins (flop CP / SRAM CK via _libsyncpin). Each branch
+# is followed (not just one path, unlike report_path), and the trace stops at a
+# sync load pin. Requires build_net_conn (P2) and add_lib (L2) to have run so
+# the net connectivity map and the sync-pin map exist.
+proc trace_clock { root } {
+ global netdriver netload netconnbuilt
+ variable _libsyncpin
+
+ _require 2
+ if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
+  puts "Error : build_net_conn must run before trace_clock"
+  return
+ }
+ if { $root eq "" } {
+  puts "Error : trace_clock requires a pin or net"
+  puts "Usage: trace_clock <pin|net>"
+  return
+ }
+ # add_lib (L2) is required for the sync-pin map; without it no leaf can be a
+ # sync endpoint, so the trace would report only combinational fanout.
+ if { [llength [array names _libsyncpin]] == 0 } {
+  puts "Warning : no sync pins loaded (run add_lib before trace_clock)"
+ }
+
+ # Resolve the root into a starting net. A pin "inst/pin" is recognised only
+ # if that instance and pin exist; otherwise the argument is a net.
+ set start_net ""
+ set start_pin ""
+ set is_pin 0
+ if { [regexp {^(.*)/([^/]+)$} $root -> inst pin] } {
+  set n [_pin_net $inst $pin]
+  if { $n ne "" } { set start_net $n ; set start_pin "$inst $pin" ; set is_pin 1 }
+ }
+ if { ! $is_pin } { set start_net [_report_net_resolve $root] }
+ if { $start_net eq "" } { puts "Error : root point $root not found" ; return }
+
+ puts "************************************************************"
+ puts " trace_clock : $root"
+ puts "************************************************************"
+
+ # Visited nets prevent combinational loops from recursing forever.
+ array set seen {}
+ set nendp 0
+ set nbranch 0
+ if { $is_pin } {
+  puts "  [_fmt_pin $start_pin]"
+  _trace_clock_net $start_net 1 seen nendp nbranch
+ } else {
+  puts "  $start_net"
+  _trace_clock_net $start_net 1 seen nendp nbranch
+ }
+ puts "  -------------------------------------------------------"
+ puts "  $nendp sync endpoint(s), $nbranch combinational branch(es) traced."
+ puts ""
+}
+
+# Recursive helper: trace from a net to its load pins. For each load pin:
+#   - sync load pin (flop CP / SRAM CK) -> print as a leaf endpoint and stop.
+#   - combinational input -> follow to that cell's output net and recurse one
+#     level deeper. Hierarchy/assign pass-through pins are followed through.
+# 'level' is the indentation depth; 'vref'/'nendpref'/'nbranchref' are upvar
+# aliases for the visited set and counters kept by the caller.
+proc _trace_clock_net { net level vref nendpref nbranchref } {
+ upvar 1 $vref seen $nendpref nendp $nbranchref nbranch
+ variable hpathlist
+ if { [info exists seen($net)] } { return }
+ set seen($net) 1
+ set loads [_net_loads $net]
+ set any 0
+ set pad [string repeat "  " $level]
+ foreach lp $loads {
+  set ln [lindex $lp 0]
+  set lpin [lindex $lp 1]
+  # A sync load pin is a leaf endpoint.
+  if { $ln ne "<port>" && $ln ne "<assign>" && [_is_sync_pin $ln $lpin] } {
+   puts "${pad}+-- [_fmt_pin $lp]  (sync endpoint)"
+   incr nendp
+   set any 1
+   continue
+  }
+  # Follow through combinational / hierarchy / assign to the next net.
+  if { $ln eq "<assign>" } {
+   set out_net $lpin
+  } elseif { [lsearch -exact $hpathlist $ln] >= 0 } {
+   # Hierarchical instance pin: follow the connection into the child scope.
+   # The inner net is the pin name scoped by the instance path (e.g. rf/clk).
+   set out_net [_hier_pin_inner_net $ln $lpin]
+  } else {
+   set out_net [_cell_out_net $ln $lpin]
+  }
+  if { $out_net eq "" } {
+   # A non-sync load with no traced output (e.g. a leaf data pin or a
+   # hierarchical output): dead branch, not a clock path.
+   continue
+  }
+  puts "${pad}+-- [_fmt_pin $lp]"
+  incr nbranch
+  set any 1
+  _trace_clock_net $out_net [expr {$level+1}] seen nendp nbranch
+ }
+ if { ! $any } { puts "${pad}(no clock path forward)" }
 }
 
 proc get_cell_id  { refname } {

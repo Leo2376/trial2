@@ -97,7 +97,7 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | (no timing tables); query with `get_sync_pins <cell>`                     |            |
 | R1  | Reporting   | `report_sync`: sync-to-sync `report_path` between flop CP / SRAM CK         | proposal   |
 |     |             | endpoints using the `_libsyncpin` attribute                                |            |
-| R2  | Reporting   | `trace_clock <pin/net>`: tree-like report tracing from a pin or net to all  | proposal   |
+| R2  | Reporting   | `trace_clock <pin/net>`: tree-like report tracing from a pin or net to all  | implemented |
 |     |             | branches down to leaf sync pins (flop CP / SRAM CK). Depends on L2.        |            |
 | R3  | Reporting   | `all_connected <net or pin>`: report all nets connected to a net/pin;      | implemented |
 |     |             | accepts wildcards (e.g. `all_connected n2*`).                           |            |
@@ -202,6 +202,12 @@ queries), the following report connectivity. Patterns are globs
   also prints the logical nets crossed, and `-layout` adds an `(x, y)`
   coordinate column for placed crossed cells/pins (nets/ports/unplaced cells
   stay blank).
+- `trace_clock <pin|net>` — tree-like report tracing from a pin or net down
+  through combinational logic and across hierarchy to all leaf sync load pins
+  (flop CP / SRAM CK via the `_libsyncpin` map). Each branch is followed (not
+  just one path, unlike `report_path`); the trace stops at a sync load pin. The
+  summary reports the number of sync endpoints and combinational branches
+  traced. Requires `build_net_conn` (P2) and `add_lib` (L2).
 - `all_connected <net or pin>` — for a net, report that net with its driver and
   receiver pins; for an `inst/pin`, report that pin's net. The match is scoped
   like `get_net` (no `-hier`): a bare name (e.g. `all_connected n77`) reports
