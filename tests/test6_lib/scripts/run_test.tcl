@@ -22,8 +22,8 @@ puts "=========================================="
 set ff_pins [get_sync_pins DFQD0]
 puts "DFQD0 sync pins : $ff_pins"
 
-set ram_pins [get_sync_pins TS1N7HSLVTA128X33M2WBZHOCP]
-puts "TS1N7HSLVTA128X33M2WBZHOCP sync pins : $ram_pins"
+set ram_pins [get_sync_pins SP128X33M2]
+puts "SP128X33M2 sync pins : $ram_pins"
 
 set comb_pins [get_sync_pins AN2D1]
 puts "AN2D1 sync pins (should be empty) : $comb_pins"
@@ -42,10 +42,10 @@ if { [lsearch -exact $ff_pins CP] < 0 } {
 }
 
 if { [lsearch -exact $ram_pins CLK] < 0 } {
-  puts "FAIL: SRAM TS1N7HSLVTA128X33M2 missing CLK sync pin"
+  puts "FAIL: SRAM SP128X33M2 missing CLK sync pin"
   set pass 0
 } else {
-  puts "PASS: SRAM TS1N7HSLVTA128X33M2 has CLK sync pin"
+  puts "PASS: SRAM SP128X33M2 has CLK sync pin"
 }
 
 if { $comb_pins ne "" } {

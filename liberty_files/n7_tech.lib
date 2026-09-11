@@ -7,7 +7,7 @@ library (n7_tech) {
   capacitive_load_unit (0.1, pf) ;
   leakage_power_unit : "0.1uW" ;
 
-  cell (TS1N7HSLVTA128X33M2WBZHOCP) {
+  cell (SP128X33M2) {
     memory : "true" ;
     area : 0.1 ;
     leakage_power : 0.1 ;
@@ -393,7 +393,7 @@ library (n7_tech) {
     }
   }
 
-  cell (TS1N7HSLVTA128X33M4WBZHOCP) {
+  cell (SP128X33M4) {
     memory : "true" ;
     area : 0.1 ;
     leakage_power : 0.1 ;
@@ -779,7 +779,7 @@ library (n7_tech) {
     }
   }
 
-  cell (TS1N7HSLVTA512X40M2WBZHOCP) {
+  cell (SP512X40M2) {
     memory : "true" ;
     area : 0.1 ;
     leakage_power : 0.1 ;
@@ -1165,7 +1165,7 @@ library (n7_tech) {
     }
   }
 
-  cell (TS1N7HSLVTA512X40M4WBZHOCP) {
+  cell (SP512X40M4) {
     memory : "true" ;
     area : 0.1 ;
     leakage_power : 0.1 ;
@@ -1551,7 +1551,7 @@ library (n7_tech) {
     }
   }
 
-  cell (TSDN7LVTA128X64M4WBZHOCP) {
+  cell (DP128X64M4) {
     memory : "true" ;
     area : 0.1 ;
     leakage_power : 0.1 ;

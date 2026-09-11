@@ -99,8 +99,8 @@ module itag_mem_group (
     wire [31:0] mem1_out;
 
     // Two RAM instances from LEF
-    TS1N7HSLVTA128X33M2WBZHOCP itag_ram_0 ( .CLK(clk), .CS(1'b0), .WE(1'b1), .A(addr[6:0]), .D(data_in), .Q(mem0_out) );
-    TS1N7HSLVTA512X40M2WBZHOCP itag_ram_1 ( .CLK(clk), .CS(1'b0), .WE(1'b1), .A(addr[8:0]), .D(data_in), .Q(mem1_out) );
+    SP128X33M2 itag_ram_0 ( .CLK(clk), .CS(1'b0), .WE(1'b1), .A(addr[6:0]), .D(data_in), .Q(mem0_out) );
+    SP512X40M2 itag_ram_1 ( .CLK(clk), .CS(1'b0), .WE(1'b1), .A(addr[8:0]), .D(data_in), .Q(mem1_out) );
 
     // Combine outputs
     assign data_out = mem0_out ^ mem1_out;
@@ -119,8 +119,8 @@ module idata_mem_group (
     wire [31:0] meml_out;
 
     // RAM instances from LEF
-    TS1N7HSLVTA512X40M4WBZHOCP idata_ram_h ( .CLK(clk), .CS(1'b0), .WE(1'b1), .A(addr[8:0]), .D(data_in), .Q(memh_out) );
-    TS1N7HSLVTA128X33M4WBZHOCP idata_ram_l ( .CLK(clk), .CS(1'b0), .WE(1'b1), .A(addr[6:0]), .D(data_in), .Q(meml_out) );
+    SP512X40M4 idata_ram_h ( .CLK(clk), .CS(1'b0), .WE(1'b1), .A(addr[8:0]), .D(data_in), .Q(memh_out) );
+    SP128X33M4 idata_ram_l ( .CLK(clk), .CS(1'b0), .WE(1'b1), .A(addr[6:0]), .D(data_in), .Q(meml_out) );
 
     assign data_out = memh_out + meml_out;
 

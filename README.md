@@ -60,7 +60,7 @@ only timing intent it encodes is the set of synchronous (clock) pins of
 sequential cells, tagged with `clock : true;`:
 
 - `CP` for every flop (e.g. `DFQD0`).
-- `CLK` for every SRAM (e.g. `TS1N7HSLVTA128X33M2WBZHOCP`).
+- `CLK` for every SRAM (e.g. `SP128X33M2`).
 
 To regenerate the file from the LEFs after editing `lef_files/`:
 
