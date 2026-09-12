@@ -1,6 +1,26 @@
 #!/usr/bin/tclsh8.6
 source ../../../mylittleda.tcl
 
+# Helper: capture stdout produced by a script so the test can parse the Info
+# lines printed by report_area_stats -wire. Renames puts for the duration.
+proc capture_stdout { script } {
+  rename puts _orig_puts
+  set ::_cap_buf ""
+  proc puts { args } {
+    if { [llength $args] >= 2 && [lindex $args 0] eq "-nonewline" } {
+      append ::_cap_buf [lindex $args 1]
+    } elseif { [llength $args] >= 1 } {
+      append ::_cap_buf [lindex $args 0]
+      append ::_cap_buf "\n"
+    }
+  }
+  uplevel 1 $script
+  set data $::_cap_buf
+  rename puts {}
+  rename _orig_puts puts
+  return $data
+}
+
 puts "=========================================="
 puts "Test 11: bhtnv block (SRAM + std cells, seed_place)"
 puts "=========================================="
@@ -82,6 +102,39 @@ if { $nplaced == $ncore && $nover == 0 && $nout == 0 } {
 } else {
   puts "FAIL: seed_place placed $nplaced/$ncore CORE cells, $nover blockage hits, $nout out-of-core (serial)"
 }
+
+# --- report_area_stats -wire : multithread vs single-thread agreement ---
+# The design has thousands of nets (>256 threshold), so with multithreading on
+# report_area_stats -wire resolves the per-net wire length in parallel worker
+# threads. Run it once with MT on (cold cache, parallel resolution), capture
+# the total and unknown count, then run it again with MT off (warm cache, pure
+# serial sum of cached scalars). The two totals must match to 4 decimals and
+# the unknown counts must be identical: this verifies the parallel
+# bounding-box computation gives the same accumulated wire length as the
+# serial cached path.
+set_multithread_on 8
+set out_mt [capture_stdout { report_area_stats -wire }]
+set total_mt -1
+set unknown_mt -1
+foreach line [split $out_mt "\n"] {
+  if { [regexp {total estimated wire length ([^ ]+)} $line -> t] } { set total_mt $t }
+  if { [regexp {unknown/unestimable nets ([0-9]+)} $line -> u] } { set unknown_mt $u }
+}
+set_multithread_off
+set out_st [capture_stdout { report_area_stats -wire }]
+set total_st -1
+set unknown_st -1
+foreach line [split $out_st "\n"] {
+  if { [regexp {total estimated wire length ([^ ]+)} $line -> t] } { set total_st $t }
+  if { [regexp {unknown/unestimable nets ([0-9]+)} $line -> u] } { set unknown_st $u }
+}
+if { [format "%.4g" $total_mt] eq [format "%.4g" $total_st] && $unknown_mt == $unknown_st } {
+  puts "PASS: report_area_stats -wire MT total $total_mt == serial $total_st, unknown $unknown_mt == $unknown_st"
+} else {
+  puts "FAIL: report_area_stats -wire MT total $total_mt vs serial $total_st, unknown $unknown_mt vs $unknown_st"
+}
+# Turn MT back on for the rest of the test.
+set_multithread_on 8
 
 # --- seed_place multithread: several random seeds, judged by wire length ---
 # MT runs N (=worker count) random-seed trials in parallel, scores each by

@@ -3732,6 +3732,173 @@ proc report_cell_properties { instname } {
 
  
 
+# Helper: compute the accumulated estimated wire length of the whole design
+# for report_area_stats -wire. Returns a list {total nets unknown}. When
+# multithreading is on (Thread loaded), the per-net wire-length computation
+# is split across worker threads: each worker resolves the pin coordinates
+# for its net range and sums the bounding-box half-perimeters, then the main
+# thread sums the partial results. This makes the cold-cache (first call
+# after build_net_conn) path parallel, which is where the cost is -- once the
+# per-net cache (_wirelen_cache) is warm, report_area_stats -wire falls back
+# to a cheap serial sum of cached scalars (no parallel overhead needed).
+#
+# Worker threads cannot see the global netdriver/netload/_instlist/pathlist
+# arrays, so the main thread pre-builds two compact, self-contained indices
+# and ships them via tsv:
+#   netkeys  - list of net names (the union of driver and load nets)
+#   netpins  - list of pin-id-lists, same order; each pin id is 1-based inst
+#              id, or 0 for a port/<assign> endpoint (no coordinate)
+#   ipos    - list {id x y} for every placed inst (id is 1-based). Unplaced
+#              insts are omitted so workers treat them as no-coordinate.
+# A worker computes, for each net in its range, the bbox of the placed pins
+# (id lookup in ipos) and adds deltaX+deltaY when >=2 pins are placed; nets
+# with <2 placed pins count as unknown. This mirrors _net_wirelen exactly
+# (the same _pin_xy -> _inst_xy placement lookup), just parallelised and
+# without the cache writes (the cache is filled lazily later by serial
+# _net_wirelen_scalar calls, e.g. from report_net).
+proc _ras_wire_total { } {
+ global _mt_on _mt_thread_loaded _mt_workers _eval_sites_seq
+ global netdriver netload netconnbuilt _wirelen_cache
+ variable _instlist
+ variable pathlist
+ if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
+  puts "Info : wire length : (build_net_conn must run before -wire)"
+  return {0 0 0}
+ }
+ # Union of net names (driver nets + load-only nets). Net keys can contain
+ # bit-select brackets, so array names is safe (returns literal keys); the
+ # dedup uses a dict keyed by the literal name.
+ set netkeys {}
+ set seen {}
+ foreach n [array names netdriver] { dict set seen $n 1; lappend netkeys $n }
+ foreach n [array names netload] { if { ! [dict exists $seen $n] } { lappend netkeys $n } }
+ unset seen
+ set nn [llength $netkeys]
+ if { $nn == 0 } { return {0 0 0} }
+
+ # Pre-build the inst position map: ipos(id) = {x y} for placed insts only.
+ # pathlist is 0-based, inst ids are 1-based (pathlist index + 1).
+ array set pathid {}
+ set pi 0
+ foreach p $pathlist { set pathid($p) [expr {$pi + 1}]; incr pi }
+ array set ipos {}
+ set npinst [llength $pathlist]
+ for { set id 1 } { $id <= $npinst } { incr id } {
+  set rec $_instlist($id)
+  if { [lindex $rec 4] == 1 } { set ipos($id) [list [lindex $rec 5] [lindex $rec 6]] }
+  }
+ # Build per-net pin-id lists (drivers + loads). Port/<assign> pins have no
+ # inst and map to id 0 (no coordinate).
+ array set netpinids {}
+ foreach n $netkeys {
+  set ids {}
+  if { [info exists netdriver($n)] } {
+   foreach p $netdriver($n) {
+    set ip [lindex $p 0]
+    if { [info exists pathid($ip)] } { lappend ids $pathid($ip) } else { lappend ids 0 }
+   }
+  }
+  if { [info exists netload($n)] } {
+   foreach p $netload($n) {
+    set ip [lindex $p 0]
+    if { [info exists pathid($ip)] } { lappend ids $pathid($ip) } else { lappend ids 0 }
+   }
+  }
+  set netpinids($n) $ids
+  }
+ # Parallel lists for tsv shipping.
+ set pinids {}
+ foreach n $netkeys { lappend pinids $netpinids($n) }
+ # Compact ipos to a flat list {id x y ...}.
+ set ipos_v {}
+ foreach id [array names ipos] { lappend ipos_v $id [lindex $ipos($id) 0] [lindex $ipos($id) 1] }
+
+ # Decide serial vs parallel. The parallel path only pays off when there is
+ # enough work (resolution of many nets) and MT is on. Below the threshold or
+ # with one worker, run serially through the cached scalar getter -- this also
+ # populates _wirelen_cache so a later report_net benefits.
+ set use_mt [expr {$_mt_on && $_mt_thread_loaded && $nn >= 256 && $_mt_workers > 1}]
+ if { ! $use_mt } {
+  set total 0
+  set unknown 0
+  foreach n $netkeys {
+   set v [_net_wirelen_scalar $n]
+   if { $v >= 0 } { set total [expr {$total + $v}] } else { incr unknown }
+  }
+  return [list $total [llength [array names netdriver]] $unknown]
+ }
+
+ # Multithreaded resolution: split the net list into nw contiguous ranges,
+ # each worker resolves + sums its range from the shipped ipos map (no globals
+ # needed), returns its partial {sum unknown}. Threads self-release when done.
+ set nw $_mt_workers
+ if { $nw > $nn } { set nw $nn }
+ set ns ras[incr _eval_sites_seq]
+ tsv::set $ns netkeys $netkeys
+ tsv::set $ns pinids $pinids
+ tsv::set $ns ipos_v $ipos_v
+ tsv::set $ns nn $nn
+ tsv::set $ns nws $nw
+ tsv::set $ns wid -1
+ tsv::array set ras_ns cur $ns
+ tsv::set ras_ns done 0
+ set wscript {
+  set ns [tsv::get ras_ns cur]
+  set pinids [tsv::get $ns pinids]
+  set ipos_v [tsv::get $ns ipos_v]
+  set nn [tsv::get $ns nn]
+  set nws [tsv::get $ns nws]
+  set wid [tsv::incr $ns wid]
+  set k0 [expr {int(($wid * $nn) / $nws)}]
+  set k1 [expr {int((($wid + 1) * $nn) / $nws)}]
+  # Reconstruct the id -> {x y} map from the flat ipos_v.
+  array set ipos {}
+  set L [llength $ipos_v]
+  for { set i 0 } { $i < $L } { incr i 3 } {
+   set id [lindex $ipos_v $i]
+   set ipos($id) [list [lindex $ipos_v [expr {$i+1}]] [lindex $ipos_v [expr {$i+2}]]]
+  }
+  set sum 0.0
+  set unk 0
+  for { set k $k0 } { $k < $k1 } { incr k } {
+   set ids [lindex $pinids $k]
+   set minx 1e18; set maxx -1e18; set miny 1e18; set maxy -1e18
+   set cnt 0
+   foreach id $ids {
+    if { $id == 0 } { continue }
+    if { ! [info exists ipos($id)] } { continue }
+    lassign $ipos($id) x y
+    if { $x < $minx } { set minx $x }
+    if { $x > $maxx } { set maxx $x }
+    if { $y < $miny } { set miny $y }
+    if { $y > $maxy } { set maxy $y }
+    incr cnt
+   }
+   if { $cnt >= 2 } {
+    set sum [expr {$sum + ($maxx - $minx) + ($maxy - $miny)}]
+   } else {
+    incr unk
+   }
+  }
+  tsv::set $ns partial_$wid [list $sum $unk]
+  tsv::incr ras_ns done
+  thread::release
+ }
+ set workers {}
+ for { set w 0 } { $w < $nw } { incr w } { lappend workers [thread::create $wscript] }
+ while { [tsv::get ras_ns done] < $nw } { after 5 }
+ set total 0.0
+ set unknown 0
+ for { set w 0 } { $w < $nw } { incr w } {
+  if { [tsv::exists $ns partial_$w] } {
+   lassign [tsv::get $ns partial_$w] s u
+   set total [expr {$total + $s}]
+   incr unknown $u
+  }
+ }
+ return [list $total [llength [array names netdriver]] $unknown]
+}
+
 proc report_area_stats { args } {
  variable topname
  variable topnameid
@@ -3818,24 +3985,12 @@ proc report_area_stats { args } {
  # Sums the per-net estimate over every net built by build_net_conn. Each
  # net's length is cached in _wirelen_cache (computed lazily, -1 = unknown /
  # not estimable) so repeated reports are cheap. Requires build_net_conn.
+ # When multithreading is on and the design is large enough, the per-net
+ # wire-length resolution is split across worker threads (see _ras_wire_total).
  if { $opt_wire } {
-  global netdriver netload netconnbuilt _wirelen_cache
-  if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
-   puts "Info : wire length : (build_net_conn must run before -wire)"
-  } else {
-   set total 0
-   set nets 0
-   set unknown 0
-   foreach n [array names netdriver] {
-    set v [_net_wirelen_scalar $n]
-    if { $v >= 0 } { set total [expr {$total + $v}] } else { incr unknown }
-   }
-   foreach n [array names netload] {
-    if { [info exists netdriver($n)] } { continue }
-    set v [_net_wirelen_scalar $n]
-    if { $v >= 0 } { set total [expr {$total + $v}] } else { incr unknown }
-   }
-   set nets [llength [array names netdriver]]
+  global netconnbuilt
+  lassign [_ras_wire_total] total nets unknown
+  if { [info exists netconnbuilt] && $netconnbuilt } {
    puts "Info : total estimated wire length [format %.4g $total] um"
    puts "Info : estimated nets $nets, unknown/unestimable nets $unknown"
   }
