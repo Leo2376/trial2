@@ -2919,6 +2919,7 @@ proc seed_place { args } {
  variable _regionlist
 
  set seed -1
+ set niter 1
  for { set i 0 } { $i < [llength $args] } { incr i } {
   set a [lindex $args $i]
   if { $a eq "-seed" } {
@@ -2928,9 +2929,16 @@ proc seed_place { args } {
     puts "Error : seed_place -seed requires an integer"
     return
    }
+  } elseif { $a eq "-iter" } {
+   incr i
+   set niter [lindex $args $i]
+   if { ![string is integer -strict $niter] || $niter < 1 } {
+    puts "Error : seed_place -iter requires a positive integer"
+    return
+   }
   } else {
    puts "Error : unknown option $a"
-   puts "Usage: seed_place ?-seed n?"
+   puts "Usage: seed_place ?-seed n? ?-iter n?"
    return
   }
  }
@@ -3295,108 +3303,124 @@ proc seed_place { args } {
  set toprest_v $toprest
  set placedpos_v [array get placedpos]
 
- # ---- run trials ----
- if { $_mt_on && $_mt_thread_loaded } {
-  set ntrials $_mt_workers
-  if { $ntrials < 2 } { set ntrials 2 }
-  if { $ntrials > 16 } { set ntrials 16 }
-  puts "Info : seed_place with multithread ON ($ntrials random seed trials, judging by wire length)"
-  # pick the seeds once on the main thread so the chosen set is reproducible
-  # per run; workers just consume the precomputed seed list.
-  set seedlist {}
-  for { set s 0 } { $s < $ntrials } { incr s } {
-   lappend seedlist [expr {int(rand() * 32768)}]
-  }
-  set ns sp[incr _eval_sites_seq]
-  tsv::set $ns counter -1
-  tsv::set $ns cellarea $cellarea_v
-  tsv::set $ns blockcells $blockcells_v
-  tsv::set $ns toprest $toprest_v
-  tsv::set $ns obs $obs
-  tsv::set $ns cb_x0 $cb_x0
-  tsv::set $ns cb_y0 $cb_y0
-  tsv::set $ns cb_x1 $cb_x1
-  tsv::set $ns cb_y1 $cb_y1
-  tsv::set $ns siteh $siteh
-  tsv::set $ns pitch $pitch
-  tsv::set $ns netkeys $netkeys
-  tsv::set $ns netpinids $netpinids
-  tsv::set $ns placedpos $placedpos_v
-  tsv::set $ns seedlist $seedlist
-  tsv::set $ns ntrials $ntrials
-  tsv::array set sp_ns cur $ns
-  tsv::set sp_ns done 0
-  set trialbody [info body _sp_trial]
-  set trialargs [info args _sp_trial]
-  tsv::set $ns trialbody $trialbody
-  tsv::set $ns trialargs $trialargs
-  set wscript {
-   set ns [tsv::get sp_ns cur]
-   set cellarea_v [tsv::get $ns cellarea]
-   set blockcells_v [tsv::get $ns blockcells]
-   set toprest_v [tsv::get $ns toprest]
-   set obs [tsv::get $ns obs]
-   set cb_x0 [tsv::get $ns cb_x0]
-   set cb_y0 [tsv::get $ns cb_y0]
-   set cb_x1 [tsv::get $ns cb_x1]
-   set cb_y1 [tsv::get $ns cb_y1]
-   set siteh [tsv::get $ns siteh]
-   set pitch [tsv::get $ns pitch]
-   set netkeys [tsv::get $ns netkeys]
-   set netpinids [tsv::get $ns netpinids]
-   set placedpos_v [tsv::get $ns placedpos]
-   set seedlist [tsv::get $ns seedlist]
-   set ntrials [tsv::get $ns ntrials]
-   set trialbody [tsv::get $ns trialbody]
-   set trialargs [tsv::get $ns trialargs]
-   proc _sp_trial $trialargs $trialbody
-   while 1 {
-    set idx [tsv::incr $ns counter]
-    if { $idx >= $ntrials } { break }
-    set seed [lindex $seedlist $idx]
-    set res [_sp_trial $seed $cellarea_v $blockcells_v $toprest_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $netkeys $netpinids $placedpos_v]
-    set sc [lindex $res 0]
-    tsv::set $ns score_$idx $sc
-    tsv::set $ns res_$idx $res
-   }
-   tsv::incr sp_ns done
-   thread::release
-  }
-  set nw $_mt_workers
-  if { $nw > $ntrials } { set nw $ntrials }
-  set workers {}
-  for { set w 0 } { $w < $nw } { incr w } { lappend workers [thread::create $wscript] }
-  while { [tsv::get sp_ns done] < $nw } { after 5 }
-  set bestidx -1
-  set bestscore 1e18
-  set bestres {}
-  for { set idx 0 } { $idx < $ntrials } { incr idx } {
-   if { ! [tsv::exists $ns score_$idx] } { continue }
-   set sc [tsv::get $ns score_$idx]
-   set res [tsv::get $ns res_$idx]
-   set sd [lindex $seedlist $idx]
-   puts "Info : seed_place, trial seed $sd score [format %.4g $sc] (N=[lindex $res 1] M=[lindex $res 2] P=[lindex $res 3] T=[lindex $res 4])"
-   if { $sc < $bestscore } { set bestscore $sc; set bestidx $idx; set bestres $res }
-  }
-  if { $bestidx < 0 } {
-   set bestres [_sp_trial [lindex $seedlist 0] $cellarea_v $blockcells_v $toprest_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $netkeys $netpinids $placedpos_v]
-   set bestscore [lindex $bestres 0]
-   set bestidx 0
-  }
-  set bestseed [lindex $seedlist $bestidx]
-  puts "Info : seed_place, best trial idx $bestidx seed $bestseed score [format %.4g $bestscore] ($ntrials trials, $nw workers)"
-  set bestplaced [lindex $bestres 5]
+ set mt_on [expr {$_mt_on && $_mt_thread_loaded}]
+ if { $mt_on } {
+  puts "Info : seed_place with multithread ON, $niter iteration(s) ($_mt_workers random seeds each, judging by wire length)"
  } else {
-  # single serial trial.
-  if { $seed < 0 } { set seed [expr {int(rand() * 32768)}] }
-  puts "Info : seed_place single-threaded (1 seed trial)"
-  set res [_sp_trial $seed $cellarea_v $blockcells_v $toprest_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $netkeys $netpinids $placedpos_v]
-  set bestscore [lindex $res 0]
-  set bestseed $seed
-  set bestplaced [lindex $res 5]
-  puts "Info : seed_place, seed=$bestseed  N=[lindex $res 1]  M=[lindex $res 2]  P=[lindex $res 3]  T=[lindex $res 4]  score [format %.4g $bestscore]"
+  puts "Info : seed_place single-threaded, $niter iteration(s) (1 random seed each)"
+ }
+
+ # ---- run iteration rounds. Each round generates a fresh candidate set
+ # ---- (N random seeds in MT, 1 random/explicit seed in serial), scores
+ # ---- them, and keeps the best across ALL rounds so far. The best of
+ # ---- round k becomes the incumbent compared against round k+1's set.
+ set bestscore 1e18
+ set bestres {}
+ set bestseed -1
+ for { set iter 1 } { $iter <= $niter } { incr iter } {
+  if { $niter > 1 } { puts "Info : seed_place, iteration $iter/$niter" }
+
+  if { $mt_on } {
+   set ntrials $_mt_workers
+   if { $ntrials < 2 } { set ntrials 2 }
+   if { $ntrials > 16 } { set ntrials 16 }
+   # fresh random seeds for this round (the incumbent is compared after).
+   set seedlist {}
+   for { set s 0 } { $s < $ntrials } { incr s } {
+    lappend seedlist [expr {int(rand() * 32768)}]
+   }
+   set ns sp[incr _eval_sites_seq]
+   tsv::set $ns counter -1
+   tsv::set $ns cellarea $cellarea_v
+   tsv::set $ns blockcells $blockcells_v
+   tsv::set $ns toprest $toprest_v
+   tsv::set $ns obs $obs
+   tsv::set $ns cb_x0 $cb_x0
+   tsv::set $ns cb_y0 $cb_y0
+   tsv::set $ns cb_x1 $cb_x1
+   tsv::set $ns cb_y1 $cb_y1
+   tsv::set $ns siteh $siteh
+   tsv::set $ns pitch $pitch
+   tsv::set $ns netkeys $netkeys
+   tsv::set $ns netpinids $netpinids
+   tsv::set $ns placedpos $placedpos_v
+   tsv::set $ns seedlist $seedlist
+   tsv::set $ns ntrials $ntrials
+   tsv::array set sp_ns cur $ns
+   tsv::set sp_ns done 0
+   set trialbody [info body _sp_trial]
+   set trialargs [info args _sp_trial]
+   tsv::set $ns trialbody $trialbody
+   tsv::set $ns trialargs $trialargs
+   set wscript {
+    set ns [tsv::get sp_ns cur]
+    set cellarea_v [tsv::get $ns cellarea]
+    set blockcells_v [tsv::get $ns blockcells]
+    set toprest_v [tsv::get $ns toprest]
+    set obs [tsv::get $ns obs]
+    set cb_x0 [tsv::get $ns cb_x0]
+    set cb_y0 [tsv::get $ns cb_y0]
+    set cb_x1 [tsv::get $ns cb_x1]
+    set cb_y1 [tsv::get $ns cb_y1]
+    set siteh [tsv::get $ns siteh]
+    set pitch [tsv::get $ns pitch]
+    set netkeys [tsv::get $ns netkeys]
+    set netpinids [tsv::get $ns netpinids]
+    set placedpos_v [tsv::get $ns placedpos]
+    set seedlist [tsv::get $ns seedlist]
+    set ntrials [tsv::get $ns ntrials]
+    set trialbody [tsv::get $ns trialbody]
+    set trialargs [tsv::get $ns trialargs]
+    proc _sp_trial $trialargs $trialbody
+    while 1 {
+     set idx [tsv::incr $ns counter]
+     if { $idx >= $ntrials } { break }
+     set seed [lindex $seedlist $idx]
+     set res [_sp_trial $seed $cellarea_v $blockcells_v $toprest_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $netkeys $netpinids $placedpos_v]
+     set sc [lindex $res 0]
+     tsv::set $ns score_$idx $sc
+     tsv::set $ns res_$idx $res
+    }
+    tsv::incr sp_ns done
+    thread::release
+   }
+   set nw $_mt_workers
+   if { $nw > $ntrials } { set nw $ntrials }
+   set workers {}
+   for { set w 0 } { $w < $nw } { incr w } { lappend workers [thread::create $wscript] }
+   while { [tsv::get sp_ns done] < $nw } { after 5 }
+   for { set idx 0 } { $idx < $ntrials } { incr idx } {
+    if { ! [tsv::exists $ns score_$idx] } { continue }
+    set sc [tsv::get $ns score_$idx]
+    set res [tsv::get $ns res_$idx]
+    set sd [lindex $seedlist $idx]
+    puts "Info : seed_place, trial seed $sd score [format %.4g $sc] (N=[lindex $res 1] M=[lindex $res 2] P=[lindex $res 3] T=[lindex $res 4])"
+    if { $sc < $bestscore } { set bestscore $sc; set bestseed $sd; set bestres $res }
+   }
+   if { [llength $bestres] == 0 } {
+    set bestres [_sp_trial [lindex $seedlist 0] $cellarea_v $blockcells_v $toprest_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $netkeys $netpinids $placedpos_v]
+    set bestscore [lindex $bestres 0]
+    set bestseed [lindex $seedlist 0]
+   }
+  } else {
+   # single serial trial for this round.
+   if { $iter == 1 && $seed >= 0 } {
+    set sd $seed
+   } else {
+    set sd [expr {int(rand() * 32768)}]
+   }
+   set res [_sp_trial $sd $cellarea_v $blockcells_v $toprest_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $netkeys $netpinids $placedpos_v]
+   set sc [lindex $res 0]
+   puts "Info : seed_place, seed=$sd  N=[lindex $res 1]  M=[lindex $res 2]  P=[lindex $res 3]  T=[lindex $res 4]  score [format %.4g $sc]"
+   if { $sc < $bestscore } { set bestscore $sc; set bestseed $sd; set bestres $res }
+  }
+  if { $niter > 1 } {
+   puts "Info : seed_place, after iteration $iter best seed $bestseed score [format %.4g $bestscore]"
+  }
  }
  catch { rename _sp_trial {} }
+ set bestplaced [lindex $bestres 5]
+ puts "Info : seed_place, best seed $bestseed score [format %.4g $bestscore]"
 
  # ---- commit the best placement to _instlist ----
  set committed 0

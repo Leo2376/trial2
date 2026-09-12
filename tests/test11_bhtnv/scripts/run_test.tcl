@@ -120,6 +120,42 @@ if { $nplaced == $ncore && $nover == 0 && $nout == 0 } {
   puts "FAIL: seed_place placed $nplaced/$ncore CORE cells, $nover blockage hits, $nout out-of-core (MT)"
 }
 
+# --- seed_place -iter n: multi-round best-across-rounds MT search ---
+# Each iteration generates a fresh set of random seeds, scores them, and
+# keeps the best across all rounds so far. More rounds give the search more
+# chances to find a lower-wire-length layout.
+unplace_stdcell
+set ti0 [clock milliseconds]
+seed_place -iter 3
+set ti1 [clock milliseconds]
+puts "Info : test11 seed_place -iter 3 (MT) took [expr {$ti1-$ti0}] ms"
+
+# verify legal after the iterated search.
+set ncore 0
+set nplaced 0
+set nover 0
+set nout 0
+for { set i 1 } { $i <= $instindex } { incr i } {
+  set inst $_instlist($i)
+  set refid [lindex $inst 8]
+  set class [lindex $_libcell($refid) 4]
+  if { $class ne "CORE" } { continue }
+  incr ncore
+  if { [lindex $inst 4] != 1 } { continue }
+  incr nplaced
+  set px [lindex $inst 5]
+  set py [lindex $inst 6]
+  if { $px < $cb_x0 || $px > $cb_x1 || $py < $cb_y0 || $py > $cb_y1 } { incr nout }
+  foreach b $obs {
+    if { $px >= [lindex $b 0] && $px < [lindex $b 2] && $py >= [lindex $b 1] && $py < [lindex $b 3] } { incr nover; break }
+  }
+}
+if { $nplaced == $ncore && $nover == 0 && $nout == 0 } {
+  puts "PASS: seed_place -iter 3 placed all $nplaced/$ncore CORE cells, $nover blockage hits, $nout out-of-core"
+} else {
+  puts "FAIL: seed_place -iter 3 placed $nplaced/$ncore CORE cells, $nover blockage hits, $nout out-of-core"
+}
+
 # --- seed_place determinism: same seed must reproduce identical coordinates ---
 unplace_stdcell
 set_multithread_off
