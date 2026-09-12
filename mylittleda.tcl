@@ -3231,6 +3231,19 @@ proc seed_place { args } {
 
   array set pos {}
   set overflow {}
+  set totalcells [array size cellarea]
+  set placedcnt 0
+  set adv 0
+  proc _sp_pp { placedcnt totalcells } {
+   upvar 1 adv adv
+   if { $totalcells < 1000 } { return }
+   set pct [expr {int(100.0 * $placedcnt / $totalcells)}]
+   if {$pct >= 10 && $adv < 3 } { puts "..10%.." ; set adv 3 }
+   if {$pct >= 30 && $adv < 5 } { puts "..30%.." ; set adv 5 }
+   if {$pct >= 50 && $adv < 7 } { puts "..50%.." ; set adv 7 }
+   if {$pct >= 70 && $adv < 9 } { puts "..70%.." ; set adv 9 }
+   if {$pct >= 90 && $adv < 11} { puts "..90%.." ; set adv 11}
+  }
   foreach b $usedBaskets {
    set lidx $basketloc($b)
    lassign [lindex $locbox $lidx] rx0 ry0 rx1 ry1
@@ -3241,6 +3254,8 @@ proc seed_place { args } {
    if { [llength $cells] == 0 } { continue }
    set ov [_sp_pack_region $cells $rx0 $ry0 $rx1 $ry1]
    lappend overflow {*}$ov
+   set placedcnt [llength [array names pos]]
+   _sp_pp $placedcnt $totalcells
   }
   set usedloc {}
   foreach b $usedBaskets { lappend usedloc $basketloc($b) }
@@ -3254,9 +3269,13 @@ proc seed_place { args } {
    if { [llength $leftover] == 0 } { break }
    lassign [lindex $locbox $lidx] rx0 ry0 rx1 ry1
    set leftover [_sp_pack_region $leftover $rx0 $ry0 $rx1 $ry1]
+   set placedcnt [llength [array names pos]]
+   _sp_pp $placedcnt $totalcells
   }
   foreach cid $leftover { set pos($cid) [list $cb_x0 $cb_y0] }
+  _sp_pp [llength [array names pos]] $totalcells
   catch { rename _sp_pack_region {} }
+  catch { rename _sp_pp {} }
 
   # poslist of placed free cells. The wire-length score is NOT computed
   # here: the caller re-scores the placement through _sp_score_all so the
@@ -3414,7 +3433,9 @@ proc seed_place { args } {
   } else {
    set sd [expr {int(rand() * 32768)}]
   }
+  puts "Info : seed_place, trial seed=$sd : placing $nfree cells"
   set res [_sp_trial $sd $cellarea_v $blockcells_v $toprest_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $netkeys $netpinids $placedpos_v]
+  puts "Info : seed_place, trial seed=$sd : placement done, estimating wire length"
   # re-score the trial's placement through the (possibly MT) scorer so the
   # wire-length sum is computed in parallel when MT is on.
   set trialpos [lindex $res 5]
@@ -3426,9 +3447,6 @@ proc seed_place { args } {
   # single-map pattern _ras_wire_total uses -- instead of a two-map fallback.
   array set upos $placedpos_v
   foreach {cid xy} [array get tpos] { set upos($cid) $xy }
-  if { $mt_on && [llength $netpinids] >= 64 } {
-   puts -nonewline "Info : seed_place, estimating wire length "
-  }
   set sc [_sp_score_all $netpinids [array get upos]]
   puts "Info : seed_place, seed=$sd  N=[lindex $res 1]  M=[lindex $res 2]  P=[lindex $res 3]  T=[lindex $res 4]  score [format %.4g $sc]"
   if { $sc < $bestscore } { set bestscore $sc; set bestseed $sd; set bestres $res }
