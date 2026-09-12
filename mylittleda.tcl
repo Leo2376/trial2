@@ -3266,6 +3266,7 @@ proc seed_place { args } {
    # self-contained from the shipped inputs (no shared globals, no upvar).
    set nw $mt_workers_v
    if { $nw > $nwork } { set nw $nwork }
+   puts "Info : seed_place, packing $nwork baskets across $nw threads"
    set ns spp[incr ::_eval_sites_seq]
    tsv::set $ns worklist $worklist
    tsv::set $ns cellarea_v $cellarea_v
