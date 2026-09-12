@@ -3185,21 +3185,37 @@ proc seed_place { args } {
   set T [expr {($seed >> 11) & 0xF}]
   set nm [expr {$N * $M}]
 
-  # --- STEP 3: allocate frontier blocks into N baskets (P-driven) ---
- # block cell counts drive a load-balanced round-robin.
+  # --- STEP 3: allocate frontier blocks into N baskets, cell-count balanced.
+ # Greedy LPT (longest processing time): sort blocks by cell count
+ # descending, assign each to the basket with the smallest current cell
+ # total. This minimizes the makespan (max basket cell count) and so the
+ # worst-case overflow, unlike the old round-robin which balanced block
+ # count but not cell count (a single huge block could land all in one
+ # basket). P adds a deterministic rotation offset to the starting basket.
  set pairs {}
  foreach hid [array names blockcells] {
    lappend pairs [list [llength $blockcells($hid)] $hid]
   }
   set pairs [lsort -integer -decreasing -index 0 $pairs]
-  set ordered {}
-  foreach p $pairs { lappend ordered [lindex $p 1] }
   array set basket {}
-  for { set b 0 } { $b < $N } { incr b } { set basket($b) {} }
+  array set basketcells {}
+  array set basketarea {}
+  for { set b 0 } { $b < $N } { incr b } { set basket($b) {}; set basketcells($b) 0; set basketarea($b) 0 }
   set bi 0
-  foreach hid $ordered {
-   set b [expr {($bi + $P) % $N}]
-   lappend basket($b) $hid
+  foreach p $pairs {
+   set hid [lindex $p 1]
+   set cc [lindex $p 0]
+   # find basket with smallest current cell total
+   set best 0
+   set bestc [lindex $basketcells(0) 0]
+   if { $N > 1 } {
+    for { set b 1 } { $b < $N } { incr b } {
+     if { $basketcells($b) < $bestc } { set bestc $basketcells($b); set best $b }
+    }
+   }
+   lappend basket($best) $hid
+   incr basketcells($best) $cc
+   foreach cid $blockcells($hid) { set basketarea($best) [expr {$basketarea($best) + [lindex $cellarea($cid) 2]}] }
    incr bi
   }
   set usedBaskets {}
@@ -3207,7 +3223,7 @@ proc seed_place { args } {
    if { [llength $basket($b)] > 0 } { lappend usedBaskets $b }
   }
 
-  # --- STEP 4: 64-location 8x8 grid, T-driven basket->location ---
+  # --- STEP 4: 64-location 8x8 grid, T-driven basket->location(s) ---
   set gx [expr {($cb_x1 - $cb_x0) / 8.0}]
   set gy [expr {($cb_y1 - $cb_y0) / 8.0}]
   set locbox {}
@@ -3225,14 +3241,40 @@ proc seed_place { args } {
    }
   }
   set start [expr {$T % 64}]
+  # Utilization estimate: how many 8x8 regions each basket needs.
+  # region_area = 1/64 of the core; usable region capacity is the region
+  # area that can actually host cells (core minus blockages), estimated as
+  # (total core area - total blockage area) / 64. Pack each basket into
+  # ceil(basket_area / region_cap) adjacent regions so an oversized basket
+  # (which still holds many cells because its block couldn't be split
+  # further) is spread over several regions instead of overflowing 90%+.
+  set core_area [expr {($cb_x1 - $cb_x0) * ($cb_y1 - $cb_y0)}]
+  set blockage_area 0
+  foreach b $obs {
+   lassign $b bx0 by0 bx1 by1
+   set blockage_area [expr {$blockage_area + ($bx1 - $bx0) * ($by1 - $by0)}]
+  }
+  set free_area [expr {$core_area - $blockage_area}]
+  if { $free_area < 1 } { set free_area $core_area }
+  set region_cap [expr {$free_area / 64.0}]
+  if { $region_cap < 1 } { set region_cap $free_area }
   array set basketloc {}
   set li 0
   foreach b $usedBaskets {
-   set basketloc($b) [lindex $trav [expr {($start + $li) % 64}]]
-   incr li
+   set nr 1
+   if { $region_cap > 0 } {
+    set nr [expr {int(ceil($basketarea($b) / $region_cap))}]
+   }
+   if { $nr < 1 } { set nr 1 }
+   set locs {}
+   for { set k 0 } { $k < $nr } { incr k } {
+    lappend locs [lindex $trav [expr {($start + $li) % 64}]]
+    incr li
+   }
+   set basketloc($b) $locs
   }
 
-  # --- STEP 5: place each basket's cells into its location region. Writes
+  # --- STEP 5: place each basket's cells into its location region(s). Writes
   # --- into a LOCAL pos(cid)={x y} map (never _instlist) so trials are
   # --- independent and discardable. Overflow + top-residual fill unassigned
   # --- location regions; last resort falls back to core origin.
@@ -3310,22 +3352,34 @@ proc seed_place { args } {
    if {$pct >= 70 && $adv < 9 } { puts "..70%.." ; set adv 9 }
    if {$pct >= 90 && $adv < 11} { puts "..90%.." ; set adv 11}
   }
-  # Build the per-basket work list once: each entry is {b lidx cells}. Every
-  # basket is independent (disjoint cell ids, its own region and row cursors),
-  # so the baskets can be packed in parallel when MT is on.
+  # Build the per-basket work list once: each entry is {regions cells}
+  # where regions is a list of {rx0 ry0 rx1 ry1} (a basket may span several
+  # 8x8 locations when it holds more cells than one region can fit). Cells
+  # cascade across the basket's own regions before overflowing to the
+  # global leftover phase, so a big basket packs in parallel rather than
+  # dumping 90%+ into the serial leftover walk.
   set worklist {}
   set wi_v 0
   foreach b $usedBaskets {
-   set lidx $basketloc($b)
-   lassign [lindex $locbox $lidx] rx0 ry0 rx1 ry1
+   set locs $basketloc($b)
+   set regions {}
+   foreach lidx $locs {
+    lassign [lindex $locbox $lidx] rx0 ry0 rx1 ry1
+    lappend regions [list $rx0 $ry0 $rx1 $ry1]
+   }
    set cells {}
    foreach hid $basket($b) {
     if { [info exists blockcells($hid)] } { lappend cells {*}$blockcells($hid) }
    }
    if { [llength $cells] == 0 } { continue }
-   lappend worklist [list $rx0 $ry0 $rx1 $ry1 $cells]
+   lappend worklist [list $regions $cells]
    if { $verbose } {
-    puts "Info : seed_place, basket $wi_v -> region ($rx0,$ry0)-($rx1,$ry1) : [llength $cells] cells ([llength $basket($b)] blocks)"
+    set rdesc {}
+    foreach rg $regions {
+     lassign $rg rx0 ry0 rx1 ry1
+     lappend rdesc "($rx0,$ry0)-($rx1,$ry1)"
+    }
+    puts "Info : seed_place, basket $wi_v -> [llength $regions] region(s) [join $rdesc { }] : [llength $cells] cells ([llength $basket($b)] blocks)"
    }
    incr wi_v
   }
@@ -3366,60 +3420,67 @@ proc seed_place { args } {
     while {1} {
      set wi [tsv::incr $ns wid]
      if { $wi >= $nwork } { break }
-     lassign [lindex $worklist $wi] rx0 ry0 rx1 ry1 cells
-     set nrows [expr {int(($ry1 - $ry0) / $siteh)}]
-     if { $nrows < 1 } { set nrows 1 }
-     set row_y {}
-     set row_spans {}
-     for { set r 0 } { $r < $nrows } { incr r } {
-      set ry0r [expr {$ry0 + $r * $siteh}]
-      set ry1r [expr {$ry0r + $siteh}]
-      set spans [list [list $rx0 $rx1]]
-      foreach b $obs {
-       lassign $b bx0 by0 bx1 by1
-       if { $by1 <= $ry0r || $by0 >= $ry1r } { continue }
-       set nsp {}
-       foreach sp $spans {
-        lassign $sp sx0 sx1
-        if { $bx1 <= $sx0 || $bx0 >= $sx1 } { lappend nsp $sp; continue }
-        if { $bx0 > $sx0 } { lappend nsp [list $sx0 $bx0] }
-        if { $bx1 < $sx1 } { lappend nsp [list $bx1 $sx1] }
-       }
-       set spans $nsp
-      }
-      lappend row_y $ry0r
-      lappend row_spans $spans
-     }
-     set row_cursor {}
-     for { set r 0 } { $r < $nrows } { incr r } {
-      lappend row_cursor [list 0 [lindex [lindex [lindex $row_spans $r] 0] 0]]
-     }
+     lassign [lindex $worklist $wi] regions cells
      set placed_flat {}
-     set ovl {}
-     foreach cid $cells {
-      set szx [lindex $cellarea($cid) 0]
-      set placed 0
-      for { set rr 0 } { $rr < $nrows } { incr rr } {
-       lassign [lindex $row_cursor $rr] si xpos
-       set spans [lindex $row_spans $rr]
-       set nsp [llength $spans]
-       while { $si < $nsp } {
-        lassign [lindex $spans $si] sx0 sx1
-        if { $xpos < $sx0 } { set xpos $sx0 }
-        if { $xpos + $szx <= $sx1 } {
-         lappend placed_flat $cid $xpos [lindex $row_y $rr]
-         lset row_cursor $rr [list $si [expr {$xpos + $szx * $pitch}]]
-         set placed 1
-         break
+     set pending $cells
+     foreach rg $regions {
+      if { [llength $pending] == 0 } { break }
+      lassign $rg rx0 ry0 rx1 ry1
+      set nrows [expr {int(($ry1 - $ry0) / $siteh)}]
+      if { $nrows < 1 } { set nrows 1 }
+      set row_y {}
+      set row_spans {}
+      for { set r 0 } { $r < $nrows } { incr r } {
+       set ry0r [expr {$ry0 + $r * $siteh}]
+       set ry1r [expr {$ry0r + $siteh}]
+       set spans [list [list $rx0 $rx1]]
+       foreach b $obs {
+        lassign $b bx0 by0 bx1 by1
+        if { $by1 <= $ry0r || $by0 >= $ry1r } { continue }
+        set nsp {}
+        foreach sp $spans {
+         lassign $sp sx0 sx1
+         if { $bx1 <= $sx0 || $bx0 >= $sx1 } { lappend nsp $sp; continue }
+         if { $bx0 > $sx0 } { lappend nsp [list $sx0 $bx0] }
+         if { $bx1 < $sx1 } { lappend nsp [list $bx1 $sx1] }
         }
-        incr si
-        if { $si < $nsp } { set xpos [lindex [lindex $spans $si] 0] }
+        set spans $nsp
        }
-       if { $placed } { break }
-       lset row_cursor $rr [list $nsp 0]
+       lappend row_y $ry0r
+       lappend row_spans $spans
       }
-      if { ! $placed } { lappend ovl $cid }
+      set row_cursor {}
+      for { set r 0 } { $r < $nrows } { incr r } {
+       lappend row_cursor [list 0 [lindex [lindex [lindex $row_spans $r] 0] 0]]
+      }
+      set next_pending {}
+      foreach cid $pending {
+       set szx [lindex $cellarea($cid) 0]
+       set placed 0
+       for { set rr 0 } { $rr < $nrows } { incr rr } {
+        lassign [lindex $row_cursor $rr] si xpos
+        set spans [lindex $row_spans $rr]
+        set nsp [llength $spans]
+        while { $si < $nsp } {
+         lassign [lindex $spans $si] sx0 sx1
+         if { $xpos < $sx0 } { set xpos $sx0 }
+         if { $xpos + $szx <= $sx1 } {
+          lappend placed_flat $cid $xpos [lindex $row_y $rr]
+          lset row_cursor $rr [list $si [expr {$xpos + $szx * $pitch}]]
+          set placed 1
+          break
+         }
+         incr si
+         if { $si < $nsp } { set xpos [lindex [lindex $spans $si] 0] }
+        }
+        if { $placed } { break }
+        lset row_cursor $rr [list $nsp 0]
+       }
+       if { ! $placed } { lappend next_pending $cid }
+      }
+      set pending $next_pending
      }
+     set ovl $pending
      tsv::set $ns placed_$wi $placed_flat
      tsv::set $ns overflow_$wi $ovl
      tsv::set $ns wthread_$wi [thread::id]
@@ -3445,14 +3506,24 @@ proc seed_place { args } {
     }
    }
   } else {
-   # Serial basket packing (current behaviour, with progress).
+   # Serial basket packing. Each basket packs across all its regions,
+   # cascading overflow to its next region before the global leftover phase.
    set wi_s 0
    foreach w $worklist {
-    lassign $w rx0 ry0 rx1 ry1 cells
-    set ov [_sp_pack_region $cells $rx0 $ry0 $rx1 $ry1]
-    lappend overflow {*}$ov
+    lassign $w regions cells
+    set pending $cells
+    set npc 0
+    foreach rg $regions {
+     if { [llength $pending] == 0 } { break }
+     lassign $rg rx0 ry0 rx1 ry1
+     set prevn [llength $pending]
+     set ov [_sp_pack_region $pending $rx0 $ry0 $rx1 $ry1]
+     incr npc [expr {$prevn - [llength $ov]}]
+     set pending $ov
+    }
+    lappend overflow {*}$pending
     if { $verbose } {
-     puts "Info : seed_place, basket $wi_s packed serial : [llength $cells]-[expr {[llength $cells]-[llength $ov]}] placed, [llength $ov] overflow"
+     puts "Info : seed_place, basket $wi_s packed serial : $npc placed, [llength $pending] overflow"
     }
     incr wi_s
     set placedcnt [llength [array names pos]]
@@ -3460,7 +3531,7 @@ proc seed_place { args } {
    }
   }
   set usedloc {}
-  foreach b $usedBaskets { lappend usedloc $basketloc($b) }
+  foreach b $usedBaskets { lappend usedloc {*}$basketloc($b) }
   set freeregions {}
   for { set t 0 } { $t < 64 } { incr t } {
    set lidx [lindex $trav [expr {($start + $t) % 64}]]
