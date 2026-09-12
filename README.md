@@ -10,14 +10,21 @@ available):
 
 ```sh
 sudo apt-get update
-sudo apt-get install -y tcl tk-dev tcl-dev xvfb
+sudo apt-get install -y tcl tk-dev tcl-dev xvfb tcl-thread
 ```
+
+`tcl-thread` provides the Tcl `Thread` extension used by the multithreaded
+placement and wire-length estimation (`seed_place`, `report_area_stats -wire`,
+`placeOpt`). Without it these stages still run (they degrade to single-threaded
+and report `Error : cannot enable multithread`), but installing it lets the
+parallel paths run. Verify it loads after install with `package require Thread`.
 
 Verify the install (note: Tk needs a display, so it only loads with an X server
 or `xvfb`; the batch test path below does not require Tk):
 
 ```sh
 echo 'puts "Tcl [info patchlevel]"; exit' | tclsh
+echo 'if {![catch {package require Thread}]} {puts "Thread ok"}; exit' | tclsh
 ```
 
 ## Running the tests (batch mode, no GUI needed)

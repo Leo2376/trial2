@@ -3293,24 +3293,24 @@ proc seed_place { args } {
  }
 
  # Wire-length scoring helper: sum the Manhattan bounding-box length of a
- # contiguous range [k0,k1) of nets. pos_v / placedpos_v are the per-trial
- # position maps serialized as {id x y ...}; a net's pin ids are looked up
- # there first, falling back to the fixed macro positions. Each net is
- # independent, so the range can be scored in a worker thread.
- proc _sp_score_range { k0 k1 netpinids pos_v placedpos_v } {
-  array set pos $pos_v
-  array set placedpos $placedpos_v
+ # contiguous range [k0,k1) of nets. upos_v is a SINGLE unified position map
+ # serialized as {id x y ...} that already merges the per-trial free-cell
+ # positions over the fixed macro/placed positions, so a net's pin ids are
+ # looked up in one map with one 'info exists' -- the same single-map pattern
+ # _ras_wire_total uses (ipos). Each net is independent, so the range can be
+ # scored in a worker thread.
+ proc _sp_score_range { k0 k1 netpinids upos_v } {
+  array set upos $upos_v
   set score 0.0
+  set adv 0
+  set span [expr {$k1 - $k0}]
   for { set k $k0 } { $k < $k1 } { incr k } {
    set ids [lindex $netpinids $k]
    set minx 1e18; set maxx -1e18; set miny 1e18; set maxy -1e18
    set cnt 0
    foreach id $ids {
-    if { [info exists pos($id)] } {
-     lassign $pos($id) x y
-    } elseif { [info exists placedpos($id)] } {
-     lassign $placedpos($id) x y
-    } else { continue }
+    if { ! [info exists upos($id)] } { continue }
+    lassign $upos($id) x y
     if { $x < $minx } { set minx $x }
     if { $x > $maxx } { set maxx $x }
     if { $y < $miny } { set miny $y }
@@ -3318,30 +3318,39 @@ proc seed_place { args } {
     incr cnt
    }
    if { $cnt >= 2 } { set score [expr {$score + ($maxx - $minx) + ($maxy - $miny)}] }
+   if { $span >= 100 } {
+    set done [expr {$k - $k0 + 1}]
+    if {$done > [expr 1* $span /10] && $adv<3 } { puts "..10%.." ; set adv 3 }
+    if {$done > [expr 3* $span /10] && $adv<5 } { puts "..30%.." ; set adv 5 }
+    if {$done > [expr 5* $span /10] && $adv<7 } { puts "..50%.." ; set adv 7 }
+    if {$done > [expr 7* $span /10] && $adv<9 } { puts "..70%.." ; set adv 9 }
+    if {$done > [expr 9* $span /10] && $adv<11} { puts "..90%.." ; set adv 11}
+   }
   }
   return $score
  }
 
  # Score all nets for one trial. Serial when MT is off; when MT is on, the
  # net index is split into nw contiguous ranges and each range is scored in
- # a worker thread, then the partial scores are summed. The net index and
- # the position maps are read-only during scoring, so parallel ranges are
- # safe. Threads are created per scoring call and self-release when done,
- # so no thread accumulates across trials/iterations.
- proc _sp_score_all { netpinids pos_v placedpos_v } {
+ # a worker thread, then the partial scores are summed. Only the per-trial
+ # unified position map (upos_v) is shipped; the net index and the fixed
+ # positions are read-only, so parallel ranges are safe. Threads are created
+ # per scoring call and self-release when done, so no thread accumulates
+ # across trials/iterations. This mirrors _ras_wire_total's single-map worker
+ # (one 'array set' + one 'info exists' per pin, no fallback lookup).
+ proc _sp_score_all { netpinids upos_v } {
   upvar mt_on mt_on _mt_workers _mt_workers _eval_sites_seq _eval_sites_seq
   set nn [llength $netpinids]
   if { ! $mt_on || $nn < 64 } {
-   return [_sp_score_range 0 $nn $netpinids $pos_v $placedpos_v]
+   return [_sp_score_range 0 $nn $netpinids $upos_v]
   }
   set nw $_mt_workers
   if { $nw < 1 } { set nw 1 }
   if { $nw > $nn } { set nw $nn }
-  if { $nw == 1 } { return [_sp_score_range 0 $nn $netpinids $pos_v $placedpos_v] }
+  if { $nw == 1 } { return [_sp_score_range 0 $nn $netpinids $upos_v] }
   set ns sps[incr _eval_sites_seq]
   tsv::set $ns netpinids $netpinids
-  tsv::set $ns pos_v $pos_v
-  tsv::set $ns placedpos_v $placedpos_v
+  tsv::set $ns upos_v $upos_v
   tsv::set $ns nn $nn
   tsv::set $ns nws $nw
   tsv::set $ns wid -1
@@ -3350,8 +3359,7 @@ proc seed_place { args } {
   set wscript {
    set ns [tsv::get sps_ns cur]
    set netpinids [tsv::get $ns netpinids]
-   set pos_v [tsv::get $ns pos_v]
-   set placedpos_v [tsv::get $ns placedpos_v]
+   set upos_v [tsv::get $ns upos_v]
    set nn [tsv::get $ns nn]
    set nws [tsv::get $ns nws]
    set wid [tsv::incr $ns wid]
@@ -3359,18 +3367,14 @@ proc seed_place { args } {
    set k1 [expr {int((($wid + 1) * $nn) / $nws)}]
    set s 0.0
    if { $k0 < $k1 } {
-    array set pos $pos_v
-    array set placedpos $placedpos_v
+    array set upos $upos_v
     for { set k $k0 } { $k < $k1 } { incr k } {
      set ids [lindex $netpinids $k]
      set minx 1e18; set maxx -1e18; set miny 1e18; set maxy -1e18
      set cnt 0
      foreach id $ids {
-      if { [info exists pos($id)] } {
-       lassign $pos($id) x y
-      } elseif { [info exists placedpos($id)] } {
-       lassign $placedpos($id) x y
-      } else { continue }
+      if { ! [info exists upos($id)] } { continue }
+      lassign $upos($id) x y
       if { $x < $minx } { set minx $x }
       if { $x > $maxx } { set maxx $x }
       if { $y < $miny } { set miny $y }
@@ -3416,7 +3420,16 @@ proc seed_place { args } {
   set trialpos [lindex $res 5]
   array set tpos {}
   foreach rec $trialpos { set tpos([lindex $rec 0]) [list [lindex $rec 1] [lindex $rec 2]] }
-  set sc [_sp_score_all $netpinids [array get tpos] $placedpos_v]
+  # Build a SINGLE unified position map: start from the fixed macro/placed
+  # positions, then overlay the trial's free-cell positions. Workers then
+  # resolve every net pin with one 'info exists' in one map -- the same
+  # single-map pattern _ras_wire_total uses -- instead of a two-map fallback.
+  array set upos $placedpos_v
+  foreach {cid xy} [array get tpos] { set upos($cid) $xy }
+  if { $mt_on && [llength $netpinids] >= 64 } {
+   puts -nonewline "Info : seed_place, estimating wire length "
+  }
+  set sc [_sp_score_all $netpinids [array get upos]]
   puts "Info : seed_place, seed=$sd  N=[lindex $res 1]  M=[lindex $res 2]  P=[lindex $res 3]  T=[lindex $res 4]  score [format %.4g $sc]"
   if { $sc < $bestscore } { set bestscore $sc; set bestseed $sd; set bestres $res }
   if { $niter > 1 } {
@@ -3821,9 +3834,18 @@ proc _ras_wire_total { } {
  if { ! $use_mt } {
   set total 0
   set unknown 0
+  set adv 0
+  set j 0
   foreach n $netkeys {
    set v [_net_wirelen_scalar $n]
    if { $v >= 0 } { set total [expr {$total + $v}] } else { incr unknown }
+   if {$j > [expr    $nn/100] && $adv==0 } { puts "..1%.."  ; set adv 1 }
+   if {$j > [expr 1* $nn /10] && $adv==2 } { puts "..10%.." ; set adv 3 }
+   if {$j > [expr 3* $nn /10] && $adv==4 } { puts "..30%.." ; set adv 5 }
+   if {$j > [expr 5* $nn /10] && $adv==6 } { puts "..50%.." ; set adv 7 }
+   if {$j > [expr 7* $nn /10] && $adv==8 } { puts "..70%.." ; set adv 9 }
+   if {$j > [expr 9* $nn /10] && $adv==10} { puts "..90%.." ; set adv 11}
+   incr j
   }
   return [list $total [llength [array names netdriver]] $unknown]
  }
@@ -3831,6 +3853,7 @@ proc _ras_wire_total { } {
  # Multithreaded resolution: split the net list into nw contiguous ranges,
  # each worker resolves + sums its range from the shipped ipos map (no globals
  # needed), returns its partial {sum unknown}. Threads self-release when done.
+ puts -nonewline "Info : estimating wire length "
  set nw $_mt_workers
  if { $nw > $nn } { set nw $nn }
  set ns ras[incr _eval_sites_seq]
