@@ -3329,20 +3329,53 @@ proc seed_place { args } {
   }
   # Hand out regions in T-traversal order, biggest basket first.
   array set basketloc {}
-  set li 0
+  # Anchor-based spatial spreading: each basket gets a deterministic
+  # "random" anchor region derived from the topology number T (part of the
+  # seed) and the basket's rank, then grows outward by grid distance so
+  # the basket's regions cluster around its anchor instead of being a
+  # consecutive slab of the traversal. This spreads big baskets across the
+  # die (better wire length) while keeping the allocation reproducible.
+  # Grid coordinates (row, col) for each usable region index.
+  set urcol {}
+  set urrow {}
+  foreach li $usablereg {
+   lappend urcol [expr {$li % 8}]
+   lappend urrow [expr {$li / 8}]
+  }
+  set taken {}
+  for { set li 0 } { $li < $nusable } { incr li } { lappend taken 0 }
+  set bidx 0
   foreach p $bpairs {
    set b [lindex $p 1]
    set nr $basketnr($b)
+   # deterministic anchor: LCG seeded by T and basket rank.
+   set anch [expr {(($T * 1103515245 + $bidx * 12345 + 12345) >> 4) % $nusable}]
+   if { $anch < 0 } { set anch [expr {-$anch}] }
+   set ac [lindex $urcol $anch]
+   set ar [lindex $urrow $anch]
+   # sort usable regions by Manhattan distance to the anchor, breaking
+   # ties by index for determinism.
+   set cands {}
+   for { set li 0 } { $li < $nusable } { incr li } {
+    if { [lindex $taken $li] } { continue }
+    set d [expr {abs([lindex $urrow $li] - $ar) + abs([lindex $urcol $li] - $ac)}]
+    lappend cands [list $d $li]
+   }
+   set cands [lsort -integer -increasing -index 0 $cands]
    set locs {}
-   for { set k 0 } { $k < $nr } { incr k } {
-    if { $li < $nusable } {
-     lappend locs [lindex $usablereg $li]
-     incr li
-    } elseif { [llength $locs] == 0 } {
-     lappend locs [lindex $usablereg 0]
-    }
+   set k 0
+   foreach c $cands {
+    if { $k >= $nr } { break }
+    set li [lindex $c 1]
+    lappend locs [lindex $usablereg $li]
+    lset taken $li 1
+    incr k
+   }
+   if { [llength $locs] == 0 && $nusable > 0 } {
+    lappend locs [lindex $usablereg 0]
    }
    set basketloc($b) $locs
+   incr bidx
   }
   if { $verbose } {
    set bmapidx {}
