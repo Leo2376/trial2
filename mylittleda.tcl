@@ -2900,6 +2900,7 @@ proc placeOpt { args } {
 # comparison. Requires a floorplan (P3). Purely geometric: uses no net
 # data, so no build_net_conn dependency.
 proc seed_place { args } {
+ global _mt_on _mt_workers _mt_thread_loaded _eval_sites_seq
  variable topname
  _require 3
  variable instindex
@@ -2908,6 +2909,7 @@ proc seed_place { args } {
  variable _instlist
  variable _hinstlist
  variable hpathlist
+ variable pathlist
  variable blockageindex
  variable _blockagelist
  variable corebox
@@ -2932,16 +2934,15 @@ proc seed_place { args } {
    return
   }
  }
- if { $seed < 0 } {
-  set seed [expr {int(rand() * 32768)}]
+
+ # score by total wire length: needs net connectivity.
+ global netconnbuilt netdriver netload
+ set haveconn 0
+ if { [info exists netconnbuilt] && $netconnbuilt } { set haveconn 1 }
+ if { ! $haveconn } {
+  puts "Error : build_net_conn must run before seed_place (wire length is the trial score)"
+  return
  }
- # bit0 = N, bits1-2 = M, bits3-10 = P, bits11-14 = T
- set N [expr {($seed & 1) ? 16 : 9}]
- set msel [expr {($seed >> 1) & 0x3}]
- if { $msel == 0 } { set M 2 } elseif { $msel == 1 } { set M 3 } else { set M 4 }
- set P [expr {($seed >> 3) & 0xFF}]
- set T [expr {($seed >> 11) & 0xF}]
- puts "Info : seed_place, seed=$seed  N=$N  M=$M  P=$P  T=$T"
 
  if { $siteh <= 0 } { set siteh 0.3 }
  set pitch [expr {100.0 / $targetutilz}]
@@ -2950,7 +2951,6 @@ proc seed_place { args } {
  set cb_y0 [lindex $corebox 1]
  set cb_x1 [lindex $corebox 2]
  set cb_y1 [lindex $corebox 3]
- set nm [expr {$N * $M}]
 
  set obs {}
  for { set i 1 } { $i <= $blockageindex } { incr i } {
@@ -2973,9 +2973,17 @@ proc seed_place { args } {
  set frontier {}
  if { [info exists childmap(-1)] } { set frontier $childmap(-1) }
  set S [llength $frontier]
+ # hierarchy depth limit for the expansion: capped so a flat design (many
+ # top-1 blocks, all leaves) does not loop. The deepest meaningful descent
+ # is bounded by the number of hierarchy levels actually present.
+ set maxlevel 6
  set level 1
- puts "Info : seed_place, hierarchy top-$level : S=$S (need N*M=$nm)"
- while { $S < $nm } {
+ puts "Info : seed_place, hierarchy top-$level : S=$S"
+ # We expand only when the CURRENT frontier is too small for the largest
+ # N*M (16*4=64); once big enough for all seeds we stop. The block->cell
+ # mapping is rebuilt per seed (different N/M change the target count),
+ # but the frontier set is shared across trials, so compute it once.
+ while { $S < 64 && $level < $maxlevel } {
   set newf {}
   set changed 0
   foreach hid $frontier {
@@ -2991,9 +2999,9 @@ proc seed_place { args } {
   set frontier $newf
   set S [llength $frontier]
   incr level
-  puts "Info : seed_place, hierarchy top-$level : S=$S (need N*M=$nm)"
+  puts "Info : seed_place, hierarchy top-$level : S=$S"
  }
- puts "Info : seed_place, selected $S hierarchy blocks at depth $level"
+ puts "Info : seed_place, selected $S hierarchy blocks at depth $level (frontier shared across trials)"
  array set fdict {}
  foreach hid $frontier { set fdict([_sp_hp $hid]) $hid }
  catch { rename _sp_hp {} }
@@ -3040,151 +3048,378 @@ proc seed_place { args } {
   return
  }
 
- # --- STEP 3: allocate blocks into N baskets (P-driven) ---
- array set bcount {}
- foreach hid $frontier { set bcount($hid) [llength $blockcells($hid)] }
+ # Precompute the net->inst-id index once (shared by all trials) so each
+ # trial scores by real total wire length. A net's pins live at inst
+ # positions; pins that are not moveable CORE cells (macros, ports, assigns)
+ # are read from _instlist so they contribute fixed endpoints. Net keys can
+ # contain bit-select brackets, so we walk via array get (no subscripts).
+ array set pathid {}
+ set pi 0
+ foreach p $pathlist { set pathid($p) [expr {$pi + 1}]; incr pi }
+ # netpins(net) = list of {id x y} where id is the inst id (0 for a port/
+ # assign endpoint that has no inst). Macro/non-free inst positions are
+ # fixed and read live during scoring; free-cell positions come from the
+ # trial's local pos map.
+ array set netpins {}
+ foreach {n dval} [array get netdriver] {
+  set pl {}
+  foreach p $dval {
+   set ip [lindex $p 0]
+   if { [info exists pathid($ip)] } {
+    lappend pl [list $pathid($ip)]
+   }
+  }
+  if { [llength $pl] > 0 } { set netpins($n) $pl }
+ }
+ foreach {n lval} [array get netload] {
+  set pl {}
+  if { [info exists netpins($n)] } { set pl $netpins($n) }
+  foreach p $lval {
+   set ip [lindex $p 0]
+   if { [info exists pathid($ip)] } {
+    lappend pl [list $pathid($ip)]
+   }
+  }
+  if { [llength $pl] > 0 } { set netpins($n) $pl }
+ }
+ # compact the net index to two parallel lists for cheap tsv shipping:
+ # netkeys (list of net names) and netpinids (list of id-lists, same order).
+ set netkeys {}
+ set netpinids {}
+ foreach {n ids} [array get netpins] {
+  lappend netkeys $n
+  lappend netpinids $ids
+ }
+ unset netpins
+
+ # ---- Pure trial: compute placement for one seed, return {score poslist}.
+ # ---- poslist = list of {cid x y}. score = total wire length over all nets
+ # ---- using the trial's positions for free cells + fixed positions for the
+ # ---- already-placed macros/ports. The trial never writes _instlist, so it
+ # ---- is safe to run many in parallel and to discard losing trials.
+ proc _sp_trial { seed cellarea_v blockcells_v toprest_v obs cb_x0 cb_y0 cb_x1 cb_y1 siteh pitch netkeys netpinids placedpos_v } {
+  array set cellarea $cellarea_v
+  array set blockcells $blockcells_v
+  set toprest $toprest_v
+  array set placedpos $placedpos_v
+
+  # decode seed
+  set N [expr {($seed & 1) ? 16 : 9}]
+  set msel [expr {($seed >> 1) & 0x3}]
+  if { $msel == 0 } { set M 2 } elseif { $msel == 1 } { set M 3 } else { set M 4 }
+  set P [expr {($seed >> 3) & 0xFF}]
+  set T [expr {($seed >> 11) & 0xF}]
+  set nm [expr {$N * $M}]
+
+  # --- STEP 3: allocate frontier blocks into N baskets (P-driven) ---
+ # block cell counts drive a load-balanced round-robin.
  set pairs {}
- foreach hid $frontier { lappend pairs [list $bcount($hid) $hid] }
- set pairs [lsort -integer -decreasing -index 0 $pairs]
- set ordered {}
- foreach p $pairs { lappend ordered [lindex $p 1] }
- array set basket {}
- for { set b 0 } { $b < $N } { incr b } { set basket($b) {} }
- set bi 0
- foreach hid $ordered {
-  set b [expr {($bi + $P) % $N}]
-  lappend basket($b) $hid
-  incr bi
- }
- set usedBaskets {}
- for { set b 0 } { $b < $N } { incr b } {
-  if { [llength $basket($b)] > 0 } { lappend usedBaskets $b }
- }
- puts "Info : seed_place, allocated $S blocks into $N baskets (P=$P), [llength $usedBaskets] baskets non-empty"
-
- # --- STEP 4: 64-location 8x8 grid, T-driven basket->location assignment ---
- set gx [expr {($cb_x1 - $cb_x0) / 8.0}]
- set gy [expr {($cb_y1 - $cb_y0) / 8.0}]
- set locbox {}
- for { set r 0 } { $r < 8 } { incr r } {
-  for { set c 0 } { $c < 8 } { incr c } {
-   lappend locbox [list [expr {$cb_x0 + $c * $gx}] [expr {$cb_y0 + $r * $gy}] [expr {$cb_x0 + ($c + 1) * $gx}] [expr {$cb_y0 + ($r + 1) * $gy}]]
+ foreach hid [array names blockcells] {
+   lappend pairs [list [llength $blockcells($hid)] $hid]
   }
- }
- set ttype [expr {$T & 0x3}]
- set trav {}
- for { set a 0 } { $a < 8 } { incr a } {
-  for { set b 0 } { $b < 8 } { incr b } {
-   if { $ttype == 0 } { set idx [expr {$a * 8 + $b}] } elseif { $ttype == 1 } { set idx [expr {$b * 8 + $a}] } elseif { $ttype == 2 } { set idx [expr {$a * 8 + (7 - $b)}] } else { set idx [expr {(7 - $a) * 8 + $b}] }
-   lappend trav $idx
+  set pairs [lsort -integer -decreasing -index 0 $pairs]
+  set ordered {}
+  foreach p $pairs { lappend ordered [lindex $p 1] }
+  array set basket {}
+  for { set b 0 } { $b < $N } { incr b } { set basket($b) {} }
+  set bi 0
+  foreach hid $ordered {
+   set b [expr {($bi + $P) % $N}]
+   lappend basket($b) $hid
+   incr bi
   }
- }
- set start [expr {$T % 64}]
- array set basketloc {}
- set li 0
- foreach b $usedBaskets {
-  set basketloc($b) [lindex $trav [expr {($start + $li) % 64}]]
-  incr li
- }
- puts "Info : seed_place, T=$T -> traversal type $ttype, start $start, [llength $usedBaskets] baskets placed"
+  set usedBaskets {}
+  for { set b 0 } { $b < $N } { incr b } {
+   if { [llength $basket($b)] > 0 } { lappend usedBaskets $b }
+  }
 
- # --- STEP 5: place each basket's cells into its location region ---
- proc _sp_pack_region { cells rx0 ry0 rx1 ry1 } {
-  upvar _instlist _instlist cellarea cellarea siteh siteh obs obs pitch pitch
-  set nrows [expr {int(($ry1 - $ry0) / $siteh)}]
-  if { $nrows < 1 } { set nrows 1 }
-  set row_y {}
-  set row_spans {}
-  for { set r 0 } { $r < $nrows } { incr r } {
-   set ry0r [expr {$ry0 + $r * $siteh}]
-   set ry1r [expr {$ry0r + $siteh}]
-   set spans [list [list $rx0 $rx1]]
-   foreach b $obs {
-    lassign $b bx0 by0 bx1 by1
-    if { $by1 <= $ry0r || $by0 >= $ry1r } { continue }
-    set nsp {}
-    foreach sp $spans {
-     lassign $sp sx0 sx1
-     if { $bx1 <= $sx0 || $bx0 >= $sx1 } { lappend nsp $sp; continue }
-     if { $bx0 > $sx0 } { lappend nsp [list $sx0 $bx0] }
-     if { $bx1 < $sx1 } { lappend nsp [list $bx1 $sx1] }
-    }
-    set spans $nsp
+  # --- STEP 4: 64-location 8x8 grid, T-driven basket->location ---
+  set gx [expr {($cb_x1 - $cb_x0) / 8.0}]
+  set gy [expr {($cb_y1 - $cb_y0) / 8.0}]
+  set locbox {}
+  for { set r 0 } { $r < 8 } { incr r } {
+   for { set c 0 } { $c < 8 } { incr c } {
+    lappend locbox [list [expr {$cb_x0 + $c * $gx}] [expr {$cb_y0 + $r * $gy}] [expr {$cb_x0 + ($c + 1) * $gx}] [expr {$cb_y0 + ($r + 1) * $gy}]]
    }
-   lappend row_y $ry0r
-   lappend row_spans $spans
   }
-  set row_cursor {}
-  for { set r 0 } { $r < $nrows } { incr r } {
-   lappend row_cursor [list 0 [lindex [lindex [lindex $row_spans $r] 0] 0]]
+  set ttype [expr {$T & 0x3}]
+  set trav {}
+  for { set a 0 } { $a < 8 } { incr a } {
+   for { set b 0 } { $b < 8 } { incr b } {
+    if { $ttype == 0 } { set idx [expr {$a * 8 + $b}] } elseif { $ttype == 1 } { set idx [expr {$b * 8 + $a}] } elseif { $ttype == 2 } { set idx [expr {$a * 8 + (7 - $b)}] } else { set idx [expr {(7 - $a) * 8 + $b}] }
+    lappend trav $idx
+   }
   }
-  proc _sp_pack1 { cid } {
-   upvar row_spans row_spans row_cursor row_cursor nrows nrows row_y row_y _instlist _instlist cellarea cellarea pitch pitch
-   set szx [lindex $cellarea($cid) 0]
-   for { set rr 0 } { $rr < $nrows } { incr rr } {
-    lassign [lindex $row_cursor $rr] si xpos
-    set spans [lindex $row_spans $rr]
-    set nsp [llength $spans]
-    while { $si < $nsp } {
-     lassign [lindex $spans $si] sx0 sx1
-     if { $xpos < $sx0 } { set xpos $sx0 }
-     if { $xpos + $szx <= $sx1 } {
-      lset _instlist($cid) 4 1
-      lset _instlist($cid) 5 $xpos
-      lset _instlist($cid) 6 [lindex $row_y $rr]
-      lset row_cursor $rr [list $si [expr {$xpos + $szx * $pitch}]]
-      return 1
+  set start [expr {$T % 64}]
+  array set basketloc {}
+  set li 0
+  foreach b $usedBaskets {
+   set basketloc($b) [lindex $trav [expr {($start + $li) % 64}]]
+   incr li
+  }
+
+  # --- STEP 5: place each basket's cells into its location region. Writes
+  # --- into a LOCAL pos(cid)={x y} map (never _instlist) so trials are
+  # --- independent and discardable. Overflow + top-residual fill unassigned
+  # --- location regions; last resort falls back to core origin.
+  proc _sp_pack_region { cells rx0 ry0 rx1 ry1 } {
+   upvar pos pos cellarea cellarea siteh siteh obs obs pitch pitch
+   set nrows [expr {int(($ry1 - $ry0) / $siteh)}]
+   if { $nrows < 1 } { set nrows 1 }
+   set row_y {}
+   set row_spans {}
+   for { set r 0 } { $r < $nrows } { incr r } {
+    set ry0r [expr {$ry0 + $r * $siteh}]
+    set ry1r [expr {$ry0r + $siteh}]
+    set spans [list [list $rx0 $rx1]]
+    foreach b $obs {
+     lassign $b bx0 by0 bx1 by1
+     if { $by1 <= $ry0r || $by0 >= $ry1r } { continue }
+     set nsp {}
+     foreach sp $spans {
+      lassign $sp sx0 sx1
+      if { $bx1 <= $sx0 || $bx0 >= $sx1 } { lappend nsp $sp; continue }
+      if { $bx0 > $sx0 } { lappend nsp [list $sx0 $bx0] }
+      if { $bx1 < $sx1 } { lappend nsp [list $bx1 $sx1] }
      }
-     incr si
-     if { $si < $nsp } { set xpos [lindex [lindex $spans $si] 0] }
+     set spans $nsp
     }
-    lset row_cursor $rr [list $nsp 0]
+    lappend row_y $ry0r
+    lappend row_spans $spans
    }
-   return 0
+   set row_cursor {}
+   for { set r 0 } { $r < $nrows } { incr r } {
+    lappend row_cursor [list 0 [lindex [lindex [lindex $row_spans $r] 0] 0]]
+   }
+   proc _sp_pack1 { cid } {
+    upvar row_spans row_spans row_cursor row_cursor nrows nrows row_y row_y pos pos cellarea cellarea pitch pitch
+    set szx [lindex $cellarea($cid) 0]
+    for { set rr 0 } { $rr < $nrows } { incr rr } {
+     lassign [lindex $row_cursor $rr] si xpos
+     set spans [lindex $row_spans $rr]
+     set nsp [llength $spans]
+     while { $si < $nsp } {
+      lassign [lindex $spans $si] sx0 sx1
+      if { $xpos < $sx0 } { set xpos $sx0 }
+      if { $xpos + $szx <= $sx1 } {
+       set pos($cid) [list $xpos [lindex $row_y $rr]]
+       lset row_cursor $rr [list $si [expr {$xpos + $szx * $pitch}]]
+       return 1
+      }
+      incr si
+      if { $si < $nsp } { set xpos [lindex [lindex $spans $si] 0] }
+     }
+     lset row_cursor $rr [list $nsp 0]
+    }
+    return 0
+   }
+   set overflow {}
+   foreach cid $cells {
+    if { ! [_sp_pack1 $cid] } { lappend overflow $cid }
+   }
+   catch { rename _sp_pack1 {} }
+   return $overflow
   }
+
+  array set pos {}
   set overflow {}
-  foreach cid $cells {
-   if { ! [_sp_pack1 $cid] } { lappend overflow $cid }
+  foreach b $usedBaskets {
+   set lidx $basketloc($b)
+   lassign [lindex $locbox $lidx] rx0 ry0 rx1 ry1
+   set cells {}
+   foreach hid $basket($b) {
+    if { [info exists blockcells($hid)] } { lappend cells {*}$blockcells($hid) }
+   }
+   if { [llength $cells] == 0 } { continue }
+   set ov [_sp_pack_region $cells $rx0 $ry0 $rx1 $ry1]
+   lappend overflow {*}$ov
   }
-  catch { rename _sp_pack1 {} }
-  return $overflow
+  set usedloc {}
+  foreach b $usedBaskets { lappend usedloc $basketloc($b) }
+  set freeregions {}
+  for { set t 0 } { $t < 64 } { incr t } {
+   set lidx [lindex $trav [expr {($start + $t) % 64}]]
+   if { [lsearch -exact $usedloc $lidx] < 0 } { lappend freeregions $lidx }
+  }
+  set leftover [concat $toprest $overflow]
+  foreach lidx $freeregions {
+   if { [llength $leftover] == 0 } { break }
+   lassign [lindex $locbox $lidx] rx0 ry0 rx1 ry1
+   set leftover [_sp_pack_region $leftover $rx0 $ry0 $rx1 $ry1]
+  }
+  foreach cid $leftover { set pos($cid) [list $cb_x0 $cb_y0] }
+  catch { rename _sp_pack_region {} }
+
+  # --- score: total wire length over all nets (bbox of placed pins) ---
+  set score 0.0
+  set nn [llength $netkeys]
+  for { set k 0 } { $k < $nn } { incr k } {
+   set ids [lindex $netpinids $k]
+   set minx 1e18; set maxx -1e18; set miny 1e18; set maxy -1e18
+   set cnt 0
+   foreach id $ids {
+    if { [info exists pos($id)] } {
+     lassign $pos($id) x y
+    } elseif { [info exists placedpos($id)] } {
+     lassign $placedpos($id) x y
+    } else { continue }
+    if { $x < $minx } { set minx $x }
+    if { $x > $maxx } { set maxx $x }
+    if { $y < $miny } { set miny $y }
+    if { $y > $maxy } { set maxy $y }
+    incr cnt
+   }
+   if { $cnt >= 2 } { set score [expr {$score + ($maxx - $minx) + ($maxy - $miny)}] }
+  }
+  # poslist of placed free cells
+  set poslist {}
+  foreach {cid xy} [array get pos] { lappend poslist [list $cid [lindex $xy 0] [lindex $xy 1]] }
+  return [list $score $N $M $P $T $poslist]
  }
 
- set overflow {}
- foreach b $usedBaskets {
-  set lidx $basketloc($b)
-  lassign [lindex $locbox $lidx] rx0 ry0 rx1 ry1
-  set cells {}
-  foreach hid $basket($b) {
-   if { [info exists blockcells($hid)] } { lappend cells {*}$blockcells($hid) }
+ # fixed positions of already-placed (macro/non-free) cells, used as net
+ # endpoints during scoring (they don't move during a trial).
+ array set placedpos {}
+ for { set i 1 } { $i <= $instindex } { incr i } {
+  set inst $_instlist($i)
+  if { [lindex $inst 4] == 1 } {
+   set refid [lindex $inst 8]
+   if { [info exists _libcell($refid)] && [lindex $_libcell($refid) 4] ne "CORE" } {
+    set placedpos($i) [list [lindex $inst 5] [lindex $inst 6]]
+   }
   }
-  if { [llength $cells] == 0 } { continue }
-  set ov [_sp_pack_region $cells $rx0 $ry0 $rx1 $ry1]
-  lappend overflow {*}$ov
  }
- # unassigned location regions absorb leftover (top residual + overflow).
- set usedloc {}
- foreach b $usedBaskets { lappend usedloc $basketloc($b) }
- set freeregions {}
- for { set t 0 } { $t < 64 } { incr t } {
-  set lidx [lindex $trav [expr {($start + $t) % 64}]]
-  if { [lsearch -exact $usedloc $lidx] < 0 } { lappend freeregions $lidx }
- }
- set leftover [concat $toprest $overflow]
- foreach lidx $freeregions {
-  if { [llength $leftover] == 0 } { break }
-  lassign [lindex $locbox $lidx] rx0 ry0 rx1 ry1
-  set leftover [_sp_pack_region $leftover $rx0 $ry0 $rx1 $ry1]
- }
- foreach cid $leftover {
-  lset _instlist($cid) 4 1
-  lset _instlist($cid) 5 $cb_x0
-  lset _instlist($cid) 6 $cb_y0
- }
- catch { rename _sp_pack_region {} }
 
+ set cellarea_v [array get cellarea]
+ set blockcells_v [array get blockcells]
+ set toprest_v $toprest
+ set placedpos_v [array get placedpos]
+
+ # ---- run trials ----
+ if { $_mt_on && $_mt_thread_loaded } {
+  set ntrials $_mt_workers
+  if { $ntrials < 2 } { set ntrials 2 }
+  if { $ntrials > 16 } { set ntrials 16 }
+  puts "Info : seed_place with multithread ON ($ntrials random seed trials, judging by wire length)"
+  # pick the seeds once on the main thread so the chosen set is reproducible
+  # per run; workers just consume the precomputed seed list.
+  set seedlist {}
+  for { set s 0 } { $s < $ntrials } { incr s } {
+   lappend seedlist [expr {int(rand() * 32768)}]
+  }
+  set ns sp[incr _eval_sites_seq]
+  tsv::set $ns counter -1
+  tsv::set $ns cellarea $cellarea_v
+  tsv::set $ns blockcells $blockcells_v
+  tsv::set $ns toprest $toprest_v
+  tsv::set $ns obs $obs
+  tsv::set $ns cb_x0 $cb_x0
+  tsv::set $ns cb_y0 $cb_y0
+  tsv::set $ns cb_x1 $cb_x1
+  tsv::set $ns cb_y1 $cb_y1
+  tsv::set $ns siteh $siteh
+  tsv::set $ns pitch $pitch
+  tsv::set $ns netkeys $netkeys
+  tsv::set $ns netpinids $netpinids
+  tsv::set $ns placedpos $placedpos_v
+  tsv::set $ns seedlist $seedlist
+  tsv::set $ns ntrials $ntrials
+  tsv::array set sp_ns cur $ns
+  tsv::set sp_ns done 0
+  set trialbody [info body _sp_trial]
+  set trialargs [info args _sp_trial]
+  tsv::set $ns trialbody $trialbody
+  tsv::set $ns trialargs $trialargs
+  set wscript {
+   set ns [tsv::get sp_ns cur]
+   set cellarea_v [tsv::get $ns cellarea]
+   set blockcells_v [tsv::get $ns blockcells]
+   set toprest_v [tsv::get $ns toprest]
+   set obs [tsv::get $ns obs]
+   set cb_x0 [tsv::get $ns cb_x0]
+   set cb_y0 [tsv::get $ns cb_y0]
+   set cb_x1 [tsv::get $ns cb_x1]
+   set cb_y1 [tsv::get $ns cb_y1]
+   set siteh [tsv::get $ns siteh]
+   set pitch [tsv::get $ns pitch]
+   set netkeys [tsv::get $ns netkeys]
+   set netpinids [tsv::get $ns netpinids]
+   set placedpos_v [tsv::get $ns placedpos]
+   set seedlist [tsv::get $ns seedlist]
+   set ntrials [tsv::get $ns ntrials]
+   set trialbody [tsv::get $ns trialbody]
+   set trialargs [tsv::get $ns trialargs]
+   proc _sp_trial $trialargs $trialbody
+   while 1 {
+    set idx [tsv::incr $ns counter]
+    if { $idx >= $ntrials } { break }
+    set seed [lindex $seedlist $idx]
+    set res [_sp_trial $seed $cellarea_v $blockcells_v $toprest_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $netkeys $netpinids $placedpos_v]
+    set sc [lindex $res 0]
+    tsv::set $ns score_$idx $sc
+    tsv::set $ns res_$idx $res
+   }
+   tsv::incr sp_ns done
+   thread::release
+  }
+  set nw $_mt_workers
+  if { $nw > $ntrials } { set nw $ntrials }
+  set workers {}
+  for { set w 0 } { $w < $nw } { incr w } { lappend workers [thread::create $wscript] }
+  while { [tsv::get sp_ns done] < $nw } { after 5 }
+  set bestidx -1
+  set bestscore 1e18
+  set bestres {}
+  for { set idx 0 } { $idx < $ntrials } { incr idx } {
+   if { ! [tsv::exists $ns score_$idx] } { continue }
+   set sc [tsv::get $ns score_$idx]
+   set res [tsv::get $ns res_$idx]
+   set sd [lindex $seedlist $idx]
+   puts "Info : seed_place, trial seed $sd score [format %.4g $sc] (N=[lindex $res 1] M=[lindex $res 2] P=[lindex $res 3] T=[lindex $res 4])"
+   if { $sc < $bestscore } { set bestscore $sc; set bestidx $idx; set bestres $res }
+  }
+  if { $bestidx < 0 } {
+   set bestres [_sp_trial [lindex $seedlist 0] $cellarea_v $blockcells_v $toprest_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $netkeys $netpinids $placedpos_v]
+   set bestscore [lindex $bestres 0]
+   set bestidx 0
+  }
+  set bestseed [lindex $seedlist $bestidx]
+  puts "Info : seed_place, best trial idx $bestidx seed $bestseed score [format %.4g $bestscore] ($ntrials trials, $nw workers)"
+  set bestplaced [lindex $bestres 5]
+ } else {
+  # single serial trial.
+  if { $seed < 0 } { set seed [expr {int(rand() * 32768)}] }
+  puts "Info : seed_place single-threaded (1 seed trial)"
+  set res [_sp_trial $seed $cellarea_v $blockcells_v $toprest_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $netkeys $netpinids $placedpos_v]
+  set bestscore [lindex $res 0]
+  set bestseed $seed
+  set bestplaced [lindex $res 5]
+  puts "Info : seed_place, seed=$bestseed  N=[lindex $res 1]  M=[lindex $res 2]  P=[lindex $res 3]  T=[lindex $res 4]  score [format %.4g $bestscore]"
+ }
+ catch { rename _sp_trial {} }
+
+ # ---- commit the best placement to _instlist ----
  set committed 0
- foreach cid $free_cells { if { [lindex $_instlist($cid) 4] == 1 } { incr committed } }
+ foreach rec $bestplaced {
+  set cid [lindex $rec 0]
+  lset _instlist($cid) 4 1
+  lset _instlist($cid) 5 [lindex $rec 1]
+  lset _instlist($cid) 6 [lindex $rec 2]
+  incr committed
+ }
+ # any free cell not in the winning trial's poslist (shouldn't happen since
+ # the trial places every free cell, even last-resort at core origin) is
+ # forced placed at the core origin so the design stays fully placed.
+ array set winset {}
+ foreach rec $bestplaced { set winset([lindex $rec 0]) 1 }
+ foreach cid $free_cells {
+  if { ! [info exists winset($cid)] } {
+   lset _instlist($cid) 4 1
+   lset _instlist($cid) 5 $cb_x0
+   lset _instlist($cid) 6 $cb_y0
+   incr committed
+  }
+ }
  puts "Info : seed_place, placed $committed / $nfree cells"
 }
 
