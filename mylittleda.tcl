@@ -3105,7 +3105,7 @@ proc seed_place { args } {
  # ---- using the trial's positions for free cells + fixed positions for the
  # ---- already-placed macros/ports. The trial never writes _instlist, so it
  # ---- is safe to run many in parallel and to discard losing trials.
- proc _sp_trial { seed cellarea_v blockcells_v toprest_v obs cb_x0 cb_y0 cb_x1 cb_y1 siteh pitch netkeys netpinids placedpos_v } {
+ proc _sp_trial { seed cellarea_v blockcells_v toprest_v obs cb_x0 cb_y0 cb_x1 cb_y1 siteh pitch netkeys netpinids placedpos_v mt_on_v mt_workers_v } {
   array set cellarea $cellarea_v
   array set blockcells $blockcells_v
   set toprest $toprest_v
@@ -3244,6 +3244,10 @@ proc seed_place { args } {
    if {$pct >= 70 && $adv < 9 } { puts "..70%.." ; set adv 9 }
    if {$pct >= 90 && $adv < 11} { puts "..90%.." ; set adv 11}
   }
+  # Build the per-basket work list once: each entry is {b lidx cells}. Every
+  # basket is independent (disjoint cell ids, its own region and row cursors),
+  # so the baskets can be packed in parallel when MT is on.
+  set worklist {}
   foreach b $usedBaskets {
    set lidx $basketloc($b)
    lassign [lindex $locbox $lidx] rx0 ry0 rx1 ry1
@@ -3252,10 +3256,121 @@ proc seed_place { args } {
     if { [info exists blockcells($hid)] } { lappend cells {*}$blockcells($hid) }
    }
    if { [llength $cells] == 0 } { continue }
-   set ov [_sp_pack_region $cells $rx0 $ry0 $rx1 $ry1]
-   lappend overflow {*}$ov
-   set placedcnt [llength [array names pos]]
-   _sp_pp $placedcnt $totalcells
+   lappend worklist [list $rx0 $ry0 $rx1 $ry1 $cells]
+  }
+  set nwork [llength $worklist]
+  if { $mt_on_v && $mt_workers_v > 1 && $nwork >= 2 } {
+   # Parallel basket packing. Ship read-only inputs once; each worker packs a
+   # disjoint basket and returns {placed_flat overflow}, which the main thread
+   # merges into pos/overflow. Workers reimplement _sp_pack_region/_sp_pack1
+   # self-contained from the shipped inputs (no shared globals, no upvar).
+   set nw $mt_workers_v
+   if { $nw > $nwork } { set nw $nwork }
+   set ns spp[incr ::_eval_sites_seq]
+   tsv::set $ns worklist $worklist
+   tsv::set $ns cellarea_v $cellarea_v
+   tsv::set $ns obs $obs
+   tsv::set $ns siteh $siteh
+   tsv::set $ns pitch $pitch
+   tsv::set $ns nwork $nwork
+   tsv::set $ns nws $nw
+   tsv::set $ns wid -1
+   tsv::array set spp_ns cur $ns
+   tsv::set spp_ns done 0
+   set wscript {
+    set ns [tsv::get spp_ns cur]
+    set worklist [tsv::get $ns worklist]
+    set cellarea_v [tsv::get $ns cellarea_v]
+    set obs [tsv::get $ns obs]
+    set siteh [tsv::get $ns siteh]
+    set pitch [tsv::get $ns pitch]
+    set nwork [tsv::get $ns nwork]
+    set nws [tsv::get $ns nws]
+    array set cellarea $cellarea_v
+    while {1} {
+     set wi [tsv::incr $ns wid]
+     if { $wi >= $nwork } { break }
+     lassign [lindex $worklist $wi] rx0 ry0 rx1 ry1 cells
+     set nrows [expr {int(($ry1 - $ry0) / $siteh)}]
+     if { $nrows < 1 } { set nrows 1 }
+     set row_y {}
+     set row_spans {}
+     for { set r 0 } { $r < $nrows } { incr r } {
+      set ry0r [expr {$ry0 + $r * $siteh}]
+      set ry1r [expr {$ry0r + $siteh}]
+      set spans [list [list $rx0 $rx1]]
+      foreach b $obs {
+       lassign $b bx0 by0 bx1 by1
+       if { $by1 <= $ry0r || $by0 >= $ry1r } { continue }
+       set nsp {}
+       foreach sp $spans {
+        lassign $sp sx0 sx1
+        if { $bx1 <= $sx0 || $bx0 >= $sx1 } { lappend nsp $sp; continue }
+        if { $bx0 > $sx0 } { lappend nsp [list $sx0 $bx0] }
+        if { $bx1 < $sx1 } { lappend nsp [list $bx1 $sx1] }
+       }
+       set spans $nsp
+      }
+      lappend row_y $ry0r
+      lappend row_spans $spans
+     }
+     set row_cursor {}
+     for { set r 0 } { $r < $nrows } { incr r } {
+      lappend row_cursor [list 0 [lindex [lindex [lindex $row_spans $r] 0] 0]]
+     }
+     set placed_flat {}
+     set ovl {}
+     foreach cid $cells {
+      set szx [lindex $cellarea($cid) 0]
+      set placed 0
+      for { set rr 0 } { $rr < $nrows } { incr rr } {
+       lassign [lindex $row_cursor $rr] si xpos
+       set spans [lindex $row_spans $rr]
+       set nsp [llength $spans]
+       while { $si < $nsp } {
+        lassign [lindex $spans $si] sx0 sx1
+        if { $xpos < $sx0 } { set xpos $sx0 }
+        if { $xpos + $szx <= $sx1 } {
+         lappend placed_flat $cid $xpos [lindex $row_y $rr]
+         lset row_cursor $rr [list $si [expr {$xpos + $szx * $pitch}]]
+         set placed 1
+         break
+        }
+        incr si
+        if { $si < $nsp } { set xpos [lindex [lindex $spans $si] 0] }
+       }
+       if { $placed } { break }
+       lset row_cursor $rr [list $nsp 0]
+      }
+      if { ! $placed } { lappend ovl $cid }
+     }
+     tsv::set $ns placed_$wi $placed_flat
+     tsv::set $ns overflow_$wi $ovl
+    }
+    tsv::incr spp_ns done
+    thread::release
+   }
+   set workers {}
+   for { set w 0 } { $w < $nw } { incr w } { lappend workers [thread::create $wscript] }
+   while { [tsv::get spp_ns done] < $nw } { after 5 }
+   for { set wi 0 } { $wi < $nwork } { incr wi } {
+    if { [tsv::exists $ns placed_$wi] } {
+     set pf [tsv::get $ns placed_$wi]
+     foreach {cid x y} $pf { set pos($cid) [list $x $y] }
+     lappend overflow {*}[tsv::get $ns overflow_$wi]
+     set placedcnt [llength [array names pos]]
+     _sp_pp $placedcnt $totalcells
+    }
+   }
+  } else {
+   # Serial basket packing (current behaviour, with progress).
+   foreach w $worklist {
+    lassign $w rx0 ry0 rx1 ry1 cells
+    set ov [_sp_pack_region $cells $rx0 $ry0 $rx1 $ry1]
+    lappend overflow {*}$ov
+    set placedcnt [llength [array names pos]]
+    _sp_pp $placedcnt $totalcells
+   }
   }
   set usedloc {}
   foreach b $usedBaskets { lappend usedloc $basketloc($b) }
@@ -3434,7 +3549,7 @@ proc seed_place { args } {
    set sd [expr {int(rand() * 32768)}]
   }
   puts "Info : seed_place, trial seed=$sd : placing $nfree cells"
-  set res [_sp_trial $sd $cellarea_v $blockcells_v $toprest_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $netkeys $netpinids $placedpos_v]
+  set res [_sp_trial $sd $cellarea_v $blockcells_v $toprest_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $netkeys $netpinids $placedpos_v $mt_on $_mt_workers]
   puts "Info : seed_place, trial seed=$sd : placement done, estimating wire length"
   # re-score the trial's placement through the (possibly MT) scorer so the
   # wire-length sum is computed in parallel when MT is on.
