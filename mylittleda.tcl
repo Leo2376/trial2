@@ -2981,6 +2981,29 @@ proc seed_place { args } {
   upvar hpathlist hpathlist
   return [lindex $hpathlist [expr {$hid - 1}]]
  }
+ # Count free CORE cells under every hierarchy path (a block + all its
+ # descendants). Used to detect frontier blocks that still hold an unfair
+ # share of the design even after the count-based expansion has made the
+ # frontier wide enough (S >= 64): a single huge block must be expanded one
+ # more level so no basket receives ~all the cells.
+ array set pathcount {}
+ set nfree_total 0
+ for { set i 1 } { $i <= $instindex } { incr i } {
+  set inst $_instlist($i)
+  if { [lindex $inst 4] != 0 } { continue }
+  set refid [lindex $inst 8]
+  if { ! [info exists _libcell($refid)] } { continue }
+  if { [lindex $_libcell($refid) 4] ne "CORE" } { continue }
+  incr nfree_total
+  set p [lindex $inst 7]
+  if { $p eq "-1" || $p eq "" } { continue }
+  while { $p ne "" } {
+   if { [info exists pathcount($p)] } { incr pathcount($p) } else { set pathcount($p) 1 }
+   set segs [split $p /]
+   if { [llength $segs] <= 1 } { break }
+   set p [join [lrange $segs 0 end-1] /]
+  }
+ }
  set frontier {}
  if { [info exists childmap(-1)] } { set frontier $childmap(-1) }
  set S [llength $frontier]
@@ -3013,6 +3036,46 @@ proc seed_place { args } {
   puts "Info : seed_place, hierarchy top-$level : S=$S"
  }
  puts "Info : seed_place, selected $S hierarchy blocks at depth $level (frontier shared across trials)"
+ # Size-driven refinement: even once the frontier is wide enough by count,
+ # a single block may still hold an outsized share of the cells (a design
+ # whose mass concentrates in one sub-block). Expand just those blocks one
+ # more level at a time until no frontier block holds more than 25% of the
+ # free CORE cells or the oversized blocks have no children left to split.
+ if { $nfree_total > 0 } {
+  set size_thresh [expr {int($nfree_total * 0.25)}]
+  if { $size_thresh < 1 } { set size_thresh 1 }
+  while { 1 } {
+   set bigblocks {}
+   foreach hid $frontier {
+    if { [info exists pathcount([_sp_hp $hid])] && $pathcount([_sp_hp $hid]) > $size_thresh } {
+     lappend bigblocks $hid
+    }
+   }
+   if { [llength $bigblocks] == 0 } { break }
+   set newf {}
+   set changed 0
+   foreach hid $frontier {
+    if { [lsearch -exact $bigblocks $hid] >= 0 } {
+     set hp [_sp_hp $hid]
+     if { [info exists childmap($hp)] && [llength $childmap($hp)] > 0 } {
+      lappend newf {*}$childmap($hp)
+      set changed 1
+     } else {
+      lappend newf $hid
+     }
+    } else {
+     lappend newf $hid
+    }
+   }
+   if { ! $changed } {
+    puts "Info : seed_place, [llength $bigblocks] block(s) above 25% of $nfree_total cells but no children to split"
+    break
+   }
+   set frontier $newf
+   set S [llength $frontier]
+   puts "Info : seed_place, size rebalance: expanded [llength $bigblocks] oversized block(s), frontier now $S blocks"
+  }
+ }
  array set fdict {}
  foreach hid $frontier { set fdict([_sp_hp $hid]) $hid }
  catch { rename _sp_hp {} }
