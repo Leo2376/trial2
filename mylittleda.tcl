@@ -3275,53 +3275,55 @@ proc seed_place { args } {
    for { set li 0 } { $li < 64 } { incr li } { set regfree($li) [expr {$reg_area > $regblk($li) ? $reg_area - $regblk($li) : $reg_area}] }
   }
   set nusable [llength $usablereg]
-  # Average free area of the usable regions -> per-region cell capacity.
-  set sumfree 0
-  foreach li $usablereg { set sumfree [expr {$sumfree + $regfree($li)}] }
-  set avgfree 0
-  if { $nusable > 0 } { set avgfree [expr {$sumfree / $nusable}] }
-  if { $avgfree < 1 } { set avgfree 1 }
-  # Each basket needs ceil(basket_area / avgfree) regions to hold its cells.
-  # Sort baskets by cell count desc (biggest first). Distribute the usable
-  # regions proportionally to each basket's NEED (not forcing all regions to
-  # be consumed): a small basket gets 1 region, a big one gets several.
+  # Region budget: 65% of usable regions go to the baskets (allocated by
+  # cell count), 35% are reserved for the leftover phase so it always has
+  # enough room to absorb basket overflow + top-residual.
+  set nbudget [expr {int(floor($nusable * 0.65))}]
+  if { $nbudget < [llength $usedBaskets] } { set nbudget [llength $usedBaskets] }
+  if { $nbudget > $nusable } { set nbudget $nusable }
+  # Per-region cell capacity based on the actual block-assigned cell count
+  # and the budget (not cell area, which overestimates how many cells a
+  # region packs because the row filler has pitch/site gaps).
+  set totalcells_b 0
   set bpairs {}
   foreach b $usedBaskets { lappend bpairs [list $basketcells($b) $b] }
   set bpairs [lsort -integer -decreasing -index 0 $bpairs]
+  foreach p $bpairs { incr totalcells_b [lindex $p 0] }
+  set cpr 1
+  if { $nbudget > 0 } { set cpr [expr {int(ceil(double($totalcells_b) / $nbudget))}] }
+  if { $cpr < 1 } { set cpr 1 }
+  # Each basket needs ceil(basketcells / cpr) regions within the budget.
   set totalneed 0
   array set basketneed {}
   foreach p $bpairs {
    set b [lindex $p 1]
-   set need [expr {int(ceil($basketarea($b) / $avgfree))}]
+   set need [expr {int(ceil(double($basketcells($b)) / $cpr))}]
    if { $need < 1 } { set need 1 }
    set basketneed($b) $need
    incr totalneed $need
   }
-  # Scale needs to the available usable regions: if total need > nusable,
-  # each basket gets round(need * nusable / totalneed); if total need <
-  # nusable, baskets keep their full need and the extra regions stay free
-  # for the leftover phase.
+  # Scale needs to the budget: if total need > budget, scale down so the
+  # sum equals nbudget; if total need <= budget, baskets keep their full
+  # need and the unused budget regions join the leftover reserve.
   array set basketnr {}
   set assigned 0
   foreach p $bpairs {
    set b [lindex $p 1]
    set need $basketneed($b)
    set nr $need
-   if { $totalneed > $nusable && $totalneed > 0 } {
-    set nr [expr {int(round(double($need) * $nusable / $totalneed))}]
+   if { $totalneed > $nbudget && $totalneed > 0 } {
+    set nr [expr {int(round(double($need) * $nbudget / $totalneed))}]
    }
    if { $nr < 1 } { set nr 1 }
-   if { $assigned + $nr > $nusable } { set nr [expr {$nusable - $assigned}] }
+   if { $assigned + $nr > $nbudget } { set nr [expr {$nbudget - $assigned}] }
    if { $nr < 1 } { set nr 1 }
    set basketnr($b) $nr
    incr assigned $nr
   }
   # Fix rounding drift against the largest basket, but only when scaling
-  # down (total need > nusable): in that mode every usable region must be
-  # consumed so the sum is forced to nusable. When total need <= nusable the
-  # extra regions stay free for the leftover phase (no drift fix).
-  set diff [expr {$nusable - $assigned}]
-  if { $diff != 0 && $totalneed > $nusable && [llength $bpairs] > 0 } {
+  # down (total need > budget): in that mode the full budget is consumed.
+  set diff [expr {$nbudget - $assigned}]
+  if { $diff != 0 && $totalneed > $nbudget && [llength $bpairs] > 0 } {
    set b0 [lindex [lindex $bpairs 0] 1]
    set basketnr($b0) [expr {$basketnr($b0) + $diff}]
    if { $basketnr($b0) < 1 } { set basketnr($b0) 1 }
@@ -3384,7 +3386,7 @@ proc seed_place { args } {
     set b [lindex $p 1]
     foreach lidx $basketloc($b) { lset bmapidx $lidx $b }
    }
-   puts "Info : seed_place, region map ($nusable usable / 64, [expr {64-$nusable}] discarded >50% blocked):"
+   puts "Info : seed_place, region map ($nusable usable / 64, [expr {64-$nusable}] discarded >50% blocked, $nbudget to baskets / [expr {$nusable-$nbudget}] reserved for leftover):"
    set hdr {     }
    for { set c 0 } { $c < 8 } { incr c } { append hdr [format {  c%-2d } $c] }
    puts $hdr
