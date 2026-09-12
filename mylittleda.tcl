@@ -3687,14 +3687,27 @@ proc seed_place { args } {
   }
   set usedloc {}
   foreach b $usedBaskets { lappend usedloc {*}$basketloc($b) }
-  set freeregions {}
+  # Free regions for the leftover phase, split into two groups so that
+  # heavily macro-obstructed regions are used only as a last resort:
+  #   - freeok : blocked fraction <= 50% (preferred, packed first)
+  #   - freeblk : blocked fraction >  50% (last resort, packed last)
+  # Both groups keep T-traversal order for determinism.
+  set freeok {}
+  set freeblk {}
   for { set t 0 } { $t < 64 } { incr t } {
    set lidx [lindex $trav [expr {($start + $t) % 64}]]
-   if { [lsearch -exact $usedloc $lidx] < 0 } { lappend freeregions $lidx }
+   if { [lsearch -exact $usedloc $lidx] < 0 } {
+    if { $regblk($lidx) > 0.5 * $reg_area } {
+     lappend freeblk $lidx
+    } else {
+     lappend freeok $lidx
+    }
+   }
   }
+  set freeregions [concat $freeok $freeblk]
   set leftover [concat $toprest $overflow]
   if { $verbose } {
-   puts "Info : seed_place, leftover phase : [llength $leftover] cells ([llength $toprest] top-residual + [llength $overflow] basket overflow) into [llength $freeregions] free regions"
+   puts "Info : seed_place, leftover phase : [llength $leftover] cells ([llength $toprest] top-residual + [llength $overflow] basket overflow) into [llength $freeregions] free regions ([llength $freeok] usable, [llength $freeblk] >50% blocked as last resort)"
   }
   set fridx 0
   foreach lidx $freeregions {
