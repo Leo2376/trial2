@@ -3258,31 +3258,13 @@ proc seed_place { args } {
   foreach cid $leftover { set pos($cid) [list $cb_x0 $cb_y0] }
   catch { rename _sp_pack_region {} }
 
-  # --- score: total wire length over all nets (bbox of placed pins) ---
-  set score 0.0
-  set nn [llength $netkeys]
-  for { set k 0 } { $k < $nn } { incr k } {
-   set ids [lindex $netpinids $k]
-   set minx 1e18; set maxx -1e18; set miny 1e18; set maxy -1e18
-   set cnt 0
-   foreach id $ids {
-    if { [info exists pos($id)] } {
-     lassign $pos($id) x y
-    } elseif { [info exists placedpos($id)] } {
-     lassign $placedpos($id) x y
-    } else { continue }
-    if { $x < $minx } { set minx $x }
-    if { $x > $maxx } { set maxx $x }
-    if { $y < $miny } { set miny $y }
-    if { $y > $maxy } { set maxy $y }
-    incr cnt
-   }
-   if { $cnt >= 2 } { set score [expr {$score + ($maxx - $minx) + ($maxy - $miny)}] }
-  }
-  # poslist of placed free cells
+  # poslist of placed free cells. The wire-length score is NOT computed
+  # here: the caller re-scores the placement through _sp_score_all so the
+  # bbox sum can run in parallel when MT is on (computing it here would
+  # double the wire-length cost on large designs).
   set poslist {}
   foreach {cid xy} [array get pos] { lappend poslist [list $cid [lindex $xy 0] [lindex $xy 1]] }
-  return [list $score $N $M $P $T $poslist]
+  return [list 0 $N $M $P $T $poslist]
  }
 
  # fixed positions of already-placed (macro/non-free) cells, used as net
@@ -3305,120 +3287,145 @@ proc seed_place { args } {
 
  set mt_on [expr {$_mt_on && $_mt_thread_loaded}]
  if { $mt_on } {
-  puts "Info : seed_place with multithread ON, $niter iteration(s) ($_mt_workers random seeds each, judging by wire length)"
+  puts "Info : seed_place with multithread ON ($niter iteration(s), wire-length scoring parallelized over $_mt_workers threads)"
  } else {
-  puts "Info : seed_place single-threaded, $niter iteration(s) (1 random seed each)"
+  puts "Info : seed_place single-threaded, $niter iteration(s)"
  }
 
- # ---- run iteration rounds. Each round generates a fresh candidate set
- # ---- (N random seeds in MT, 1 random/explicit seed in serial), scores
- # ---- them, and keeps the best across ALL rounds so far. The best of
- # ---- round k becomes the incumbent compared against round k+1's set.
+ # Wire-length scoring helper: sum the Manhattan bounding-box length of a
+ # contiguous range [k0,k1) of nets. pos_v / placedpos_v are the per-trial
+ # position maps serialized as {id x y ...}; a net's pin ids are looked up
+ # there first, falling back to the fixed macro positions. Each net is
+ # independent, so the range can be scored in a worker thread.
+ proc _sp_score_range { k0 k1 netpinids pos_v placedpos_v } {
+  array set pos $pos_v
+  array set placedpos $placedpos_v
+  set score 0.0
+  for { set k $k0 } { $k < $k1 } { incr k } {
+   set ids [lindex $netpinids $k]
+   set minx 1e18; set maxx -1e18; set miny 1e18; set maxy -1e18
+   set cnt 0
+   foreach id $ids {
+    if { [info exists pos($id)] } {
+     lassign $pos($id) x y
+    } elseif { [info exists placedpos($id)] } {
+     lassign $placedpos($id) x y
+    } else { continue }
+    if { $x < $minx } { set minx $x }
+    if { $x > $maxx } { set maxx $x }
+    if { $y < $miny } { set miny $y }
+    if { $y > $maxy } { set maxy $y }
+    incr cnt
+   }
+   if { $cnt >= 2 } { set score [expr {$score + ($maxx - $minx) + ($maxy - $miny)}] }
+  }
+  return $score
+ }
+
+ # Score all nets for one trial. Serial when MT is off; when MT is on, the
+ # net index is split into nw contiguous ranges and each range is scored in
+ # a worker thread, then the partial scores are summed. The net index and
+ # the position maps are read-only during scoring, so parallel ranges are
+ # safe. Threads are created per scoring call and self-release when done,
+ # so no thread accumulates across trials/iterations.
+ proc _sp_score_all { netpinids pos_v placedpos_v } {
+  upvar mt_on mt_on _mt_workers _mt_workers _eval_sites_seq _eval_sites_seq
+  set nn [llength $netpinids]
+  if { ! $mt_on || $nn < 64 } {
+   return [_sp_score_range 0 $nn $netpinids $pos_v $placedpos_v]
+  }
+  set nw $_mt_workers
+  if { $nw < 1 } { set nw 1 }
+  if { $nw > $nn } { set nw $nn }
+  if { $nw == 1 } { return [_sp_score_range 0 $nn $netpinids $pos_v $placedpos_v] }
+  set ns sps[incr _eval_sites_seq]
+  tsv::set $ns netpinids $netpinids
+  tsv::set $ns pos_v $pos_v
+  tsv::set $ns placedpos_v $placedpos_v
+  tsv::set $ns nn $nn
+  tsv::set $ns nws $nw
+  tsv::set $ns wid -1
+  tsv::array set sps_ns cur $ns
+  tsv::set sps_ns done 0
+  set wscript {
+   set ns [tsv::get sps_ns cur]
+   set netpinids [tsv::get $ns netpinids]
+   set pos_v [tsv::get $ns pos_v]
+   set placedpos_v [tsv::get $ns placedpos_v]
+   set nn [tsv::get $ns nn]
+   set nws [tsv::get $ns nws]
+   set wid [tsv::incr $ns wid]
+   set k0 [expr {int(($wid * $nn) / $nws)}]
+   set k1 [expr {int((($wid + 1) * $nn) / $nws)}]
+   set s 0.0
+   if { $k0 < $k1 } {
+    array set pos $pos_v
+    array set placedpos $placedpos_v
+    for { set k $k0 } { $k < $k1 } { incr k } {
+     set ids [lindex $netpinids $k]
+     set minx 1e18; set maxx -1e18; set miny 1e18; set maxy -1e18
+     set cnt 0
+     foreach id $ids {
+      if { [info exists pos($id)] } {
+       lassign $pos($id) x y
+      } elseif { [info exists placedpos($id)] } {
+       lassign $placedpos($id) x y
+      } else { continue }
+      if { $x < $minx } { set minx $x }
+      if { $x > $maxx } { set maxx $x }
+      if { $y < $miny } { set miny $y }
+      if { $y > $maxy } { set maxy $y }
+      incr cnt
+     }
+     if { $cnt >= 2 } { set s [expr {$s + ($maxx - $minx) + ($maxy - $miny)}] }
+    }
+   }
+   tsv::set $ns partial_$wid $s
+   tsv::incr sps_ns done
+   thread::release
+  }
+  set workers {}
+  for { set w 0 } { $w < $nw } { incr w } { lappend workers [thread::create $wscript] }
+  while { [tsv::get sps_ns done] < $nw } { after 5 }
+  set total 0.0
+  for { set w 0 } { $w < $nw } { incr w } {
+   if { [tsv::exists $ns partial_$w] } { set total [expr {$total + [tsv::get $ns partial_$w]}] }
+  }
+  return $total
+ }
+
+ # ---- run iteration rounds sequentially. Each round runs ONE placement
+ # ---- trial (serial), scores it by total wire length (the scoring itself
+ # ---- is parallelized over threads when MT is on), and keeps the best
+ # ---- across all rounds so far. Trials run one after the other -- no
+ # ---- parallel trials -- so there are never more than nw worker threads
+ # ---- alive (and only during a scoring pass), with no accumulation.
  set bestscore 1e18
  set bestres {}
  set bestseed -1
  for { set iter 1 } { $iter <= $niter } { incr iter } {
   if { $niter > 1 } { puts "Info : seed_place, iteration $iter/$niter" }
-
-  if { $mt_on } {
-   set ntrials $_mt_workers
-   if { $ntrials < 2 } { set ntrials 2 }
-   if { $ntrials > 16 } { set ntrials 16 }
-   # fresh random seeds for this round (the incumbent is compared after).
-   set seedlist {}
-   for { set s 0 } { $s < $ntrials } { incr s } {
-    lappend seedlist [expr {int(rand() * 32768)}]
-   }
-   set ns sp[incr _eval_sites_seq]
-   tsv::set $ns counter -1
-   tsv::set $ns cellarea $cellarea_v
-   tsv::set $ns blockcells $blockcells_v
-   tsv::set $ns toprest $toprest_v
-   tsv::set $ns obs $obs
-   tsv::set $ns cb_x0 $cb_x0
-   tsv::set $ns cb_y0 $cb_y0
-   tsv::set $ns cb_x1 $cb_x1
-   tsv::set $ns cb_y1 $cb_y1
-   tsv::set $ns siteh $siteh
-   tsv::set $ns pitch $pitch
-   tsv::set $ns netkeys $netkeys
-   tsv::set $ns netpinids $netpinids
-   tsv::set $ns placedpos $placedpos_v
-   tsv::set $ns seedlist $seedlist
-   tsv::set $ns ntrials $ntrials
-   tsv::array set sp_ns cur $ns
-   tsv::set sp_ns done 0
-   set trialbody [info body _sp_trial]
-   set trialargs [info args _sp_trial]
-   tsv::set $ns trialbody $trialbody
-   tsv::set $ns trialargs $trialargs
-   set wscript {
-    set ns [tsv::get sp_ns cur]
-    set cellarea_v [tsv::get $ns cellarea]
-    set blockcells_v [tsv::get $ns blockcells]
-    set toprest_v [tsv::get $ns toprest]
-    set obs [tsv::get $ns obs]
-    set cb_x0 [tsv::get $ns cb_x0]
-    set cb_y0 [tsv::get $ns cb_y0]
-    set cb_x1 [tsv::get $ns cb_x1]
-    set cb_y1 [tsv::get $ns cb_y1]
-    set siteh [tsv::get $ns siteh]
-    set pitch [tsv::get $ns pitch]
-    set netkeys [tsv::get $ns netkeys]
-    set netpinids [tsv::get $ns netpinids]
-    set placedpos_v [tsv::get $ns placedpos]
-    set seedlist [tsv::get $ns seedlist]
-    set ntrials [tsv::get $ns ntrials]
-    set trialbody [tsv::get $ns trialbody]
-    set trialargs [tsv::get $ns trialargs]
-    proc _sp_trial $trialargs $trialbody
-    while 1 {
-     set idx [tsv::incr $ns counter]
-     if { $idx >= $ntrials } { break }
-     set seed [lindex $seedlist $idx]
-     set res [_sp_trial $seed $cellarea_v $blockcells_v $toprest_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $netkeys $netpinids $placedpos_v]
-     set sc [lindex $res 0]
-     tsv::set $ns score_$idx $sc
-     tsv::set $ns res_$idx $res
-    }
-    tsv::incr sp_ns done
-    thread::release
-   }
-   set nw $_mt_workers
-   if { $nw > $ntrials } { set nw $ntrials }
-   set workers {}
-   for { set w 0 } { $w < $nw } { incr w } { lappend workers [thread::create $wscript] }
-   while { [tsv::get sp_ns done] < $nw } { after 5 }
-   for { set idx 0 } { $idx < $ntrials } { incr idx } {
-    if { ! [tsv::exists $ns score_$idx] } { continue }
-    set sc [tsv::get $ns score_$idx]
-    set res [tsv::get $ns res_$idx]
-    set sd [lindex $seedlist $idx]
-    puts "Info : seed_place, trial seed $sd score [format %.4g $sc] (N=[lindex $res 1] M=[lindex $res 2] P=[lindex $res 3] T=[lindex $res 4])"
-    if { $sc < $bestscore } { set bestscore $sc; set bestseed $sd; set bestres $res }
-   }
-   if { [llength $bestres] == 0 } {
-    set bestres [_sp_trial [lindex $seedlist 0] $cellarea_v $blockcells_v $toprest_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $netkeys $netpinids $placedpos_v]
-    set bestscore [lindex $bestres 0]
-    set bestseed [lindex $seedlist 0]
-   }
+  if { $iter == 1 && $seed >= 0 } {
+   set sd $seed
   } else {
-   # single serial trial for this round.
-   if { $iter == 1 && $seed >= 0 } {
-    set sd $seed
-   } else {
-    set sd [expr {int(rand() * 32768)}]
-   }
-   set res [_sp_trial $sd $cellarea_v $blockcells_v $toprest_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $netkeys $netpinids $placedpos_v]
-   set sc [lindex $res 0]
-   puts "Info : seed_place, seed=$sd  N=[lindex $res 1]  M=[lindex $res 2]  P=[lindex $res 3]  T=[lindex $res 4]  score [format %.4g $sc]"
-   if { $sc < $bestscore } { set bestscore $sc; set bestseed $sd; set bestres $res }
+   set sd [expr {int(rand() * 32768)}]
   }
+  set res [_sp_trial $sd $cellarea_v $blockcells_v $toprest_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $netkeys $netpinids $placedpos_v]
+  # re-score the trial's placement through the (possibly MT) scorer so the
+  # wire-length sum is computed in parallel when MT is on.
+  set trialpos [lindex $res 5]
+  array set tpos {}
+  foreach rec $trialpos { set tpos([lindex $rec 0]) [list [lindex $rec 1] [lindex $rec 2]] }
+  set sc [_sp_score_all $netpinids [array get tpos] $placedpos_v]
+  puts "Info : seed_place, seed=$sd  N=[lindex $res 1]  M=[lindex $res 2]  P=[lindex $res 3]  T=[lindex $res 4]  score [format %.4g $sc]"
+  if { $sc < $bestscore } { set bestscore $sc; set bestseed $sd; set bestres $res }
   if { $niter > 1 } {
    puts "Info : seed_place, after iteration $iter best seed $bestseed score [format %.4g $bestscore]"
   }
  }
  catch { rename _sp_trial {} }
+ catch { rename _sp_score_range {} }
+ catch { rename _sp_score_all {} }
  set bestplaced [lindex $bestres 5]
  puts "Info : seed_place, best seed $bestseed score [format %.4g $bestscore]"
 
