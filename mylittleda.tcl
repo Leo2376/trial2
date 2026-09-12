@@ -3010,41 +3010,20 @@ proc seed_place { args } {
  # hierarchy depth limit for the expansion: capped so a flat design (many
  # top-1 blocks, all leaves) does not loop. The deepest meaningful descent
  # is bounded by the number of hierarchy levels actually present.
- set maxlevel 6
+ set maxlevel 12
  set level 1
  puts "Info : seed_place, hierarchy top-$level : S=$S"
- # We expand only when the CURRENT frontier is too small for the largest
- # N*M (16*4=64); once big enough for all seeds we stop. The block->cell
- # mapping is rebuilt per seed (different N/M change the target count),
- # but the frontier set is shared across trials, so compute it once.
- while { $S < 64 && $level < $maxlevel } {
-  set newf {}
-  set changed 0
-  foreach hid $frontier {
-   set hp [_sp_hp $hid]
-   if { [info exists childmap($hp)] && [llength $childmap($hp)] > 0 } {
-    lappend newf {*}$childmap($hp)
-    set changed 1
-   } else {
-    lappend newf $hid
-   }
-  }
-  if { ! $changed } { break }
-  set frontier $newf
-  set S [llength $frontier]
-  incr level
-  puts "Info : seed_place, hierarchy top-$level : S=$S"
- }
- puts "Info : seed_place, selected $S hierarchy blocks at depth $level (frontier shared across trials)"
- # Size-driven refinement: even once the frontier is wide enough by count,
- # a single block may still hold an outsized share of the cells (a design
- # whose mass concentrates in one sub-block). Expand just those blocks one
- # more level at a time until no frontier block holds more than 25% of the
- # free CORE cells or the oversized blocks have no children left to split.
+ # Size-driven expansion: continue descending the hierarchy as long as any
+ # frontier block holds more than 25% of the free CORE cells. Unlike the old
+ # count-based stop (S >= 64) which could leave a single block holding 90%
+ # of the design once S was merely wide enough by count, this drives the
+ # frontier as deep as needed (the CPU has 7+ levels) so no block dominates.
+ # All frontier blocks are expanded uniformly each level; blocks with no
+ # children stay put.
  if { $nfree_total > 0 } {
   set size_thresh [expr {int($nfree_total * 0.25)}]
   if { $size_thresh < 1 } { set size_thresh 1 }
-  while { 1 } {
+  while { $level < $maxlevel } {
    set bigblocks {}
    foreach hid $frontier {
     if { [info exists pathcount([_sp_hp $hid])] && $pathcount([_sp_hp $hid]) > $size_thresh } {
@@ -3055,14 +3034,10 @@ proc seed_place { args } {
    set newf {}
    set changed 0
    foreach hid $frontier {
-    if { [lsearch -exact $bigblocks $hid] >= 0 } {
-     set hp [_sp_hp $hid]
-     if { [info exists childmap($hp)] && [llength $childmap($hp)] > 0 } {
-      lappend newf {*}$childmap($hp)
-      set changed 1
-     } else {
-      lappend newf $hid
-     }
+    set hp [_sp_hp $hid]
+    if { [info exists childmap($hp)] && [llength $childmap($hp)] > 0 } {
+     lappend newf {*}$childmap($hp)
+     set changed 1
     } else {
      lappend newf $hid
     }
@@ -3073,9 +3048,11 @@ proc seed_place { args } {
    }
    set frontier $newf
    set S [llength $frontier]
-   puts "Info : seed_place, size rebalance: expanded [llength $bigblocks] oversized block(s), frontier now $S blocks"
+   incr level
+   puts "Info : seed_place, hierarchy top-$level : S=$S"
   }
  }
+ puts "Info : seed_place, selected $S hierarchy blocks at depth $level (frontier shared across trials)"
  array set fdict {}
  foreach hid $frontier { set fdict([_sp_hp $hid]) $hid }
  catch { rename _sp_hp {} }
@@ -3120,6 +3097,47 @@ proc seed_place { args } {
  if { $nfree == 0 } {
   puts "Info : seed_place, nothing to place"
   return
+ }
+ # Leaf-block split: when a frontier block holds more than 25% of the free
+ # cells but has no hierarchy children to expand (a flat leaf module with
+ # many cells), split its cell list into K sub-blocks so the LPT basket
+ # allocation can spread them across baskets instead of dumping the whole
+ # block into one basket. K = ceil(block_cells / threshold). Synthetic
+ # negative IDs avoid clashing with real hinst ids.
+ if { $nfree > 0 } {
+  set split_thresh [expr {int($nfree * 0.25)}]
+  if { $split_thresh < 1 } { set split_thresh 1 }
+  set splitnext -1
+  set nsplits 0
+  foreach hid [array names blockcells] {
+   set cc [llength $blockcells($hid)]
+   if { $cc <= $split_thresh } { continue }
+   set hp [lindex $hpathlist [expr {$hid - 1}]]
+   if { [info exists childmap($hp)] && [llength $childmap($hp)] > 0 } { continue }
+   set K [expr {int(ceil(double($cc) / $split_thresh))}]
+   if { $K <= 1 } { continue }
+   set cells $blockcells($hid)
+   unset blockcells($hid)
+   set chunk [expr {int(ceil(double($cc) / $K))}]
+   if { $chunk < 1 } { set chunk 1 }
+   set pos 0
+   for { set k 0 } { $k < $K } { incr k } {
+    set end [expr {$pos + $chunk - 1}]
+    if { $end >= $cc } { set end [expr {$cc - 1}] }
+    set sub [lrange $cells $pos $end]
+    if { [llength $sub] > 0 } {
+     set sid $splitnext
+     incr splitnext -1
+     set blockcells($sid) $sub
+     incr nsplits
+    }
+    set pos [expr {$end + 1}]
+   }
+   puts "Info : seed_place, leaf split: block $hid ($hp, $cc cells) into $K sub-blocks"
+  }
+  if { $nsplits > 0 } {
+   puts "Info : seed_place, leaf split: created $nsplits sub-blocks from oversized leaf blocks"
+  }
  }
 
  # Precompute the net->inst-id index once (shared by all trials) so each
