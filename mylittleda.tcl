@@ -3241,37 +3241,137 @@ proc seed_place { args } {
    }
   }
   set start [expr {$T % 64}]
-  # Utilization estimate: how many 8x8 regions each basket needs.
-  # region_area = 1/64 of the core; usable region capacity is the region
-  # area that can actually host cells (core minus blockages), estimated as
-  # (total core area - total blockage area) / 64. Pack each basket into
-  # ceil(basket_area / region_cap) adjacent regions so an oversized basket
-  # (which still holds many cells because its block couldn't be split
-  # further) is spread over several regions instead of overflowing 90%+.
+  # Per-region free area: for each of the 64 grid locations compute the
+  # blockage overlap so heavily macro-blocked regions are identified and
+  # discarded. Only usable regions host baskets; the rest join the leftover
+  # pool. A region is discarded when its blocked fraction exceeds 50%.
   set core_area [expr {($cb_x1 - $cb_x0) * ($cb_y1 - $cb_y0)}]
-  set blockage_area 0
-  foreach b $obs {
-   lassign $b bx0 by0 bx1 by1
-   set blockage_area [expr {$blockage_area + ($bx1 - $bx0) * ($by1 - $by0)}]
+  set reg_area [expr {$core_area / 64.0}]
+  array set regblk {}
+  array set regfree {}
+  for { set li 0 } { $li < 64 } { incr li } {
+   lassign [lindex $locbox $li] rx0 ry0 rx1 ry1
+   set ba 0
+   foreach b $obs {
+    lassign $b bx0 by0 bx1 by1
+    if { $bx1 <= $rx0 || $bx0 >= $rx1 || $by1 <= $ry0 || $by0 >= $ry1 } { continue }
+    set ox0 [expr {$bx0 > $rx0 ? $bx0 : $rx0}]
+    set oy0 [expr {$by0 > $ry0 ? $by0 : $ry0}]
+    set ox1 [expr {$bx1 < $rx1 ? $bx1 : $rx1}]
+    set oy1 [expr {$by1 < $ry1 ? $by1 : $ry1}]
+    set ba [expr {$ba + ($ox1 - $ox0) * ($oy1 - $oy0)}]
+   }
+   set regblk($li) $ba
+   set regfree($li) [expr {$reg_area - $ba}]
   }
-  set free_area [expr {$core_area - $blockage_area}]
-  if { $free_area < 1 } { set free_area $core_area }
-  set region_cap [expr {$free_area / 64.0}]
-  if { $region_cap < 1 } { set region_cap $free_area }
-  array set basketloc {}
-  set li 0
-  foreach b $usedBaskets {
-   set nr 1
-   if { $region_cap > 0 } {
-    set nr [expr {int(ceil($basketarea($b) / $region_cap))}]
+  # Usable regions in T-traversal order: free fraction > 50%.
+  set usablereg {}
+  for { set t 0 } { $t < 64 } { incr t } {
+   set li [lindex $trav [expr {($start + $t) % 64}]]
+   if { $regfree($li) > 0.5 * $reg_area } { lappend usablereg $li }
+  }
+  if { [llength $usablereg] == 0 } {
+   set usablereg $trav
+   for { set li 0 } { $li < 64 } { incr li } { set regfree($li) [expr {$reg_area > $regblk($li) ? $reg_area - $regblk($li) : $reg_area}] }
+  }
+  set nusable [llength $usablereg]
+  # Average free area of the usable regions -> per-region cell capacity.
+  set sumfree 0
+  foreach li $usablereg { set sumfree [expr {$sumfree + $regfree($li)}] }
+  set avgfree 0
+  if { $nusable > 0 } { set avgfree [expr {$sumfree / $nusable}] }
+  if { $avgfree < 1 } { set avgfree 1 }
+  # Each basket needs ceil(basket_area / avgfree) regions to hold its cells.
+  # Sort baskets by cell count desc (biggest first). Distribute the usable
+  # regions proportionally to each basket's NEED (not forcing all regions to
+  # be consumed): a small basket gets 1 region, a big one gets several.
+  set bpairs {}
+  foreach b $usedBaskets { lappend bpairs [list $basketcells($b) $b] }
+  set bpairs [lsort -integer -decreasing -index 0 $bpairs]
+  set totalneed 0
+  array set basketneed {}
+  foreach p $bpairs {
+   set b [lindex $p 1]
+   set need [expr {int(ceil($basketarea($b) / $avgfree))}]
+   if { $need < 1 } { set need 1 }
+   set basketneed($b) $need
+   incr totalneed $need
+  }
+  # Scale needs to the available usable regions: if total need > nusable,
+  # each basket gets round(need * nusable / totalneed); if total need <
+  # nusable, baskets keep their full need and the extra regions stay free
+  # for the leftover phase.
+  array set basketnr {}
+  set assigned 0
+  foreach p $bpairs {
+   set b [lindex $p 1]
+   set need $basketneed($b)
+   set nr $need
+   if { $totalneed > $nusable && $totalneed > 0 } {
+    set nr [expr {int(round(double($need) * $nusable / $totalneed))}]
    }
    if { $nr < 1 } { set nr 1 }
+   if { $assigned + $nr > $nusable } { set nr [expr {$nusable - $assigned}] }
+   if { $nr < 1 } { set nr 1 }
+   set basketnr($b) $nr
+   incr assigned $nr
+  }
+  # Fix rounding drift against the largest basket, but only when scaling
+  # down (total need > nusable): in that mode every usable region must be
+  # consumed so the sum is forced to nusable. When total need <= nusable the
+  # extra regions stay free for the leftover phase (no drift fix).
+  set diff [expr {$nusable - $assigned}]
+  if { $diff != 0 && $totalneed > $nusable && [llength $bpairs] > 0 } {
+   set b0 [lindex [lindex $bpairs 0] 1]
+   set basketnr($b0) [expr {$basketnr($b0) + $diff}]
+   if { $basketnr($b0) < 1 } { set basketnr($b0) 1 }
+   set assigned [expr {$assigned + $diff}]
+  }
+  # Hand out regions in T-traversal order, biggest basket first.
+  array set basketloc {}
+  set li 0
+  foreach p $bpairs {
+   set b [lindex $p 1]
+   set nr $basketnr($b)
    set locs {}
    for { set k 0 } { $k < $nr } { incr k } {
-    lappend locs [lindex $trav [expr {($start + $li) % 64}]]
-    incr li
+    if { $li < $nusable } {
+     lappend locs [lindex $usablereg $li]
+     incr li
+    } elseif { [llength $locs] == 0 } {
+     lappend locs [lindex $usablereg 0]
+    }
    }
    set basketloc($b) $locs
+  }
+  if { $verbose } {
+   set bmapidx {}
+   for { set li 0 } { $li < 64 } { incr li } { lappend bmapidx -1 }
+   foreach p $bpairs {
+    set b [lindex $p 1]
+    foreach lidx $basketloc($b) { lset bmapidx $lidx $b }
+   }
+   puts "Info : seed_place, region map ($nusable usable / 64, [expr {64-$nusable}] discarded >50% blocked):"
+   set hdr {     }
+   for { set c 0 } { $c < 8 } { incr c } { append hdr [format {  c%-2d } $c] }
+   puts $hdr
+   for { set r 7 } { $r >= 0 } { incr r -1 } {
+    set line [format {r%d  } $r]
+    for { set c 0 } { $c < 8 } { incr c } {
+     set li [expr {$r * 8 + $c}]
+     if { $regblk($li) > 0.5 * $reg_area } {
+      append line {  ##  }
+     } else {
+      set bn [lindex $bmapidx $li]
+      if { $bn < 0 } {
+       append line {  .  }
+      } else {
+       append line [format { %2d  } $bn]
+      }
+     }
+    }
+    puts $line
+   }
   }
 
   # --- STEP 5: place each basket's cells into its location region(s). Writes
