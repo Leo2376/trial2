@@ -2879,7 +2879,7 @@ proc placeOpt { args } {
  puts "Info : placeOpt, done: total [format %.2f $total0] -> [format %.2f $total] ([expr {$total0>0?int(($total0-$total)*100/$total0):0}]% reduction)"
 }
 
-# Seed-driven hierarchy-coherent placement: seed_place ?-seed n?
+# Seed-driven hierarchy-coherent placement: seed_place ?-seed n? ?-iter n? ?-verbose?
 #
 # A placement strategy driven by a single integer seed that encodes four
 # choices and keeps hierarchy blocks spatially together.
@@ -2920,6 +2920,7 @@ proc seed_place { args } {
 
  set seed -1
  set niter 1
+ set verbose 0
  for { set i 0 } { $i < [llength $args] } { incr i } {
   set a [lindex $args $i]
   if { $a eq "-seed" } {
@@ -2936,9 +2937,11 @@ proc seed_place { args } {
     puts "Error : seed_place -iter requires a positive integer"
     return
    }
+  } elseif { $a eq "-verbose" } {
+   set verbose 1
   } else {
    puts "Error : unknown option $a"
-   puts "Usage: seed_place ?-seed n? ?-iter n?"
+   puts "Usage: seed_place ?-seed n? ?-iter n? ?-verbose?"
    return
   }
  }
@@ -3105,7 +3108,7 @@ proc seed_place { args } {
  # ---- using the trial's positions for free cells + fixed positions for the
  # ---- already-placed macros/ports. The trial never writes _instlist, so it
  # ---- is safe to run many in parallel and to discard losing trials.
- proc _sp_trial { seed cellarea_v blockcells_v toprest_v obs cb_x0 cb_y0 cb_x1 cb_y1 siteh pitch netkeys netpinids placedpos_v mt_on_v mt_workers_v } {
+ proc _sp_trial { seed cellarea_v blockcells_v toprest_v obs cb_x0 cb_y0 cb_x1 cb_y1 siteh pitch netkeys netpinids placedpos_v mt_on_v mt_workers_v verbose } {
   array set cellarea $cellarea_v
   array set blockcells $blockcells_v
   set toprest $toprest_v
@@ -3248,6 +3251,7 @@ proc seed_place { args } {
   # basket is independent (disjoint cell ids, its own region and row cursors),
   # so the baskets can be packed in parallel when MT is on.
   set worklist {}
+  set wi_v 0
   foreach b $usedBaskets {
    set lidx $basketloc($b)
    lassign [lindex $locbox $lidx] rx0 ry0 rx1 ry1
@@ -3257,8 +3261,16 @@ proc seed_place { args } {
    }
    if { [llength $cells] == 0 } { continue }
    lappend worklist [list $rx0 $ry0 $rx1 $ry1 $cells]
+   if { $verbose } {
+    puts "Info : seed_place, basket $wi_v -> region ($rx0,$ry0)-($rx1,$ry1) : [llength $cells] cells ([llength $basket($b)] blocks)"
+   }
+   incr wi_v
   }
   set nwork [llength $worklist]
+  if { $verbose } {
+   set blockassigned [expr {$totalcells - [llength $toprest_v]}]
+   puts "Info : seed_place, $nwork non-empty baskets, $blockassigned block-assigned cells, [llength $toprest_v] top-residual"
+  }
   if { $mt_on_v && $mt_workers_v > 1 && $nwork >= 2 } {
    # Parallel basket packing. Ship read-only inputs once; each worker packs a
    # disjoint basket and returns {placed_flat overflow}, which the main thread
@@ -3347,6 +3359,7 @@ proc seed_place { args } {
      }
      tsv::set $ns placed_$wi $placed_flat
      tsv::set $ns overflow_$wi $ovl
+     tsv::set $ns wthread_$wi [thread::id]
     }
     tsv::incr spp_ns done
     thread::release
@@ -3358,17 +3371,27 @@ proc seed_place { args } {
     if { [tsv::exists $ns placed_$wi] } {
      set pf [tsv::get $ns placed_$wi]
      foreach {cid x y} $pf { set pos($cid) [list $x $y] }
-     lappend overflow {*}[tsv::get $ns overflow_$wi]
+     set ovwi [tsv::get $ns overflow_$wi]
+     lappend overflow {*}$ovwi
+     if { $verbose } {
+      set npc [expr {[llength $pf] / 3}]
+      puts "Info : seed_place, basket $wi packed by [tsv::get $ns wthread_$wi] : $npc placed, [llength $ovwi] overflow"
+     }
      set placedcnt [llength [array names pos]]
      _sp_pp $placedcnt $totalcells
     }
    }
   } else {
    # Serial basket packing (current behaviour, with progress).
+   set wi_s 0
    foreach w $worklist {
     lassign $w rx0 ry0 rx1 ry1 cells
     set ov [_sp_pack_region $cells $rx0 $ry0 $rx1 $ry1]
     lappend overflow {*}$ov
+    if { $verbose } {
+     puts "Info : seed_place, basket $wi_s packed serial : [llength $cells]-[expr {[llength $cells]-[llength $ov]}] placed, [llength $ov] overflow"
+    }
+    incr wi_s
     set placedcnt [llength [array names pos]]
     _sp_pp $placedcnt $totalcells
    }
@@ -3381,14 +3404,26 @@ proc seed_place { args } {
    if { [lsearch -exact $usedloc $lidx] < 0 } { lappend freeregions $lidx }
   }
   set leftover [concat $toprest $overflow]
+  if { $verbose } {
+   puts "Info : seed_place, leftover phase : [llength $leftover] cells ([llength $toprest] top-residual + [llength $overflow] basket overflow) into [llength $freeregions] free regions"
+  }
+  set fridx 0
   foreach lidx $freeregions {
    if { [llength $leftover] == 0 } { break }
    lassign [lindex $locbox $lidx] rx0 ry0 rx1 ry1
+   set prev [llength $leftover]
    set leftover [_sp_pack_region $leftover $rx0 $ry0 $rx1 $ry1]
    set placedcnt [llength [array names pos]]
+   if { $verbose } {
+    puts "Info : seed_place, free region $fridx (idx $lidx) ($rx0,$ry0)-($rx1,$ry1) : placed [expr {$prev - [llength $leftover]}], remaining [llength $leftover], total placed $placedcnt / $totalcells"
+   }
+   incr fridx
    _sp_pp $placedcnt $totalcells
   }
   foreach cid $leftover { set pos($cid) [list $cb_x0 $cb_y0] }
+  if { $verbose } {
+   puts "Info : seed_place, [llength $leftover] leftover cells placed at core origin ($cb_x0,$cb_y0)"
+  }
   _sp_pp [llength [array names pos]] $totalcells
   catch { rename _sp_pack_region {} }
   catch { rename _sp_pp {} }
@@ -3550,7 +3585,7 @@ proc seed_place { args } {
    set sd [expr {int(rand() * 32768)}]
   }
   puts "Info : seed_place, trial seed=$sd : placing $nfree cells"
-  set res [_sp_trial $sd $cellarea_v $blockcells_v $toprest_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $netkeys $netpinids $placedpos_v $mt_on $_mt_workers]
+  set res [_sp_trial $sd $cellarea_v $blockcells_v $toprest_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $netkeys $netpinids $placedpos_v $mt_on $_mt_workers $verbose]
   puts "Info : seed_place, trial seed=$sd : placement done, estimating wire length"
   # re-score the trial's placement through the (possibly MT) scorer so the
   # wire-length sum is computed in parallel when MT is on.
