@@ -2883,8 +2883,8 @@ proc placeOpt { args } {
 #
 # A placement strategy driven by a single integer seed that encodes four
 # choices and keeps hierarchy blocks spatially together.
-#   STEP 1 - seed encodes: N (9 or 16 subdivisions), M (2/3/4 hierarchy
-#            granularity), P (0..255 block-allocation drive), T (0..15
+#   STEP 1 - seed encodes: N (6/9/16 subdivisions), M (2/3/4 hierarchy
+#            granularity), P (0..255 block-allocation drive), T (0..7
 #            topology choice).
 #   STEP 2 - analyse hierarchy: count top-1 subblocks (S). While S < N*M
 #            descend one hierarchy level (expanding the frontier) until
@@ -3195,12 +3195,14 @@ proc seed_place { args } {
   set toprest $toprest_v
   array set placedpos $placedpos_v
 
-  # decode seed
-  set N [expr {($seed & 1) ? 16 : 9}]
-  set msel [expr {($seed >> 1) & 0x3}]
+  # decode seed: N (6/9/16 subdivisions, 2 bits), M (2/3/4 granularity),
+  # P (0..255 block-allocation drive), T (0..7 topology choice).
+  set nsel [expr {($seed >> 0) & 0x3}]
+  if { $nsel == 0 } { set N 6 } elseif { $nsel == 1 } { set N 9 } else { set N 16 }
+  set msel [expr {($seed >> 2) & 0x3}]
   if { $msel == 0 } { set M 2 } elseif { $msel == 1 } { set M 3 } else { set M 4 }
-  set P [expr {($seed >> 3) & 0xFF}]
-  set T [expr {($seed >> 11) & 0xF}]
+  set P [expr {($seed >> 4) & 0xFF}]
+  set T [expr {($seed >> 12) & 0x7}]
   set nm [expr {$N * $M}]
 
   # --- STEP 3: allocate frontier blocks into N baskets, cell-count balanced.
