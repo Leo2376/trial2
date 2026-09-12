@@ -2688,6 +2688,8 @@ proc placeOpt { args } {
  variable regionindex
  variable _regionlist
  global netconnbuilt netdriver netload _wirelen_cache
+ global _mt_on _mt_workers _mt_thread_loaded _eval_sites_seq
+ set mt_on [expr {$_mt_on && $_mt_thread_loaded}]
 
  set niter 3
  for { set i 0 } { $i < [llength $args] } { incr i } {
@@ -2710,6 +2712,11 @@ proc placeOpt { args } {
   return
  }
  if { $siteh <= 0 } { set siteh 0.3 }
+ if { $mt_on } {
+  puts "Info : placeOpt with multithread ON ($niter iteration(s), wire-length scoring parallelized over $_mt_workers threads)"
+ } else {
+  puts "Info : placeOpt single-threaded, $niter iteration(s)"
+ }
 
  set cb_x0 [lindex $corebox 0]
  set cb_y0 [lindex $corebox 1]
@@ -2757,6 +2764,35 @@ proc placeOpt { args } {
   }
  }
 
+ # Wire-length scoring index for the parallel recompute: netpinids is a
+ # list of per-net pin id-lists (all placed pins -- drivers + loads, every
+ # placed inst not only CORE), in the same order as netkeys. Built once from
+ # netdriver/netload via the pathid map; unplaced insts (field 4 != 1) are
+ # skipped so a net with <2 placed pins contributes nothing. The unified
+ # position map upos_v {id x y ...} is rebuilt on every _po_total call so it
+ # reflects the latest cell positions (it is NOT cached). Workers receive
+ # netpinids + upos_v and sum Manhattan bounding boxes over their shard;
+ # this bypasses _wirelen_cache entirely so there is no cache race between
+ # the main thread (which mutates positions during the move loop) and the
+ # scoring workers.
+ set netkeys {}
+ set netpinids {}
+ foreach {n dval} [array get netdriver] {
+  set ids {}
+  foreach p [concat $dval [_net_loads $n]] {
+   set ip [lindex $p 0]
+   if { $ip eq "<port>" || $ip eq "<assign>" } { continue }
+   if { ! [info exists pathid($ip)] } { continue }
+   set id $pathid($ip)
+   if { [lindex $_instlist($id) 4] != 1 } { continue }
+   lappend ids $id
+  }
+  if { [llength $ids] >= 2 } {
+   lappend netkeys $n
+   lappend netpinids $ids
+  }
+ }
+
  # Helper: is point (px,py) clear of all blockages/regions?
  proc _po_clear { px py obs } {
   foreach b $obs {
@@ -2765,15 +2801,105 @@ proc placeOpt { args } {
   return 1
  }
 
- # total wire length over all nets (uses cache, computes lazily).
- proc _po_total {} {
-  global netdriver _wirelen_cache
-  set tot 0
-  foreach {n v} [array get netdriver] {
-   set w [_net_wirelen_scalar $n]
-   if { $w > 0 } { set tot [expr {$tot + $w}] }
+ # Sum Manhattan bounding-box wire length of a contiguous range [k0,k1) of
+ # nets using the unified position map upos_v {id x y ...}. Each net is
+ # independent, so a range is safe to score in a worker thread. Mirrors
+ # _sp_score_range.
+ proc _po_score_range { k0 k1 netpinids upos_v } {
+  array set upos $upos_v
+  set score 0.0
+  for { set k $k0 } { $k < $k1 } { incr k } {
+   set ids [lindex $netpinids $k]
+   set minx 1e18; set maxx -1e18; set miny 1e18; set maxy -1e18
+   set cnt 0
+   foreach id $ids {
+    if { ! [info exists upos($id)] } { continue }
+    lassign $upos($id) x y
+    if { $x < $minx } { set minx $x }
+    if { $x > $maxx } { set maxx $x }
+    if { $y < $miny } { set miny $y }
+    if { $y > $maxy } { set maxy $y }
+    incr cnt
+   }
+   if { $cnt >= 2 } { set score [expr {$score + ($maxx - $minx) + ($maxy - $miny)}] }
   }
-  return $tot
+  return $score
+ }
+
+ # total wire length over all nets. Serial when MT is off; when MT is on,
+ # the net index is split into nw contiguous ranges and each is scored in a
+ # worker thread, then partial scores are summed. Only the position map
+ # upos_v is shipped; netpinids is read-only, so parallel ranges are safe.
+ # Bypasses _wirelen_cache entirely (no cache races with the move loop).
+ # Mirrors _sp_score_all.
+ proc _po_total {} {
+  upvar netpinids netpinids mt_on mt_on _mt_workers _mt_workers _eval_sites_seq _eval_sites_seq
+  variable _instlist
+  variable instindex
+  set nn [llength $netpinids]
+  if { $nn == 0 } { return 0.0 }
+  # Build the unified position map from current _instlist placements.
+  set upos_v {}
+  for { set i 1 } { $i <= $instindex } { incr i } {
+   if { [info exists _instlist($i)] && [lindex $_instlist($i) 4] == 1 } {
+    lappend upos_v $i [list [lindex $_instlist($i) 5] [lindex $_instlist($i) 6]]
+   }
+  }
+  if { ! $mt_on || $nn < 64 } {
+   return [_po_score_range 0 $nn $netpinids $upos_v]
+  }
+  set nw $_mt_workers
+  if { $nw < 1 } { set nw 1 }
+  if { $nw > $nn } { set nw $nn }
+  if { $nw == 1 } { return [_po_score_range 0 $nn $netpinids $upos_v] }
+  set ns po[incr _eval_sites_seq]
+  tsv::set $ns netpinids $netpinids
+  tsv::set $ns upos_v $upos_v
+  tsv::set $ns nn $nn
+  tsv::set $ns nws $nw
+  tsv::set $ns wid -1
+  tsv::array set po_ns cur $ns
+  tsv::set po_ns done 0
+  set wscript {
+   set ns [tsv::get po_ns cur]
+   set netpinids [tsv::get $ns netpinids]
+   set upos_v [tsv::get $ns upos_v]
+   set nn [tsv::get $ns nn]
+   set nws [tsv::get $ns nws]
+   set wid [tsv::incr $ns wid]
+   set k0 [expr {int(($wid * $nn) / $nws)}]
+   set k1 [expr {int((($wid + 1) * $nn) / $nws)}]
+   set s 0.0
+   if { $k0 < $k1 } {
+    array set upos $upos_v
+    for { set k $k0 } { $k < $k1 } { incr k } {
+     set ids [lindex $netpinids $k]
+     set minx 1e18; set maxx -1e18; set miny 1e18; set maxy -1e18
+     set cnt 0
+     foreach id $ids {
+      if { ! [info exists upos($id)] } { continue }
+      lassign $upos($id) x y
+      if { $x < $minx } { set minx $x }
+      if { $x > $maxx } { set maxx $x }
+      if { $y < $miny } { set miny $y }
+      if { $y > $maxy } { set maxy $y }
+      incr cnt
+     }
+     if { $cnt >= 2 } { set s [expr {$s + ($maxx - $minx) + ($maxy - $miny)}] }
+    }
+   }
+   tsv::set $ns partial_$wid $s
+   tsv::incr po_ns done
+   thread::release
+  }
+  set workers {}
+  for { set w 0 } { $w < $nw } { incr w } { lappend workers [thread::create $wscript] }
+  while { [tsv::get po_ns done] < $nw } { after 5 }
+  set total 0.0
+  for { set w 0 } { $w < $nw } { incr w } {
+   if { [tsv::exists $ns partial_$w] } { set total [expr {$total + [tsv::get $ns partial_$w]}] }
+  }
+  return $total
  }
 
  # wire length of one net given current placement (force recompute, bypass cache).
@@ -2789,6 +2915,7 @@ proc placeOpt { args } {
  set total0 [_po_total]
   puts "Info : placeOpt, initial total wire length = [format %.2f $total0]"
 
+ set total $total0
  for { set iter 1 } { $iter <= $niter } { incr iter } {
   # Rank nets by current wire length (descending). Walk all nets, compute
   # scalar length, collect {len net} pairs.
@@ -2874,6 +3001,7 @@ proc placeOpt { args } {
   puts "Info : placeOpt, iter $iter: moved $nmoved cells, total wire length = [format %.2f $total]"
  }
  catch { rename _po_clear {} }
+ catch { rename _po_score_range {} }
  catch { rename _po_total {} }
  catch { rename _po_netlen {} }
  puts "Info : placeOpt, done: total [format %.2f $total0] -> [format %.2f $total] ([expr {$total0>0?int(($total0-$total)*100/$total0):0}]% reduction)"
