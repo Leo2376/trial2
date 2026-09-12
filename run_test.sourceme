@@ -1,40 +1,41 @@
-cd tests/test1*/scripts
+cd tests/test1_*/scripts
 tclsh8.6 run_test.tcl
 cd ../../..
 
 
-cd tests/test2*/scripts
+cd tests/test2_*/scripts
 tclsh8.6 run_test.tcl
 cd ../../..
 
 
-cd tests/test3*/scripts
+cd tests/test3_*/scripts
 tclsh8.6 run_test.tcl
 cd ../../..
 
 
-cd tests/test4*/scripts
+cd tests/test4_*/scripts
 tclsh8.6 run_test.tcl
 cd ../../..
 
 
-cd tests/test5*/scripts
+cd tests/test5_*/scripts
 tclsh8.6 run_test.tcl
 cd ../../..
-
-cd tests/test6*/scripts
+cd tests/test6_*/scripts
 tclsh8.6 run_test.tcl
 cd ../../..
-
-cd tests/test7*/scripts
+cd tests/test7_*/scripts
 tclsh8.6 run_test.tcl
 cd ../../..
-cd tests/test8*/scripts
+cd tests/test8_*/scripts
 tclsh8.6 run_test.tcl
 cd ../../..
-cd tests/test9*/scripts
+cd tests/test9_*/scripts
 tclsh8.6 run_test.tcl
 cd ../../..
-cd tests/test10*/scripts
+cd tests/test10_*/scripts
+tclsh8.6 run_test.tcl
+cd ../../..
+cd tests/test11_*/scripts
 tclsh8.6 run_test.tcl
 cd ../../..
