@@ -2879,6 +2879,315 @@ proc placeOpt { args } {
  puts "Info : placeOpt, done: total [format %.2f $total0] -> [format %.2f $total] ([expr {$total0>0?int(($total0-$total)*100/$total0):0}]% reduction)"
 }
 
+# Seed-driven hierarchy-coherent placement: seed_place ?-seed n?
+#
+# A placement strategy driven by a single integer seed that encodes four
+# choices and keeps hierarchy blocks spatially together.
+#   STEP 1 - seed encodes: N (9 or 16 subdivisions), M (2/3/4 hierarchy
+#            granularity), P (0..255 block-allocation drive), T (0..15
+#            topology choice).
+#   STEP 2 - analyse hierarchy: count top-1 subblocks (S). While S < N*M
+#            descend one hierarchy level (expanding the frontier) until
+#            S >= N*M or the hierarchy is exhausted.
+#   STEP 3 - allocate the S blocks into N baskets, P-driven deterministic
+#            round-robin (even distribution).
+#   STEP 4 - divide the chip into an 8x8 grid of 64 locations; assign each
+#            basket to a location via a T-driven traversal + start offset.
+#   STEP 5 - place each basket's cells (the leaf cells of its hierarchy
+#            blocks) inside its location region, blockage-aware. Overflow
+#            and top-residual cells fill the unassigned location regions.
+# Different seeds give different layouts, enabling future multi-seed
+# comparison. Requires a floorplan (P3). Purely geometric: uses no net
+# data, so no build_net_conn dependency.
+proc seed_place { args } {
+ variable topname
+ _require 3
+ variable instindex
+ variable hinstindex
+ variable _libcell
+ variable _instlist
+ variable _hinstlist
+ variable hpathlist
+ variable blockageindex
+ variable _blockagelist
+ variable corebox
+ variable siteh
+ variable targetutilz
+ variable regionindex
+ variable _regionlist
+
+ set seed -1
+ for { set i 0 } { $i < [llength $args] } { incr i } {
+  set a [lindex $args $i]
+  if { $a eq "-seed" } {
+   incr i
+   set seed [lindex $args $i]
+   if { ![string is integer -strict $seed] } {
+    puts "Error : seed_place -seed requires an integer"
+    return
+   }
+  } else {
+   puts "Error : unknown option $a"
+   puts "Usage: seed_place ?-seed n?"
+   return
+  }
+ }
+ if { $seed < 0 } {
+  set seed [expr {int(rand() * 32768)}]
+ }
+ # bit0 = N, bits1-2 = M, bits3-10 = P, bits11-14 = T
+ set N [expr {($seed & 1) ? 16 : 9}]
+ set msel [expr {($seed >> 1) & 0x3}]
+ if { $msel == 0 } { set M 2 } elseif { $msel == 1 } { set M 3 } else { set M 4 }
+ set P [expr {($seed >> 3) & 0xFF}]
+ set T [expr {($seed >> 11) & 0xF}]
+ puts "Info : seed_place, seed=$seed  N=$N  M=$M  P=$P  T=$T"
+
+ if { $siteh <= 0 } { set siteh 0.3 }
+ set pitch [expr {100.0 / $targetutilz}]
+ if { $pitch < 1.0 } { set pitch 1.0 }
+ set cb_x0 [lindex $corebox 0]
+ set cb_y0 [lindex $corebox 1]
+ set cb_x1 [lindex $corebox 2]
+ set cb_y1 [lindex $corebox 3]
+ set nm [expr {$N * $M}]
+
+ set obs {}
+ for { set i 1 } { $i <= $blockageindex } { incr i } {
+  lappend obs [list [lindex $_blockagelist($i) 1] [lindex $_blockagelist($i) 2] [lindex $_blockagelist($i) 3] [lindex $_blockagelist($i) 4]]
+ }
+ for { set i 1 } { $i <= $regionindex } { incr i } {
+  lappend obs [list [lindex $_regionlist($i) 1] [lindex $_regionlist($i) 2] [lindex $_regionlist($i) 3] [lindex $_regionlist($i) 4]]
+ }
+
+ # --- STEP 2: analyse hierarchy ---
+ # path-aware children map: parent fullpath (field 7) -> list of hinst ids.
+ array set childmap {}
+ for { set i 1 } { $i <= $hinstindex } { incr i } {
+  lappend childmap([lindex $_hinstlist($i) 7]) $i
+ }
+ proc _sp_hp { hid } {
+  upvar hpathlist hpathlist
+  return [lindex $hpathlist [expr {$hid - 1}]]
+ }
+ set frontier {}
+ if { [info exists childmap(-1)] } { set frontier $childmap(-1) }
+ set S [llength $frontier]
+ set level 1
+ puts "Info : seed_place, hierarchy top-$level : S=$S (need N*M=$nm)"
+ while { $S < $nm } {
+  set newf {}
+  set changed 0
+  foreach hid $frontier {
+   set hp [_sp_hp $hid]
+   if { [info exists childmap($hp)] && [llength $childmap($hp)] > 0 } {
+    lappend newf {*}$childmap($hp)
+    set changed 1
+   } else {
+    lappend newf $hid
+   }
+  }
+  if { ! $changed } { break }
+  set frontier $newf
+  set S [llength $frontier]
+  incr level
+  puts "Info : seed_place, hierarchy top-$level : S=$S (need N*M=$nm)"
+ }
+ puts "Info : seed_place, selected $S hierarchy blocks at depth $level"
+ array set fdict {}
+ foreach hid $frontier { set fdict([_sp_hp $hid]) $hid }
+ catch { rename _sp_hp {} }
+
+ # collect free CORE cells; map each to its deepest frontier ancestor (by
+ # path prefix walk-up); unmatchable / top-level cells go to a residual list.
+ array set cellarea {}
+ array set blockcells {}
+ set toprest {}
+ set free_cells {}
+ for { set i 1 } { $i <= $instindex } { incr i } {
+  set inst $_instlist($i)
+  if { [lindex $inst 4] != 0 } { continue }
+  set refid [lindex $inst 8]
+  if { ! [info exists _libcell($refid)] } { continue }
+  if { [lindex $_libcell($refid) 4] ne "CORE" } { continue }
+  set szx [lindex $_libcell($refid) 1]
+  set szy [lindex $_libcell($refid) 2]
+  set cellarea($i) [list $szx $szy [expr {$szx * $szy}]]
+  lappend free_cells $i
+  set fp [lindex $inst 7]
+  if { $fp eq "-1" || $fp eq "" } {
+   lappend toprest $i
+   continue
+  }
+  set owner 0
+  set p $fp
+  while { $p ne "" } {
+   if { [info exists fdict($p)] } { set owner $fdict($p); break }
+   set segs [split $p /]
+   if { [llength $segs] <= 1 } { break }
+   set p [join [lrange $segs 0 end-1] /]
+  }
+  if { $owner } {
+   lappend blockcells($owner) $i
+  } else {
+   lappend toprest $i
+  }
+ }
+ set nfree [llength $free_cells]
+ puts "Info : seed_place, $nfree free CORE cells, [llength $toprest] top-residual"
+ if { $nfree == 0 } {
+  puts "Info : seed_place, nothing to place"
+  return
+ }
+
+ # --- STEP 3: allocate blocks into N baskets (P-driven) ---
+ array set bcount {}
+ foreach hid $frontier { set bcount($hid) [llength $blockcells($hid)] }
+ set pairs {}
+ foreach hid $frontier { lappend pairs [list $bcount($hid) $hid] }
+ set pairs [lsort -integer -decreasing -index 0 $pairs]
+ set ordered {}
+ foreach p $pairs { lappend ordered [lindex $p 1] }
+ array set basket {}
+ for { set b 0 } { $b < $N } { incr b } { set basket($b) {} }
+ set bi 0
+ foreach hid $ordered {
+  set b [expr {($bi + $P) % $N}]
+  lappend basket($b) $hid
+  incr bi
+ }
+ set usedBaskets {}
+ for { set b 0 } { $b < $N } { incr b } {
+  if { [llength $basket($b)] > 0 } { lappend usedBaskets $b }
+ }
+ puts "Info : seed_place, allocated $S blocks into $N baskets (P=$P), [llength $usedBaskets] baskets non-empty"
+
+ # --- STEP 4: 64-location 8x8 grid, T-driven basket->location assignment ---
+ set gx [expr {($cb_x1 - $cb_x0) / 8.0}]
+ set gy [expr {($cb_y1 - $cb_y0) / 8.0}]
+ set locbox {}
+ for { set r 0 } { $r < 8 } { incr r } {
+  for { set c 0 } { $c < 8 } { incr c } {
+   lappend locbox [list [expr {$cb_x0 + $c * $gx}] [expr {$cb_y0 + $r * $gy}] [expr {$cb_x0 + ($c + 1) * $gx}] [expr {$cb_y0 + ($r + 1) * $gy}]]
+  }
+ }
+ set ttype [expr {$T & 0x3}]
+ set trav {}
+ for { set a 0 } { $a < 8 } { incr a } {
+  for { set b 0 } { $b < 8 } { incr b } {
+   if { $ttype == 0 } { set idx [expr {$a * 8 + $b}] } elseif { $ttype == 1 } { set idx [expr {$b * 8 + $a}] } elseif { $ttype == 2 } { set idx [expr {$a * 8 + (7 - $b)}] } else { set idx [expr {(7 - $a) * 8 + $b}] }
+   lappend trav $idx
+  }
+ }
+ set start [expr {$T % 64}]
+ array set basketloc {}
+ set li 0
+ foreach b $usedBaskets {
+  set basketloc($b) [lindex $trav [expr {($start + $li) % 64}]]
+  incr li
+ }
+ puts "Info : seed_place, T=$T -> traversal type $ttype, start $start, [llength $usedBaskets] baskets placed"
+
+ # --- STEP 5: place each basket's cells into its location region ---
+ proc _sp_pack_region { cells rx0 ry0 rx1 ry1 } {
+  upvar _instlist _instlist cellarea cellarea siteh siteh obs obs pitch pitch
+  set nrows [expr {int(($ry1 - $ry0) / $siteh)}]
+  if { $nrows < 1 } { set nrows 1 }
+  set row_y {}
+  set row_spans {}
+  for { set r 0 } { $r < $nrows } { incr r } {
+   set ry0r [expr {$ry0 + $r * $siteh}]
+   set ry1r [expr {$ry0r + $siteh}]
+   set spans [list [list $rx0 $rx1]]
+   foreach b $obs {
+    lassign $b bx0 by0 bx1 by1
+    if { $by1 <= $ry0r || $by0 >= $ry1r } { continue }
+    set nsp {}
+    foreach sp $spans {
+     lassign $sp sx0 sx1
+     if { $bx1 <= $sx0 || $bx0 >= $sx1 } { lappend nsp $sp; continue }
+     if { $bx0 > $sx0 } { lappend nsp [list $sx0 $bx0] }
+     if { $bx1 < $sx1 } { lappend nsp [list $bx1 $sx1] }
+    }
+    set spans $nsp
+   }
+   lappend row_y $ry0r
+   lappend row_spans $spans
+  }
+  set row_cursor {}
+  for { set r 0 } { $r < $nrows } { incr r } {
+   lappend row_cursor [list 0 [lindex [lindex [lindex $row_spans $r] 0] 0]]
+  }
+  proc _sp_pack1 { cid } {
+   upvar row_spans row_spans row_cursor row_cursor nrows nrows row_y row_y _instlist _instlist cellarea cellarea pitch pitch
+   set szx [lindex $cellarea($cid) 0]
+   for { set rr 0 } { $rr < $nrows } { incr rr } {
+    lassign [lindex $row_cursor $rr] si xpos
+    set spans [lindex $row_spans $rr]
+    set nsp [llength $spans]
+    while { $si < $nsp } {
+     lassign [lindex $spans $si] sx0 sx1
+     if { $xpos < $sx0 } { set xpos $sx0 }
+     if { $xpos + $szx <= $sx1 } {
+      lset _instlist($cid) 4 1
+      lset _instlist($cid) 5 $xpos
+      lset _instlist($cid) 6 [lindex $row_y $rr]
+      lset row_cursor $rr [list $si [expr {$xpos + $szx * $pitch}]]
+      return 1
+     }
+     incr si
+     if { $si < $nsp } { set xpos [lindex [lindex $spans $si] 0] }
+    }
+    lset row_cursor $rr [list $nsp 0]
+   }
+   return 0
+  }
+  set overflow {}
+  foreach cid $cells {
+   if { ! [_sp_pack1 $cid] } { lappend overflow $cid }
+  }
+  catch { rename _sp_pack1 {} }
+  return $overflow
+ }
+
+ set overflow {}
+ foreach b $usedBaskets {
+  set lidx $basketloc($b)
+  lassign [lindex $locbox $lidx] rx0 ry0 rx1 ry1
+  set cells {}
+  foreach hid $basket($b) {
+   if { [info exists blockcells($hid)] } { lappend cells {*}$blockcells($hid) }
+  }
+  if { [llength $cells] == 0 } { continue }
+  set ov [_sp_pack_region $cells $rx0 $ry0 $rx1 $ry1]
+  lappend overflow {*}$ov
+ }
+ # unassigned location regions absorb leftover (top residual + overflow).
+ set usedloc {}
+ foreach b $usedBaskets { lappend usedloc $basketloc($b) }
+ set freeregions {}
+ for { set t 0 } { $t < 64 } { incr t } {
+  set lidx [lindex $trav [expr {($start + $t) % 64}]]
+  if { [lsearch -exact $usedloc $lidx] < 0 } { lappend freeregions $lidx }
+ }
+ set leftover [concat $toprest $overflow]
+ foreach lidx $freeregions {
+  if { [llength $leftover] == 0 } { break }
+  lassign [lindex $locbox $lidx] rx0 ry0 rx1 ry1
+  set leftover [_sp_pack_region $leftover $rx0 $ry0 $rx1 $ry1]
+ }
+ foreach cid $leftover {
+  lset _instlist($cid) 4 1
+  lset _instlist($cid) 5 $cb_x0
+  lset _instlist($cid) 6 $cb_y0
+ }
+ catch { rename _sp_pack_region {} }
+
+ set committed 0
+ foreach cid $free_cells { if { [lindex $_instlist($cid) 4] == 1 } { incr committed } }
+ puts "Info : seed_place, placed $committed / $nfree cells"
+}
+
 proc create_region { hmodule blx bly trx try } {
  variable regionindex
  variable _regionlist
