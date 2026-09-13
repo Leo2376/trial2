@@ -183,6 +183,16 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | `seed_placement`, `placeOpt`, `unplace_stdcell`, `unplace_pad`), not only on    |            |
 |     |             | `build_net_conn`, so `report_net_wirelen` / `report_area_stats -wire` cannot|            |
 |     |             | serve stale lengths after a move.                                          |            |
+| W3  | Placement   | `seed_placement` frontier anchor: when the size-driven descent expands a   | implemented|
+|     |             | block into its children, the parent leaves the frontier, so leaf cells living|            |
+|     |             | directly in that module walked up their ancestor chain and found no match -> |            |
+|     |             | top-residual (placed with no hierarchy-coherent locality). The expansion   |            |
+|     |             | now records each expanded parent -> its first surviving child, and the     |            |
+|     |             | cell->frontier walk consults that map, so direct-resident cells anchor to a |            |
+|     |             | frontier block instead of leaking to top-residual. Verified in            |            |
+|     |             | test14_seed_expand: a hierarchical design with a big module holding 34      |            |
+|     |             | direct-resident cells + submodules drops its top-residual from ~39 to the   |            |
+|     |             | 5 legitimate flat top-level cells.                                          |            |
 | P7  | Path tracing| `report_path ... -limit <n> ?-max_depth <n>?`: bound the trace. `-limit`     | implemented|
 |     |             | caps the number of sync endpoints reported (forward mode); `-max_depth`      |            |
 |     |             | bounds the BFS depth (net hops) so large/cyclic graphs stay bounded. Both   |            |

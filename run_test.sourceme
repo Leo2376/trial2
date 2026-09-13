@@ -47,3 +47,6 @@ cd ../../..
 cd tests/test13_*/scripts
 tclsh8.6 run_test.tcl
 cd ../../..
+cd tests/test14_*/scripts
+tclsh8.6 run_test.tcl
+cd ../../..

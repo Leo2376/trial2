@@ -3157,6 +3157,13 @@ proc seed_placement { args } {
  if { $nfree_total > 0 } {
   set size_thresh [expr {int($nfree_total * 0.25)}]
   if { $size_thresh < 1 } { set size_thresh 1 }
+  # expandparent: when a block is expanded into its children, the parent's
+  # path is no longer on the frontier, so a leaf cell living directly in
+  # that module (parent path == the expanded block) would walk up its
+  # ancestor chain and find no match -> top-residual. Map each expanded
+  # parent path to its first surviving child so those direct-resident cells
+  # still anchor to a frontier block instead of leaking to top-residual.
+  array set expandparent {}
   while { $level < $maxlevel } {
    set bigblocks {}
    foreach hid $frontier {
@@ -3170,7 +3177,9 @@ proc seed_placement { args } {
    foreach hid $frontier {
     set hp [_sp_hp $hid]
     if { [info exists childmap($hp)] && [llength $childmap($hp)] > 0 } {
-     lappend newf {*}$childmap($hp)
+     set kids $childmap($hp)
+     lappend newf {*}$kids
+     set expandparent($hp) [lindex $kids 0]
      set changed 1
     } else {
      lappend newf $hid
@@ -3216,6 +3225,7 @@ proc seed_placement { args } {
   set p $fp
   while { $p ne "" } {
    if { [info exists fdict($p)] } { set owner $fdict($p); break }
+   if { [info exists expandparent($p)] } { set owner $expandparent($p); break }
    set segs [split $p /]
    if { [llength $segs] <= 1 } { break }
    set p [join [lrange $segs 0 end-1] /]
