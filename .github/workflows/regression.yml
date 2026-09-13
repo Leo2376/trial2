@@ -1,0 +1,35 @@
+name: regression
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Tcl + Thread extension
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tcl tcl-thread
+
+      - name: Verify Tcl install
+        run: |
+          echo 'puts "Tcl [info patchlevel]"; exit' | tclsh
+          echo 'if {![catch {package require Thread}]} {puts "Thread ok"}; exit' | tclsh
+
+      - name: Run regression suite
+        # test1 (CPU synthesis, too long) and test9 (gui_start, needs a display)
+        # are commented out in run_test.sourceme; the rest run headless.
+        # Capture all output, then fail the step if any FAIL line appears.
+        run: |
+          set -o pipefail
+          bash -c 'source run_test.sourceme' 2>&1 | tee /tmp/regression.log
+          if grep -q '^FAIL' /tmp/regression.log; then
+            echo "::error::Regression failures detected:"
+            grep '^FAIL' /tmp/regression.log
+            exit 1
+          fi
+          echo "No FAIL lines. PASS count: $(grep -c '^PASS' /tmp/regression.log)"

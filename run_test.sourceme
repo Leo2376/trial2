@@ -31,9 +31,10 @@ cd ../../..
 cd tests/test8_*/scripts
 tclsh8.6 run_test.tcl
 cd ../../..
-cd tests/test9_*/scripts
-tclsh8.6 run_test.tcl
-cd ../../..
+# test9 (gui_start / redraw) skipped in CI: needs an X display / xvfb.
+# cd tests/test9_*/scripts
+# tclsh8.6 run_test.tcl
+# cd ../../..
 cd tests/test10_*/scripts
 tclsh8.6 run_test.tcl
 cd ../../..
