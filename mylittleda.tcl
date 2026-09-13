@@ -3013,7 +3013,7 @@ proc placeOpt { args } {
  _invalidate_wirelen_cache
 }
 
-# Seed-driven hierarchy-coherent placement: seed_place ?-seed n? ?-iter n? ?-verbose?
+# Seed-driven hierarchy-coherent placement: seed_placement ?-seed n? ?-iter n? ?-verbose?
 #
 # A placement strategy driven by a single integer seed that encodes four
 # choices and keeps hierarchy blocks spatially together.
@@ -3033,7 +3033,7 @@ proc placeOpt { args } {
 # Different seeds give different layouts, enabling future multi-seed
 # comparison. Requires a floorplan (P3). Purely geometric: uses no net
 # data, so no build_net_conn dependency.
-proc seed_place { args } {
+proc seed_placement { args } {
  global _mt_on _mt_workers _mt_thread_loaded _eval_sites_seq
  variable topname
  _require 3
@@ -3061,21 +3061,21 @@ proc seed_place { args } {
    incr i
    set seed [lindex $args $i]
    if { ![string is integer -strict $seed] } {
-    puts "Error : seed_place -seed requires an integer"
+    puts "Error : seed_placement -seed requires an integer"
     return
    }
   } elseif { $a eq "-iter" } {
    incr i
    set niter [lindex $args $i]
    if { ![string is integer -strict $niter] || $niter < 1 } {
-    puts "Error : seed_place -iter requires a positive integer"
+    puts "Error : seed_placement -iter requires a positive integer"
     return
    }
   } elseif { $a eq "-verbose" } {
    set verbose 1
   } else {
    puts "Error : unknown option $a"
-   puts "Usage: seed_place ?-seed n? ?-iter n? ?-verbose?"
+   puts "Usage: seed_placement ?-seed n? ?-iter n? ?-verbose?"
    return
   }
  }
@@ -3085,7 +3085,7 @@ proc seed_place { args } {
  set haveconn 0
  if { [info exists netconnbuilt] && $netconnbuilt } { set haveconn 1 }
  if { ! $haveconn } {
-  puts "Error : build_net_conn must run before seed_place (wire length is the trial score)"
+  puts "Error : build_net_conn must run before seed_placement (wire length is the trial score)"
   return
  }
 
@@ -3146,7 +3146,7 @@ proc seed_place { args } {
  # is bounded by the number of hierarchy levels actually present.
  set maxlevel 12
  set level 1
- puts "Info : seed_place, hierarchy top-$level : S=$S"
+ puts "Info : seed_placement, hierarchy top-$level : S=$S"
  # Size-driven expansion: continue descending the hierarchy as long as any
  # frontier block holds more than 25% of the free CORE cells. Unlike the old
  # count-based stop (S >= 64) which could leave a single block holding 90%
@@ -3177,16 +3177,16 @@ proc seed_place { args } {
     }
    }
    if { ! $changed } {
-    puts "Info : seed_place, [llength $bigblocks] block(s) above 25% of $nfree_total cells but no children to split"
+    puts "Info : seed_placement, [llength $bigblocks] block(s) above 25% of $nfree_total cells but no children to split"
     break
    }
    set frontier $newf
    set S [llength $frontier]
    incr level
-   puts "Info : seed_place, hierarchy top-$level : S=$S"
+   puts "Info : seed_placement, hierarchy top-$level : S=$S"
   }
  }
- puts "Info : seed_place, selected $S hierarchy blocks at depth $level (frontier shared across trials)"
+ puts "Info : seed_placement, selected $S hierarchy blocks at depth $level (frontier shared across trials)"
  array set fdict {}
  foreach hid $frontier { set fdict([_sp_hp $hid]) $hid }
  catch { rename _sp_hp {} }
@@ -3227,9 +3227,9 @@ proc seed_place { args } {
   }
  }
  set nfree [llength $free_cells]
- puts "Info : seed_place, $nfree free CORE cells, [llength $toprest] top-residual"
+ puts "Info : seed_placement, $nfree free CORE cells, [llength $toprest] top-residual"
  if { $nfree == 0 } {
-  puts "Info : seed_place, nothing to place"
+  puts "Info : seed_placement, nothing to place"
   return
  }
  # Leaf-block split: when a frontier block holds more than 25% of the free
@@ -3267,10 +3267,10 @@ proc seed_place { args } {
     }
     set pos [expr {$end + 1}]
    }
-   puts "Info : seed_place, leaf split: block $hid ($hp, $cc cells) into $K sub-blocks"
+   puts "Info : seed_placement, leaf split: block $hid ($hp, $cc cells) into $K sub-blocks"
   }
   if { $nsplits > 0 } {
-   puts "Info : seed_place, leaf split: created $nsplits sub-blocks from oversized leaf blocks"
+   puts "Info : seed_placement, leaf split: created $nsplits sub-blocks from oversized leaf blocks"
   }
  }
 
@@ -3540,7 +3540,7 @@ proc seed_place { args } {
     set b [lindex $p 1]
     foreach lidx $basketloc($b) { lset bmapidx $lidx $b }
    }
-   puts "Info : seed_place, region map ($nusable usable / 64, [expr {64-$nusable}] discarded >50% blocked, $nbudget to baskets / [expr {$nusable-$nbudget}] reserved for leftover):"
+   puts "Info : seed_placement, region map ($nusable usable / 64, [expr {64-$nusable}] discarded >50% blocked, $nbudget to baskets / [expr {$nusable-$nbudget}] reserved for leftover):"
    set hdr {     }
    for { set c 0 } { $c < 8 } { incr c } { append hdr [format {  c%-2d } $c] }
    puts $hdr
@@ -3668,14 +3668,14 @@ proc seed_place { args } {
      lassign $rg rx0 ry0 rx1 ry1
      lappend rdesc "($rx0,$ry0)-($rx1,$ry1)"
     }
-    puts "Info : seed_place, basket $wi_v -> [llength $regions] region(s) [join $rdesc { }] : [llength $cells] cells ([llength $basket($b)] blocks)"
+    puts "Info : seed_placement, basket $wi_v -> [llength $regions] region(s) [join $rdesc { }] : [llength $cells] cells ([llength $basket($b)] blocks)"
    }
    incr wi_v
   }
   set nwork [llength $worklist]
   if { $verbose } {
    set blockassigned [expr {$totalcells - [llength $toprest_v]}]
-   puts "Info : seed_place, $nwork non-empty baskets, $blockassigned block-assigned cells, [llength $toprest_v] top-residual"
+   puts "Info : seed_placement, $nwork non-empty baskets, $blockassigned block-assigned cells, [llength $toprest_v] top-residual"
   }
   if { $mt_on_v && $mt_workers_v > 1 && $nwork >= 2 } {
    # Parallel basket packing. Ship read-only inputs once; each worker packs a
@@ -3684,7 +3684,7 @@ proc seed_place { args } {
    # self-contained from the shipped inputs (no shared globals, no upvar).
    set nw $mt_workers_v
    if { $nw > $nwork } { set nw $nwork }
-   puts "Info : seed_place, packing $nwork baskets across $nw threads"
+   puts "Info : seed_placement, packing $nwork baskets across $nw threads"
    set ns spp[incr ::_eval_sites_seq]
    tsv::set $ns worklist $worklist
    tsv::set $ns cellarea_v $cellarea_v
@@ -3788,7 +3788,7 @@ proc seed_place { args } {
      lappend overflow {*}$ovwi
      if { $verbose } {
       set npc [expr {[llength $pf] / 3}]
-      puts "Info : seed_place, basket $wi packed by [tsv::get $ns wthread_$wi] : $npc placed, [llength $ovwi] overflow"
+      puts "Info : seed_placement, basket $wi packed by [tsv::get $ns wthread_$wi] : $npc placed, [llength $ovwi] overflow"
      }
      set placedcnt [llength [array names pos]]
      _sp_pp $placedcnt $totalcells
@@ -3812,7 +3812,7 @@ proc seed_place { args } {
     }
     lappend overflow {*}$pending
     if { $verbose } {
-     puts "Info : seed_place, basket $wi_s packed serial : $npc placed, [llength $pending] overflow"
+     puts "Info : seed_placement, basket $wi_s packed serial : $npc placed, [llength $pending] overflow"
     }
     incr wi_s
     set placedcnt [llength [array names pos]]
@@ -3841,7 +3841,7 @@ proc seed_place { args } {
   set freeregions [concat $freeok $freeblk]
   set leftover [concat $toprest $overflow]
   if { $verbose } {
-   puts "Info : seed_place, leftover phase : [llength $leftover] cells ([llength $toprest] top-residual + [llength $overflow] basket overflow) into [llength $freeregions] free regions ([llength $freeok] usable, [llength $freeblk] >50% blocked as last resort)"
+   puts "Info : seed_placement, leftover phase : [llength $leftover] cells ([llength $toprest] top-residual + [llength $overflow] basket overflow) into [llength $freeregions] free regions ([llength $freeok] usable, [llength $freeblk] >50% blocked as last resort)"
   }
   set fridx 0
   foreach lidx $freeregions {
@@ -3851,14 +3851,14 @@ proc seed_place { args } {
    set leftover [_sp_pack_region $leftover $rx0 $ry0 $rx1 $ry1]
    set placedcnt [llength [array names pos]]
    if { $verbose } {
-    puts "Info : seed_place, free region $fridx (idx $lidx) ($rx0,$ry0)-($rx1,$ry1) : placed [expr {$prev - [llength $leftover]}], remaining [llength $leftover], total placed $placedcnt / $totalcells"
+    puts "Info : seed_placement, free region $fridx (idx $lidx) ($rx0,$ry0)-($rx1,$ry1) : placed [expr {$prev - [llength $leftover]}], remaining [llength $leftover], total placed $placedcnt / $totalcells"
    }
    incr fridx
    _sp_pp $placedcnt $totalcells
   }
   foreach cid $leftover { set pos($cid) [list $cb_x0 $cb_y0] }
   if { $verbose } {
-   puts "Info : seed_place, [llength $leftover] leftover cells placed at core origin ($cb_x0,$cb_y0)"
+   puts "Info : seed_placement, [llength $leftover] leftover cells placed at core origin ($cb_x0,$cb_y0)"
   }
   _sp_pp [llength [array names pos]] $totalcells
   catch { rename _sp_pack_region {} }
@@ -3893,9 +3893,9 @@ proc seed_place { args } {
 
  set mt_on [expr {$_mt_on && $_mt_thread_loaded}]
  if { $mt_on } {
-  puts "Info : seed_place with multithread ON ($niter iteration(s), wire-length scoring parallelized over $_mt_workers threads)"
+  puts "Info : seed_placement with multithread ON ($niter iteration(s), wire-length scoring parallelized over $_mt_workers threads)"
  } else {
-  puts "Info : seed_place single-threaded, $niter iteration(s)"
+  puts "Info : seed_placement single-threaded, $niter iteration(s)"
  }
 
  # Wire-length scoring helper: sum the Manhattan bounding-box length of a
@@ -4014,15 +4014,15 @@ proc seed_place { args } {
  set bestres {}
  set bestseed -1
  for { set iter 1 } { $iter <= $niter } { incr iter } {
-  if { $niter > 1 } { puts "Info : seed_place, iteration $iter/$niter" }
+  if { $niter > 1 } { puts "Info : seed_placement, iteration $iter/$niter" }
   if { $iter == 1 && $seed >= 0 } {
    set sd $seed
   } else {
    set sd [expr {int(rand() * 32768)}]
   }
-  puts "Info : seed_place, trial seed=$sd : placing $nfree cells"
+  puts "Info : seed_placement, trial seed=$sd : placing $nfree cells"
   set res [_sp_trial $sd $cellarea_v $blockcells_v $toprest_v $obs $cb_x0 $cb_y0 $cb_x1 $cb_y1 $siteh $pitch $netkeys $netpinids $placedpos_v $mt_on $_mt_workers $verbose]
-  puts "Info : seed_place, trial seed=$sd : placement done, estimating wire length"
+  puts "Info : seed_placement, trial seed=$sd : placement done, estimating wire length"
   # re-score the trial's placement through the (possibly MT) scorer so the
   # wire-length sum is computed in parallel when MT is on.
   set trialpos [lindex $res 5]
@@ -4035,17 +4035,17 @@ proc seed_place { args } {
   array set upos $placedpos_v
   foreach {cid xy} [array get tpos] { set upos($cid) $xy }
   set sc [_sp_score_all $netpinids [array get upos]]
-  puts "Info : seed_place, seed=$sd  N=[lindex $res 1]  M=[lindex $res 2]  P=[lindex $res 3]  T=[lindex $res 4]  score [format %.4g $sc]"
+  puts "Info : seed_placement, seed=$sd  N=[lindex $res 1]  M=[lindex $res 2]  P=[lindex $res 3]  T=[lindex $res 4]  score [format %.4g $sc]"
   if { $sc < $bestscore } { set bestscore $sc; set bestseed $sd; set bestres $res }
   if { $niter > 1 } {
-   puts "Info : seed_place, after iteration $iter best seed $bestseed score [format %.4g $bestscore]"
+   puts "Info : seed_placement, after iteration $iter best seed $bestseed score [format %.4g $bestscore]"
   }
  }
  catch { rename _sp_trial {} }
  catch { rename _sp_score_range {} }
  catch { rename _sp_score_all {} }
  set bestplaced [lindex $bestres 5]
- puts "Info : seed_place, best seed $bestseed score [format %.4g $bestscore]"
+ puts "Info : seed_placement, best seed $bestseed score [format %.4g $bestscore]"
 
  # ---- commit the best placement to _instlist ----
  set committed 0
@@ -4069,7 +4069,7 @@ proc seed_place { args } {
    incr committed
   }
  }
- puts "Info : seed_place, placed $committed / $nfree cells"
+ puts "Info : seed_placement, placed $committed / $nfree cells"
  _invalidate_wirelen_cache
 }
 
@@ -4629,7 +4629,7 @@ proc report_area_stats { args } {
 
 # G8 report_design
 # One-screen design overview aggregating the counts that today require running
-# several separate commands (report_hierarchy_tree, get_cell, get_net,
+# several separate commands (report_hierarchy_tree, get_cells, get_nets,
 # report_area_stats, report_unplaced). It summarizes the loaded design:
 # top module, module/leaf/hier instance counts, library cells, nets, top ports,
 # assigns, placement progress, unplaced count, and (when build_net_conn ran)
@@ -5607,22 +5607,22 @@ proc _net_loads { n } {
  return {}
 }
 
-# get_cell <pattern> ?-hier?
+# get_cells <pattern> ?-hier?
 # Return the list (collection) of cells (leaf and hierarchical) whose full
 # hierarchical instance path matches the glob pattern. Wildcards are the
 # standard glob ones (*, ?, [..]). Nothing is printed; callers capture the
-# returned list, e.g. 'set cells [get_cell core0/w0/*]'.
+# returned list, e.g. 'set cells [get_cells core0/w0/*]'.
 #
 # By default (no -hier) only the DIRECT children of the scope implied by the
 # pattern are returned:
-#   get_cell *             -> top-level instances only
-#   get_cell core0/w0/*    -> direct children of core0/w0 only
-#   get_cell *reg*         -> top-level instances matching *reg* only
+#   get_cells *             -> top-level instances only
+#   get_cells core0/w0/*    -> direct children of core0/w0 only
+#   get_cells *reg*         -> top-level instances matching *reg* only
 # This matches the common EDA convention that a non-hierarchical query stays
 # within one scope. With -hier the match is cross-hierarchy (the previous
 # behaviour): every instance whose full path matches the pattern is returned,
 # at any depth.
-proc get_cell { args } {
+proc get_cells { args } {
  variable instindex
  variable hinstindex
  variable _instlist
@@ -5634,8 +5634,8 @@ proc get_cell { args } {
  _require 2
 
  if { [llength $args] == 0 } {
-  puts "Error : get_cell requires a pattern"
-  puts "Usage: get_cell <pattern> ?-hier?"
+  puts "Error : get_cells requires a pattern"
+  puts "Usage: get_cells <pattern> ?-hier?"
   return
  }
  set pattern [lindex $args 0]
@@ -5643,7 +5643,7 @@ proc get_cell { args } {
  foreach a [lrange $args 1 end] {
   if { $a eq "-hier" } { set hier 1 ; continue }
   puts "Error : unknown option '$a'"
-  puts "Usage: get_cell <pattern> ?-hier?"
+  puts "Usage: get_cells <pattern> ?-hier?"
   return
  }
 
@@ -5687,23 +5687,23 @@ proc get_cell { args } {
  return $cells
 }
 
-# get_lib_cell <refname>
+# get_lib_cells <refname>
 # Return the list (collection) of library-cell references (refnames) whose
 # name matches the glob pattern (standard globs: *, ?, [..]). A bare refname
 # with no wildcard is an exact lookup. Nothing is printed; callers capture the
-# returned list, e.g. 'set cells [get_lib_cell SP*]' ->
-# {SP128X33M2 SP128X33M4 SP512X40M2 SP512X40M4}. Unlike get_cell/get_net this
+# returned list, e.g. 'set cells [get_lib_cells SP*]' ->
+# {SP128X33M2 SP128X33M4 SP512X40M2 SP512X40M4}. Unlike get_cells/get_nets this
 # queries the loaded library (cataloglist / _libcell), so it works as soon as
 # a LEF has been imported and does not require a design to be set or built.
-proc get_lib_cell { pattern } {
+proc get_lib_cells { pattern } {
  variable cellindex
  variable _libcell
  variable _libcellpindir
  variable cataloglist
 
  if { $pattern eq "" } {
-  puts "Error : get_lib_cell requires a pattern"
-  puts "Usage: get_lib_cell <refname>"
+  puts "Error : get_lib_cells requires a pattern"
+  puts "Usage: get_lib_cells <refname>"
   return
  }
 
@@ -5718,28 +5718,28 @@ proc get_lib_cell { pattern } {
  return $names
 }
 
-# get_net <pattern> ?-hier?
+# get_nets <pattern> ?-hier?
 # Return the list (collection) of nets whose (scoped) name matches the glob
 # pattern. Net names are stored scoped by their containing module's
 # hierarchical path (e.g. "core0/w0/nv_c0/c0/iu0/n20719"); top-level nets keep
 # the bare name. Wildcards are the standard glob ones (*, ?, [..]). Nothing is
-# printed; callers capture the returned list, e.g. 'set nets [get_net n2*]'.
+# printed; callers capture the returned list, e.g. 'set nets [get_nets n2*]'.
 #
 # By default (no -hier) only the nets of the SINGLE scope implied by the
 # pattern are returned:
-#   get_net *                    -> top-level nets only
-#   get_net core0/w0/nv_c0/c0/*  -> nets declared in core0/w0/nv_c0/c0 only
-#   get_net n2*                  -> top-level nets matching n2* only
+#   get_nets *                    -> top-level nets only
+#   get_nets core0/w0/nv_c0/c0/*  -> nets declared in core0/w0/nv_c0/c0 only
+#   get_nets n2*                  -> top-level nets matching n2* only
 # With -hier the match is cross-hierarchy: every net whose full scoped name
 # matches the pattern is returned, at any depth.
-proc get_net { args } {
+proc get_nets { args } {
  global netdriver netload
 
  _require 2
 
  if { [llength $args] == 0 } {
-  puts "Error : get_net requires a pattern"
-  puts "Usage: get_net <pattern> ?-hier?"
+  puts "Error : get_nets requires a pattern"
+  puts "Usage: get_nets <pattern> ?-hier?"
   return
  }
  set pattern [lindex $args 0]
@@ -5747,7 +5747,7 @@ proc get_net { args } {
  foreach a [lrange $args 1 end] {
   if { $a eq "-hier" } { set hier 1 ; continue }
   puts "Error : unknown option '$a'"
-  puts "Usage: get_net <pattern> ?-hier?"
+  puts "Usage: get_nets <pattern> ?-hier?"
   return
  }
 
@@ -5781,7 +5781,7 @@ proc get_net { args } {
 # all_connected <net or pin>
 # Report the nets connected to a net or pin. A pin "inst/pin" argument
 # reports the single net that pin is on. A net argument may use globs
-# (*, ?, [..]); like get_net, the match is scoped: only nets of the single
+# (*, ?, [..]); like get_nets, the match is scoped: only nets of the single
 # scope implied by the pattern are reported (the pattern minus its last path
 # component; a bare name with no '/' scopes to the top level). So
 # "all_connected n77" reports only the top-level net n77 (not same-named nets
@@ -5811,7 +5811,7 @@ proc all_connected { pattern } {
   }
  }
 
- # Otherwise treat the argument as a net pattern, scoped like get_net: the
+ # Otherwise treat the argument as a net pattern, scoped like get_nets: the
  # scope is the pattern minus its last path component (top level "-1" for a
  # bare name). Only nets whose containing scope equals this scope AND whose
  # scoped name matches the pattern are reported, so same-named nets in sibling
@@ -5866,7 +5866,7 @@ proc _report_net { n } {
 
 # G4 report_net <net>
 # Report a single net: its driver(s), receiver(s) and the full list of
-# connected instance pins. The net is scoped like get_net/all_connected: the
+# connected instance pins. The net is scoped like get_nets/all_connected: the
 # trailing token is the net name and the prefix (the path before the last
 # '/') is the containing hierarchical scope; a bare name with no '/' is a
 # top-level net. Requires build_net_conn (P2) to have run first.
@@ -5884,7 +5884,7 @@ proc report_net { net } {
   return
  }
 
- # Resolve the scoped net key the same way get_net/all_connected scope a
+ # Resolve the scoped net key the same way get_nets/all_connected scope a
  # net: only nets whose containing scope equals the scope implied by the
  # argument (the path before the last '/') are considered, so a same-named
  # net reused in a sibling submodule is never collapsed onto another. A
@@ -5904,7 +5904,7 @@ proc report_net { net } {
 }
 
 # Helper for report_net: resolve a net argument to a single scoped net key,
-# using the same scope rule as get_net/all_connected (scope = path before the
+# using the same scope rule as get_nets/all_connected (scope = path before the
 # last '/', top level for a bare name). The exact scoped name is preferred; if
 # not present, any net of that scope whose name matches the glob is accepted.
 # A bus base name (e.g. "alu/result") also aggregates its per-bit members
@@ -6077,7 +6077,7 @@ proc _report_net_detail { n } {
 # cached length is computed from pin coordinates and goes stale as soon as a
 # driver/receiver moves. build_net_conn already unsets the cache; this helper
 # lets the placement procs (place_instance, make_placement, initial_placement,
-# hier_placement, seed_place, placeOpt, unplace_stdcell, unplace_pad) drop it
+# hier_placement, seed_placement, placeOpt, unplace_stdcell, unplace_pad) drop it
 # too without each one re-implementing the unset. It is cheap when the cache
 # is empty (no design / no query yet) and a no-op when nothing was cached.
 proc _invalidate_wirelen_cache { } {
@@ -6162,7 +6162,7 @@ proc report_net_wirelen { net } {
 # Create a new net inside a scope. The trailing token is the net name and the
 # prefix (the path before the last '/') is the containing hierarchical scope; a
 # bare name with no '/' creates a top-level net. The net is registered as an
-# empty entry in the netdriver/netload map so get_net/all_connected see it and
+# empty entry in the netdriver/netload map so get_nets/all_connected see it and
 # it can later receive pins via connect_net (E4). Requires build_net_conn (P2)
 # to have run first, since ECO commands mutate that map.
 proc create_net { netname } {
@@ -6179,7 +6179,7 @@ proc create_net { netname } {
   return
  }
 
- # Scope the net name like get_net/all_connected: top-level "-1" keeps the
+ # Scope the net name like get_nets/all_connected: top-level "-1" keeps the
  # bare name, a hierarchical reference becomes "scope/net".
  if { [string match {*/*} $netname] } {
   set key $netname
@@ -6273,7 +6273,7 @@ proc create_cell { inst_path celltype } {
 
 # E3 disconnect_net <net> <pin>
 # Detach an instance pin from a net. <pin> is "<inst>/<pinname>". The net is
-# scoped like get_net (trailing token = net name, prefix = scope; bare name =
+# scoped like get_nets (trailing token = net name, prefix = scope; bare name =
 # top level). The pin entry is removed from the net's driver list (if it is an
 # output pin) or its receiver list (if it is an input pin). Requires
 # build_net_conn (P2) to have run first.
@@ -6360,7 +6360,7 @@ proc disconnect_net { net pin } {
 
 # E4 connect_net <net> <pin>
 # Attach an instance pin to a net. <pin> is "<inst>/<pinname>". The net is
-# scoped like get_net. The pin is added to the net's driver list (if it is an
+# scoped like get_nets. The pin is added to the net's driver list (if it is an
 # output pin) or its receiver list (if it is an input pin). Requires
 # build_net_conn (P2) to have run first.
 proc connect_net { net pin } {
@@ -6507,7 +6507,7 @@ proc delete_cell { inst_path } {
  # Drop the instance records. pathlist is a list; remove the matching entry.
  # The _instlist/_instpinconn arrays are iterated by index (1..instindex) all
  # over the tool, so the slot is kept and marked <deleted> instead of unset;
- # a gap would break those index loops. get_cell / get_net / all_connected
+ # a gap would break those index loops. get_cells / get_nets / all_connected
  # skip <deleted> entries.
  set pi [lsearch -exact $pathlist $inst_path]
  if { $pi >= 0 } { set pathlist [lreplace $pathlist $pi $pi] }
@@ -6527,7 +6527,7 @@ proc delete_cell { inst_path } {
 # Remove a net from the netdriver/netload map. Every pin connected to the net
 # (drivers and receivers) is marked <unconnected> in its instance's
 # _instpinconn2 record, then the net keys are unset. The net is scoped like
-# get_net (trailing token = net name, prefix = scope; bare name = top level).
+# get_nets (trailing token = net name, prefix = scope; bare name = top level).
 # Requires build_net_conn (P2) to have run first. A net that still drives/loads
 # other logic should be disconnected first; this command does not re-route.
 proc delete_net { netname } {
@@ -6997,8 +6997,8 @@ proc write_db { filename } {
 
 # N3 restore_db <file>
 # Reload a database written by write_db. Every scalar, list and array variable
-# is restored, so the session is ready immediately: get_cell / get_net /
-# all_connected / get_lib_cell and the placement / library data are all
+# is restored, so the session is ready immediately: get_cells / get_nets /
+# all_connected / get_lib_cells and the placement / library data are all
 # available without read_netlist, set_top_design, build_design or
 # build_net_conn. The source netlist and LEFs do not need to be re-imported.
 proc restore_db { filename } {
@@ -7457,19 +7457,19 @@ proc export_dc_floorplan { filename } {
 # Connectivity, ECO, Optimization, Reporting, Netlist I/O, Placement,
 # Floorplan, Library, GUI, Shell). With a glob pattern argument, list the
 # commands whose name matches and print a one-line usage for each
-# (e.g. `help report*`, `help *cell*`, `help get_net`). Private helpers
+# (e.g. `help report*`, `help *cell*`, `help get_nets`). Private helpers
 # (names starting with '_') are never listed. The area map and one-liners are
 # kept here so the REPL is self-describing without the README.
 proc help { {pattern ""} } {
  # Area -> command list. Only public commands (no leading '_') are listed.
  array set _help_areas {
   "Path tracing" {report_path trace_clock}
-  "Connectivity" {get_cell get_net get_lib_cell all_connected report_net report_pin report_net_wirelen}
+  "Connectivity" {get_cells get_nets get_lib_cells all_connected report_net report_pin report_net_wirelen}
   "ECO" {create_net create_cell connect_net disconnect_net delete_cell delete_net}
   "Optimization" {set_max_fanout fix_max_fanout}
   "Reporting" {report_design report_area_stats report_hierarchy_tree report_unplaced report_all_macro report_cell_properties}
   "Netlist I/O" {read_netlist write_verilog write_db restore_db}
-  "Placement" {make_placement initial_placement hier_placement seed_place placeOpt place_instance unplace_stdcell unplace_pad}
+  "Placement" {make_placement initial_placement hier_placement seed_placement placeOpt place_instance unplace_stdcell unplace_pad}
   "Floorplan" {make_floorplan create_region remove_all_region list_region_instances add_halo remove_all_blockage add_bump set_site_height set_target_utilization}
   "Library" {add_lef add_lib get_sync_pins get_cell_id}
   "Design" {set_top_design build_design build_net_conn update_wire_db swap_refcell all_macro all_pad}
@@ -7482,9 +7482,9 @@ proc help { {pattern ""} } {
  array set _help_usage {
   report_path "report_path -from <pin|net> ?-to <pin|net>? ?-net? ?-layout? ?-limit <n>? ?-max_depth <n>?"
   trace_clock "trace_clock <pin|net>"
-  get_cell "get_cell <pattern> ?-hier?"
-  get_net "get_net <pattern> ?-hier?"
-  get_lib_cell "get_lib_cell <refname>"
+  get_cells "get_cells <pattern> ?-hier?"
+  get_nets "get_nets <pattern> ?-hier?"
+  get_lib_cells "get_lib_cells <refname>"
   all_connected "all_connected <net or pin>"
   report_net "report_net <net>"
   report_pin "report_pin <inst>/<pin>"
@@ -7510,7 +7510,7 @@ proc help { {pattern ""} } {
   make_placement "make_placement ?-full|-partial|-region_only?"
   initial_placement "initial_placement ?-full|-partial|-region_only?"
   hier_placement "hier_placement ?-full|-partial|-region_only?"
-  seed_place "seed_place ?-iter <n>? ?-seed <n>? ?-mt?"
+  seed_placement "seed_placement ?-iter <n>? ?-seed <n>? ?-mt?"
   placeOpt "placeOpt ?-iter <n>? ?-mt?"
   place_instance "place_instance <inst> <x> <y> <orient>"
   unplace_stdcell "unplace_stdcell"

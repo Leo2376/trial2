@@ -14,7 +14,7 @@ sudo apt-get install -y tcl tk-dev tcl-dev xvfb tcl-thread
 ```
 
 `tcl-thread` provides the Tcl `Thread` extension used by the multithreaded
-placement and wire-length estimation (`seed_place`, `report_area_stats -wire`,
+placement and wire-length estimation (`seed_placement`, `report_area_stats -wire`,
 `placeOpt`). Without it these stages still run (they degrade to single-threaded
 and report `Error : cannot enable multithread`), but installing it lets the
 parallel paths run. Verify it loads after install with `package require Thread`.
@@ -118,14 +118,14 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | branches down to leaf sync pins (flop CP / SRAM CK). Depends on L2.        |            |
 | R3  | Reporting   | `all_connected <net or pin>`: report all nets connected to a net/pin;      | implemented |
 |     |             | accepts wildcards (e.g. `all_connected n2*`).                           |            |
-| R4  | Reporting   | `get_cell <pattern>`: report all cells matching a pattern (e.g. `*reg*`);   | implemented |
-|     |             | handles hierarchy by scope (e.g. `get_cell core0/c0/*reg*` lists cells in  |            |
+| R4  | Reporting   | `get_cells <pattern>`: report all cells matching a pattern (e.g. `*reg*`);   | implemented |
+|     |             | handles hierarchy by scope (e.g. `get_cells core0/c0/*reg*` lists cells in  |            |
 |     |             | that scope). Add `-hier` for a cross-hierarchy match.                   |            |
-| R5  | Reporting   | `get_net <pattern>`: report all nets matching a pattern (e.g. `n2*`);     | implemented |
-|     |             | handles hierarchy by scope (e.g. `get_net core0/w0/nv_c0/c0/*` lists nets |            |
+| R5  | Reporting   | `get_nets <pattern>`: report all nets matching a pattern (e.g. `n2*`);     | implemented |
+|     |             | handles hierarchy by scope (e.g. `get_nets core0/w0/nv_c0/c0/*` lists nets |            |
 |     |             | declared in that scope). Add `-hier` for a cross-hierarchy match.        |            |
-| R6  | Reporting   | `get_lib_cell <refname>`: report library-cell references whose name matches | implemented |
-|     |             | the glob pattern (e.g. `get_lib_cell BUFF*`, `get_lib_cell *DFF*`); an    |            |
+| R6  | Reporting   | `get_lib_cells <refname>`: report library-cell references whose name matches | implemented |
+|     |             | the glob pattern (e.g. `get_lib_cells BUFF*`, `get_lib_cells *DFF*`); an    |            |
 |     |             | exact name is a single-cell lookup. Reports name, class, LEF size and the |            |
 |     |             | pin list with directions. Queries the loaded library, not the netlist,   |            |
 |     |             | so it works as soon as a LEF is imported.                                  |            |
@@ -180,7 +180,7 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | v1 (no checksum) still restores, with a `Warning`.                          |            |
 | W2  | Wirelength  | Invalidate the per-net `_wirelen_cache` on every placement change           | implemented|
 |     |             | (`place_instance`, `make_placement`, `initial_placement`, `hier_placement`,|            |
-|     |             | `seed_place`, `placeOpt`, `unplace_stdcell`, `unplace_pad`), not only on    |            |
+|     |             | `seed_placement`, `placeOpt`, `unplace_stdcell`, `unplace_pad`), not only on    |            |
 |     |             | `build_net_conn`, so `report_net_wirelen` / `report_area_stats -wire` cannot|            |
 |     |             | serve stale lengths after a move.                                          |            |
 | P7  | Path tracing| `report_path ... -limit <n> ?-max_depth <n>?`: bound the trace. `-limit`     | implemented|
@@ -221,19 +221,19 @@ Notes:
 - N2 + N3 (binary DB save/restore) are verified by a test that loads a design
   fully (read_netlist -> set_top_design -> build_design -> build_net_conn),
   runs `write_db`, then in a fresh session runs `restore_db` and checks that
-  every query command (`get_cell`, `get_net`, `all_connected`, `get_lib_cell`)
+  every query command (`get_cells`, `get_nets`, `all_connected`, `get_lib_cells`)
   returns identical results to the original session. The saved file must
   contain 100% of the database (instances, wires, positions, the net
   connectivity map, LEF library, ports, assigns) so `restore_db` is a strict
   faster substitute for the parse/build path.
 - O1 + O2 (buffer insertion) are verified by a test that builds a net with a
   high-fanout driver, runs `set_max_fanout <n>` then `fix_max_fanout -cell
-  <buf>`, and checks via `get_net`/`all_connected` that every net now has at
+  <buf>`, and checks via `get_nets`/`all_connected` that every net now has at
   most <n> receivers and that the inserted buffers chain the original driver
   to the receivers. Depends on the P2 netload map, so P2 -> O2 is the order.
 - E1-E4 (ECO) are verified together: `create_net` a new net, `create_cell` a
   buffer in a scope, `disconnect_net` a pin from its old net and `connect_net`
-  it to the new net, then `all_connected`/`get_net` to confirm the old net lost
+  it to the new net, then `all_connected`/`get_nets` to confirm the old net lost
   the receiver and the new net gained it. E3/E4 mutate the netload map (P2),
   so they require build_net_conn to have run first; the order is P2 -> E4.
   Implemented in test1: the receiver of `core0/w0/nv_c0/c0/iu0/n20719`
@@ -243,7 +243,7 @@ Notes:
   output and the moved receiver. A `write_verilog` (N1) dump after the ECO
   will confirm the structural change once N1 is implemented.
 - E5 (`delete_cell`/`delete_net`) is verified in test13_e5p8p7h2: a leaf cell
-  is deleted (its pins detach from the netdriver/netload map and `get_cell * -hier`
+  is deleted (its pins detach from the netdriver/netload map and `get_cells * -hier`
   runs cleanly afterwards — no gap crash from the index-iterated loops) and a
   net is deleted (every attached pin becomes `<unconnected>` and `all_connected`
   reports no net). Deleted instances are tombstoned (`<deleted>`) rather than
@@ -292,26 +292,26 @@ queries), the following report connectivity. Patterns are globs
   traced. Requires `build_net_conn` (P2) and `add_lib` (L2).
 - `all_connected <net or pin>` — for a net, report that net with its driver and
   receiver pins; for an `inst/pin`, report that pin's net. The match is scoped
-  like `get_net` (no `-hier`): a bare name (e.g. `all_connected n77`) reports
+  like `get_nets` (no `-hier`): a bare name (e.g. `all_connected n77`) reports
   only the top-level net `n77`, not same-named nets reused in submodules; a
   hierarchical reference (e.g. `all_connected core0/w0/n77`) reports only that
   scope's net. If the net is not in that hierarchy, nothing is found.
-- `get_cell <pattern> ?-hier?` — list cells (leaf and hierarchical) whose
+- `get_cells <pattern> ?-hier?` — list cells (leaf and hierarchical) whose
   full instance path matches. Without `-hier` only the direct children of
-  the scope implied by the pattern are reported (`get_cell *` = top level
-  only); `-hier` matches across the whole hierarchy. Like `get_lib_cell`, it is
+  the scope implied by the pattern are reported (`get_cells *` = top level
+  only); `-hier` matches across the whole hierarchy. Like `get_lib_cells`, it is
   a getter: it prints just the matching instance path (with a `hierarchical`
   marker for hierarchical instances) per line plus a match count; per-cell
   detail lives in `report_cell`.
-- `get_net <pattern> ?-hier?` — list nets whose scoped name matches. Without
+- `get_nets <pattern> ?-hier?` — list nets whose scoped name matches. Without
   `-hier` only the nets of the single scope implied by the pattern are
-  reported (`get_net *` = top-level nets only, `get_net core0/w0/nv_c0/c0/*`
+  reported (`get_nets *` = top-level nets only, `get_nets core0/w0/nv_c0/c0/*`
   = nets in that module); `-hier` matches across the whole hierarchy. Like
-  `get_cell`/`get_lib_cell`, it is a getter: it prints just the matching net
+  `get_cells`/`get_lib_cells`, it is a getter: it prints just the matching net
   name per line plus a match count; driver/receiver detail lives in
   `report_net`.
-- `get_lib_cell <refname>` — list library-cell references whose name matches
-  the glob (`get_lib_cell BUFF*`, `get_lib_cell *DFF*`, or an exact name).
+- `get_lib_cells <refname>` — list library-cell references whose name matches
+  the glob (`get_lib_cells BUFF*`, `get_lib_cells *DFF*`, or an exact name).
   Reports each cell's class, LEF width x height and pin list with directions.
   Unlike the commands above this queries the loaded library, not the netlist,
   so it works as soon as a LEF is imported and needs no `build_design`.
@@ -332,12 +332,12 @@ After `build_design`, `report_design` prints a one-screen summary of the loaded
 ## ECO commands
 
 After `build_net_conn` (P2), the following mutate the design's net connectivity
-in memory. Net and instance paths are scoped the same way as `get_net`/
-`get_cell`: the trailing token is the net/instance name and the prefix is the
+in memory. Net and instance paths are scoped the same way as `get_nets`/
+`get_cells`: the trailing token is the net/instance name and the prefix is the
 containing hierarchical scope; a bare name targets the top level.
 
 - `create_net <netname>` — register a new (empty) net in a scope; the net is
-  then visible to `get_net`/`all_connected` and can receive pins via
+  then visible to `get_nets`/`all_connected` and can receive pins via
   `connect_net`.
 - `create_cell <inst_path> <celltype>` — instantiate a library cell in a scope;
   the new instance's pins start unconnected and can be wired with
@@ -392,8 +392,8 @@ After `set_top_design`, the design's netlist can be dumped back out:
   a versioned text Tcl-list database (`# version 2`) ending in a `C <sum>`
   checksum line (N4); a truncated or hand-edited file is rejected by `restore_db`.
 - `restore_db <file>` — reload a database written by `write_db`. Restores all
-  variables so the session is ready immediately: `get_cell` / `get_net` /
-  `all_connected` / `get_lib_cell` and the placement / library data are all
+  variables so the session is ready immediately: `get_cells` / `get_nets` /
+  `all_connected` / `get_lib_cells` and the placement / library data are all
   available without `read_netlist`, `set_top_design`, `build_design` or
   `build_net_conn` (verified query-identical in test8_db). It validates the
   trailing checksum (N4): a missing checksum (truncated file) or a mismatch

@@ -75,11 +75,11 @@ fix_max_fanout -cell BUFFD1
 # After: alu_result now has 2 receivers (the 2 buffer inputs), each <= maxfanout.
 report_net alu_result
 # The new buffer nets exist and each has at most maxfanout receivers.
-get_net alu_result_b*
+get_nets alu_result_b*
 report_net alu_result_b1
 report_net alu_result_b2
-# The inserted buffer instances are visible to get_cell.
-get_cell alu_result___*
+# The inserted buffer instances are visible to get_cells.
+get_cells alu_result___*
 
 # Non-regression check for hier_placement (hierarchy-aware placer): the
 # medium design has 3 hierarchy clusters (rf, ctrl, alu). Re-unplace and run

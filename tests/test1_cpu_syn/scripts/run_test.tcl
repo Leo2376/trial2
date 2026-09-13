@@ -16,8 +16,8 @@ set_top_design cpucore5nvstrb_nl2
 build_design
 # build_net_conn before build_design.
 build_net_conn
-# get_cell before build_design.
-get_cell *
+# get_cells before build_design.
+get_cells *
 
 # Load LEF libraries
 puts "Loading LEF libraries..."
@@ -123,48 +123,48 @@ if { $_mt_on == 0 } {
 }
 
 puts "=========================================="
-puts "get_lib_cell non-reg checks"
+puts "get_lib_cells non-reg checks"
 puts "=========================================="
 
-# get_lib_cell queries the loaded library (cataloglist), not the netlist, so
+# get_lib_cells queries the loaded library (cataloglist), not the netlist, so
 # it works once a LEF is imported. Exact name, prefix wildcard and substring
 # wildcard are all supported. It also RETURNS the list (collection) of matching
-# cell names, so callers can capture it: set cells [get_lib_cell SP*].
-get_lib_cell BUFFD10
-get_lib_cell BUFF*
-get_lib_cell *DFF*
+# cell names, so callers can capture it: set cells [get_lib_cells SP*].
+get_lib_cells BUFFD10
+get_lib_cells BUFF*
+get_lib_cells *DFF*
 # Return-value check: the 4 SRAM macros loaded from sram.lef match SP*.
-set _sp_cells [get_lib_cell SP*]
+set _sp_cells [get_lib_cells SP*]
 if { [llength $_sp_cells] == 4 && [lsort $_sp_cells] eq [lsort {SP128X33M2 SP128X33M4 SP512X40M2 SP512X40M4}] } {
-  puts "PASS: get_lib_cell SP* returns collection of 4 SRAM macros: $_sp_cells"
+  puts "PASS: get_lib_cells SP* returns collection of 4 SRAM macros: $_sp_cells"
 } else {
-  puts "FAIL: get_lib_cell SP* expected 4 SRAM macros, got $_sp_cells"
+  puts "FAIL: get_lib_cells SP* expected 4 SRAM macros, got $_sp_cells"
 }
 
 puts "=========================================="
-puts "get_cell / all_connected non-reg checks"
+puts "get_cells / all_connected non-reg checks"
 puts "=========================================="
 
-# get_cell without -hier stays within one scope (direct children only):
+# get_cells without -hier stays within one scope (direct children only):
 #   *             -> top-level instances only (197)
 #   <scope>/*     -> direct children of <scope> only
-# get_cell -hier matches across the whole hierarchy (legacy behaviour).
-get_cell *
-get_cell * -hier
-get_cell core0/w0/nv_c0/c0/*
-get_cell core0/w0/nv_c0/c0/iu0/*
+# get_cells -hier matches across the whole hierarchy (legacy behaviour).
+get_cells *
+get_cells * -hier
+get_cells core0/w0/nv_c0/c0/*
+get_cells core0/w0/nv_c0/c0/iu0/*
 
-# get_net mirrors get_cell's scope semantics but for nets. Without -hier it
+# get_nets mirrors get_cells's scope semantics but for nets. Without -hier it
 # reports only the nets of the single scope implied by the pattern; with
-# -hier it matches across the whole hierarchy. get_net now reports just the
-# net name per match (a getter, like get_cell/get_lib_cell); the driver /
+# -hier it matches across the whole hierarchy. get_nets now reports just the
+# net name per match (a getter, like get_cells/get_lib_cells); the driver /
 # receiver detail lives in report_net. Expect a single net for the exact
 # reference (use report_net to see driver U28571/ZN).
-get_net *
-get_net * -hier
-get_net core0/w0/nv_c0/c0/*
-get_net core0/w0/nv_c0/c0/iu0/*
-get_net core0/w0/nv_c0/c0/iu0/n20719
+get_nets *
+get_nets * -hier
+get_nets core0/w0/nv_c0/c0/*
+get_nets core0/w0/nv_c0/c0/iu0/*
+get_nets core0/w0/nv_c0/c0/iu0/n20719
 
 # all_connected on a full hierarchical net reports only that scope's net,
 # not same-named nets reused in sibling submodules. Expect a single driver:
@@ -177,7 +177,7 @@ all_connected core0/w0/nv_c0/c0/iu0/n20719
 # driver: nv_entropy_valid (port), receiver: core0/nv_entropy_valid.
 all_connected nv_entropy_valid
 
-# all_connected is scoped like get_net (no -hier): a bare name matches only the
+# all_connected is scoped like get_nets (no -hier): a bare name matches only the
 # top-level net, not same-named nets reused in submodules. all_connected n77
 # must report a single top-level net n77 (driver U18/Z), not the 38 cross-scope
 # n77 nets. A hierarchical reference scopes to that module.
@@ -187,7 +187,7 @@ puts "=========================================="
 puts "report_net / report_pin non-reg checks (G4)"
 puts "=========================================="
 # report_net reports a single scoped net: drivers, receivers and the full
-# connected-pin list. It is scoped like get_net/all_connected (no -hier), so a
+# connected-pin list. It is scoped like get_nets/all_connected (no -hier), so a
 # full hierarchical reference reports only that scope's net.
 #   core0/w0/nv_c0/c0/iu0/n20719 has a single driver U28571/ZN and one receiver
 #   U28630/A1 (must NOT collapse same-named nets from sibling scopes).
@@ -195,7 +195,7 @@ report_net core0/w0/nv_c0/c0/iu0/n20719
 # A top input-port net: driver is the port, receiver is the core0 input pin.
 # Bus-concatenation pins must not misalign the parser.
 report_net nv_entropy_valid
-# report_net is scoped like get_net (no -hier): a bare name matches only the
+# report_net is scoped like get_nets (no -hier): a bare name matches only the
 # top-level net, not same-named nets reused in submodules.
 report_net n77
 report_net core0/w0/nv_c0/c0/bht0/n77
@@ -218,7 +218,7 @@ puts "=========================================="
 
 # E1-E4 ECO flow: create a new net, create a buffer in the same scope, move a
 # receiver from an existing net to the new net through the buffer, then verify
-# with get_net/all_connected. Uses net core0/w0/nv_c0/c0/iu0/n20719 which has a
+# with get_nets/all_connected. Uses net core0/w0/nv_c0/c0/iu0/n20719 which has a
 # single driver U28571/ZN and one receiver U28630/A1 before the ECO.
 #
 # E1 create_net: new net n_eco in scope core0/w0/nv_c0/c0/iu0.
@@ -241,8 +241,8 @@ all_connected core0/w0/nv_c0/c0/iu0/n20719
 # Verify: new net now has driver u_eco_buf/Z and receiver U28630/A1.
 all_connected core0/w0/nv_c0/c0/iu0/n_eco
 # Verify: the new net and cell are visible to the query commands.
-get_net core0/w0/nv_c0/c0/iu0/n_eco
-get_cell core0/w0/nv_c0/c0/iu0/u_*
+get_nets core0/w0/nv_c0/c0/iu0/n_eco
+get_cells core0/w0/nv_c0/c0/iu0/u_*
 
 puts "=========================================="
 puts "gui_start non-reg checks (G1/GUI)"
@@ -252,7 +252,7 @@ puts "=========================================="
 # (print an Error and Info line) and the session must continue normally after.
 gui_start
 # Confirm the session is unaffected: a normal query still runs.
-get_cell *
+get_cells *
 
 set hier_dontshow { SNPS_CLOCK grnand2_tech68_ }
 report_hierarchy_tree

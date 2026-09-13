@@ -81,8 +81,8 @@ if {[_has $hr "-limit"] && [_has $hr "-max_depth"]} {
 }
 # help *cell* lists the cell commands.
 set hc [_capture_stdout {help *cell*}]
-if {[_has $hc "get_cell"] && [_has $hc "delete_cell"] && [_has $hc "get_lib_cell"]} {
-  puts "PASS: help *cell* lists get_cell / delete_cell / get_lib_cell"
+if {[_has $hc "get_cells"] && [_has $hc "delete_cell"] && [_has $hc "get_lib_cells"]} {
+  puts "PASS: help *cell* lists get_cells / delete_cell / get_lib_cells"
 } else {
   puts "FAIL: help *cell* missing expected cell commands"
 }
@@ -101,8 +101,8 @@ puts "=========================================="
 puts "E5 delete_cell / delete_net non-reg checks"
 puts "=========================================="
 # Create a buffer, wire it into hi_net (as an extra load via its input), then
-# delete the cell. The net must lose the connection; get_cell must not list
-# the deleted cell; the session must not crash on a later get_cell *.
+# delete the cell. The net must lose the connection; get_cells must not list
+# the deleted cell; the session must not crash on a later get_cells *.
 create_net hi2
 create_cell u_e5del BUFFD1
 connect_net hi2 u_e5del/Z
@@ -115,33 +115,33 @@ if {[_has $ac "u_e5del/Z"]} {
   puts "FAIL: before delete, hi2 should have driver u_e5del/Z"
 }
 delete_cell u_e5del
-# After delete: hi2 has no driver; get_cell * must not list u_e5del.
+# After delete: hi2 has no driver; get_cells * must not list u_e5del.
 set ac2 [_capture_stdout {all_connected hi2}]
 if {[_has $ac2 "drivers : (none)"]} {
   puts "PASS: after delete_cell, hi2 has no driver"
 } else {
   puts "FAIL: after delete_cell, hi2 should have no driver"
 }
-set gc [_capture_stdout {get_cell u_*}]
+set gc [_capture_stdout {get_cells u_*}]
 if {! [_has $gc "u_e5del"]} {
-  puts "PASS: after delete_cell, get_cell u_* does not list the deleted cell"
+  puts "PASS: after delete_cell, get_cells u_* does not list the deleted cell"
 } else {
-  puts "FAIL: get_cell u_* still lists the deleted cell u_e5del"
+  puts "FAIL: get_cells u_* still lists the deleted cell u_e5del"
 }
 # The whole-instance scan must not crash (the <deleted> slot is skipped).
-if {![catch {get_cell * -hier} err]} {
-  puts "PASS: get_cell * -hier runs cleanly after a delete_cell (no gap crash)"
+if {![catch {get_cells * -hier} err]} {
+  puts "PASS: get_cells * -hier runs cleanly after a delete_cell (no gap crash)"
 } else {
-  puts "FAIL: get_cell * -hier crashed after delete_cell: $err"
+  puts "FAIL: get_cells * -hier crashed after delete_cell: $err"
 }
 
-# delete_net: remove hi2 entirely; it must vanish from get_net/all_connected.
+# delete_net: remove hi2 entirely; it must vanish from get_nets/all_connected.
 delete_net hi2
-set gn [_capture_stdout {get_net hi2}]
+set gn [_capture_stdout {get_nets hi2}]
 if {! [_has $gn "hi2"]} {
-  puts "PASS: after delete_net, get_net hi2 finds nothing"
+  puts "PASS: after delete_net, get_nets hi2 finds nothing"
 } else {
-  puts "FAIL: after delete_net, get_net hi2 still finds the net"
+  puts "FAIL: after delete_net, get_nets hi2 still finds the net"
 }
 set ac3 [_capture_stdout {all_connected hi2}]
 if {[_has $ac3 "No net matches"]} {

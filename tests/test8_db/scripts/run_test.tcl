@@ -3,7 +3,7 @@
 # Based on test3 (medium_design.v): loads the design fully (read_netlist ->
 # set_top_design -> build_design -> build_net_conn), runs write_db, then in a
 # fresh tclsh session runs restore_db and checks that every query command
-# (get_cell, get_net, all_connected, report_net, report_pin, get_lib_cell)
+# (get_cells, get_nets, all_connected, report_net, report_pin, get_lib_cells)
 # returns identical results to the original session. The saved file must
 # contain 100% of the database (instances, wires, positions, the net
 # connectivity map, LEF library, ports, assigns) so restore_db is a strict
@@ -47,15 +47,15 @@ puts $qf {proc _emit {cmd} { global _qf _puts_orig; set rc [catch {uplevel 1 $cm
 puts $qf {proc _emit_ret {cmd} { global _qf _puts_orig; set rc [catch {uplevel 1 $cmd} res]; if {$rc} { _puts_orig $_qf $res } else { _puts_orig $_qf $res } }}
 puts $qf {set sep ===========================================================}
 foreach q {
-  {get_cell *}
-  {get_cell * -hier}
-  {get_net *}
-  {get_net * -hier}
+  {get_cells *}
+  {get_cells * -hier}
+  {get_nets *}
+  {get_nets * -hier}
   {all_connected alu_result}
   {report_net alu_result}
   {report_pin alu/and0/Z}
   {report_pin alu/result}
-  {get_lib_cell AN2*}
+  {get_lib_cells AN2*}
 } {
   puts $qf "_puts_orig \$_qf \$sep"
   puts $qf "_puts_orig \$_qf {CMD: $q}"
@@ -113,7 +113,7 @@ set d2 [read $f2]
 close $f2
 if { $d1 eq $d2 } {
   puts "PASS : restore_db reproduces full-build query output"
-  puts "       (get_cell/get_net/all_connected/report_net/report_pin/get_lib_cell)"
+  puts "       (get_cells/get_nets/all_connected/report_net/report_pin/get_lib_cells)"
 } else {
   puts "FAIL : restored query output differs from full-build output"
   puts "  session 1: /tmp/test8_q1.out"

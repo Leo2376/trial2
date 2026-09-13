@@ -22,14 +22,14 @@ proc capture_stdout { script } {
 }
 
 puts "=========================================="
-puts "Test 11: bhtnv block (SRAM + std cells, seed_place)"
+puts "Test 11: bhtnv block (SRAM + std cells, seed_placement)"
 puts "=========================================="
 puts ""
 
 # Lighter testcase extracted from cpu_syn.v: the bhtnv_h_832_242_406 block
 # (branch-prediction history table) plus the modules it instantiates. It has
 # one SRAM macro (DP128X64M4 at phtable/x0_id0) and a few thousand std cells,
-# so it exercises seed_place at a realistic size without the full 100k+
+# so it exercises seed_placement at a realistic size without the full 100k+
 # design read time.
 
 add_lef ../../../lef_files/std_cell.lef
@@ -55,15 +55,15 @@ set_site_height 0.3
 unplace_stdcell
 set targetutilz 35
 
-# Build connectivity so seed_place can score trials by total wire length.
+# Build connectivity so seed_placement can score trials by total wire length.
 update_wire_db
 build_net_conn
 
-# --- seed_place single-threaded (1 random seed) ---
+# --- seed_placement single-threaded (1 random seed) ---
 set t0 [clock milliseconds]
-seed_place
+seed_placement
 set t1 [clock milliseconds]
-puts "Info : test11 seed_place (serial, 1 random seed) took [expr {$t1-$t0}] ms"
+puts "Info : test11 seed_placement (serial, 1 random seed) took [expr {$t1-$t0}] ms"
 
 # Verify every CORE cell is placed, inside the core, and clear of blockages.
 global _instlist _libcell blockageindex _blockagelist corebox regionindex _regionlist
@@ -98,9 +98,9 @@ for { set i 1 } { $i <= $instindex } { incr i } {
   }
 }
 if { $nplaced == $ncore && $nover == 0 && $nout == 0 } {
-  puts "PASS: seed_place placed all $nplaced/$ncore CORE cells, $nover blockage hits, $nout out-of-core (serial)"
+  puts "PASS: seed_placement placed all $nplaced/$ncore CORE cells, $nover blockage hits, $nout out-of-core (serial)"
 } else {
-  puts "FAIL: seed_place placed $nplaced/$ncore CORE cells, $nover blockage hits, $nout out-of-core (serial)"
+  puts "FAIL: seed_placement placed $nplaced/$ncore CORE cells, $nover blockage hits, $nout out-of-core (serial)"
 }
 
 # --- report_area_stats -wire : multithread vs single-thread agreement ---
@@ -136,16 +136,16 @@ if { [format "%.4g" $total_mt] eq [format "%.4g" $total_st] && $unknown_mt == $u
 # Turn MT back on for the rest of the test.
 set_multithread_on 8
 
-# --- seed_place multithread: several random seeds, judged by wire length ---
+# --- seed_placement multithread: several random seeds, judged by wire length ---
 # MT runs N (=worker count) random-seed trials in parallel, scores each by
-# total wire length, and commits the best. This is the seed_place counterpart
+# total wire length, and commits the best. This is the seed_placement counterpart
 # of hier_placement's multi-seed trials.
 unplace_stdcell
 set_multithread_on 8
 set t2 [clock milliseconds]
-seed_place
+seed_placement
 set t3 [clock milliseconds]
-puts "Info : test11 seed_place (MT 8 random seeds) took [expr {$t3-$t2}] ms"
+puts "Info : test11 seed_placement (MT 8 random seeds) took [expr {$t3-$t2}] ms"
 
 # re-verify after the MT placement.
 set ncore 0
@@ -168,20 +168,20 @@ for { set i 1 } { $i <= $instindex } { incr i } {
   }
 }
 if { $nplaced == $ncore && $nover == 0 && $nout == 0 } {
-  puts "PASS: seed_place placed all $nplaced/$ncore CORE cells, $nover blockage hits, $nout out-of-core (MT)"
+  puts "PASS: seed_placement placed all $nplaced/$ncore CORE cells, $nover blockage hits, $nout out-of-core (MT)"
 } else {
-  puts "FAIL: seed_place placed $nplaced/$ncore CORE cells, $nover blockage hits, $nout out-of-core (MT)"
+  puts "FAIL: seed_placement placed $nplaced/$ncore CORE cells, $nover blockage hits, $nout out-of-core (MT)"
 }
 
-# --- seed_place -iter n: multi-round best-across-rounds MT search ---
+# --- seed_placement -iter n: multi-round best-across-rounds MT search ---
 # Each iteration generates a fresh set of random seeds, scores them, and
 # keeps the best across all rounds so far. More rounds give the search more
 # chances to find a lower-wire-length layout.
 unplace_stdcell
 set ti0 [clock milliseconds]
-seed_place -iter 3
+seed_placement -iter 3
 set ti1 [clock milliseconds]
-puts "Info : test11 seed_place -iter 3 (MT) took [expr {$ti1-$ti0}] ms"
+puts "Info : test11 seed_placement -iter 3 (MT) took [expr {$ti1-$ti0}] ms"
 
 # verify legal after the iterated search.
 set ncore 0
@@ -204,15 +204,15 @@ for { set i 1 } { $i <= $instindex } { incr i } {
   }
 }
 if { $nplaced == $ncore && $nover == 0 && $nout == 0 } {
-  puts "PASS: seed_place -iter 3 placed all $nplaced/$ncore CORE cells, $nover blockage hits, $nout out-of-core"
+  puts "PASS: seed_placement -iter 3 placed all $nplaced/$ncore CORE cells, $nover blockage hits, $nout out-of-core"
 } else {
-  puts "FAIL: seed_place -iter 3 placed $nplaced/$ncore CORE cells, $nover blockage hits, $nout out-of-core"
+  puts "FAIL: seed_placement -iter 3 placed $nplaced/$ncore CORE cells, $nover blockage hits, $nout out-of-core"
 }
 
-# --- seed_place determinism: same seed must reproduce identical coordinates ---
+# --- seed_placement determinism: same seed must reproduce identical coordinates ---
 unplace_stdcell
 set_multithread_off
-seed_place -seed 1234
+seed_placement -seed 1234
 array set sp_coords1 {}
 for { set i 1 } { $i <= $instindex } { incr i } {
   set inst $_instlist($i)
@@ -220,7 +220,7 @@ for { set i 1 } { $i <= $instindex } { incr i } {
   set sp_coords1($i) [list [lindex $inst 5] [lindex $inst 6]]
 }
 unplace_stdcell
-seed_place -seed 1234
+seed_placement -seed 1234
 set ndiff 0
 for { set i 1 } { $i <= $instindex } { incr i } {
   set inst $_instlist($i)
@@ -230,14 +230,14 @@ for { set i 1 } { $i <= $instindex } { incr i } {
   if { $c ne $sp_coords1($i) } { incr ndiff }
 }
 if { $ndiff == 0 } {
-  puts "PASS: seed_place is deterministic for seed 1234"
+  puts "PASS: seed_placement is deterministic for seed 1234"
 } else {
-  puts "FAIL: seed_place produced $ndiff differing cells on the same seed"
+  puts "FAIL: seed_placement produced $ndiff differing cells on the same seed"
 }
 
 # a different seed should (generally) produce a different layout.
 unplace_stdcell
-seed_place -seed 777
+seed_placement -seed 777
 set ndiff 0
 for { set i 1 } { $i <= $instindex } { incr i } {
   set inst $_instlist($i)
@@ -247,13 +247,13 @@ for { set i 1 } { $i <= $instindex } { incr i } {
   if { $c ne $sp_coords1($i) } { incr ndiff }
 }
 if { $ndiff > 0 } {
-  puts "PASS: seed_place seed 777 differs from seed 1234 ($ndiff cells moved)"
+  puts "PASS: seed_placement seed 777 differs from seed 1234 ($ndiff cells moved)"
 } else {
-  puts "FAIL: seed_place seed 777 is identical to seed 1234"
+  puts "FAIL: seed_placement seed 777 is identical to seed 1234"
 }
 
 # --- placeOpt: iterative wire-length optimizer on the placed layout ---
-# Runs after seed_place so the optimizer starts from a legal placement and
+# Runs after seed_placement so the optimizer starts from a legal placement and
 # reduces total wire length by moving the cells of the longest nets toward
 # their centroid. Default 3 iterations; verify the placement stays legal
 # (no blockage hits, no out-of-core) afterward.

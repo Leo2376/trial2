@@ -33,7 +33,7 @@ gui_start
 if { ! $_gui_mode } {
   puts "Info : headless mode - gui_start did not start the GUI (expected)"
   # Confirm the session is unaffected: a normal query still runs.
-  set rc [catch { get_cell * } msg]
+  set rc [catch { get_cells * } msg]
   if { $rc } {
     puts "FAIL: session broken after headless gui_start: $msg"
     set pass 0
