@@ -128,8 +128,14 @@ foreach line [split $out_st "\n"] {
   if { [regexp {total estimated wire length ([^ ]+)} $line -> t] } { set total_st $t }
   if { [regexp {unknown/unestimable nets ([0-9]+)} $line -> u] } { set unknown_st $u }
 }
-if { [format "%.4g" $total_mt] eq [format "%.4g" $total_st] && $unknown_mt == $unknown_st } {
-  puts "PASS: report_area_stats -wire MT total $total_mt == serial $total_st, unknown $unknown_mt == $unknown_st"
+# MT and serial sum the same nets in different orders, so the totals can
+# differ by floating-point rounding at the last digits; compare with a
+# small relative tolerance instead of exact string equality.
+set _mt [expr {double($total_mt)}]
+set _st [expr {double($total_st)}]
+set _rel [expr {($_mt == 0 && $_st == 0) ? 0.0 : abs($_mt - $_st) / (abs($_mt) > abs($_st) ? abs($_mt) : abs($_st))}]
+if { $_rel <= 0.001 && $unknown_mt == $unknown_st } {
+  puts "PASS: report_area_stats -wire MT total $total_mt ~= serial $total_st (rel [format %.4g $_rel]), unknown $unknown_mt == $unknown_st"
 } else {
   puts "FAIL: report_area_stats -wire MT total $total_mt vs serial $total_st, unknown $unknown_mt vs $unknown_st"
 }
