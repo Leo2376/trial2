@@ -58,6 +58,7 @@ array set _wiretype {}
 array set _wiremaster {}
 array set _wireinst {}
 array set _wirelen_cache {}
+array set _netshapes {}
 array set _instpinconn1 {}
 array set _instpinconn2 {}
 array set _hinstpinconn1 {}
@@ -4758,6 +4759,14 @@ proc report_design { } {
  } else {
   puts "  high-fanout nets       : (run build_net_conn to enable)"
  }
+
+ # Routed nets: nets with at least one shape in the _netshapes map.
+ global _netshapes
+ set nrouted 0
+ foreach k [array names _netshapes] {
+  if { [llength $_netshapes($k)] > 0 } { incr nrouted }
+ }
+ puts "  routed nets            : $nrouted"
  puts ""
 }
 
@@ -6210,6 +6219,220 @@ proc report_net_wirelen { net } {
  return $v
 }
 
+# RT1/RT2 wire shape model.
+# Each net may carry an ordered list of shape records describing its physical
+# geometry. Two shape kinds exist:
+#   path {path <layer> {x1 y1} {x2 y2}}  - a single segment on one metal layer.
+#                                          Layer is one of m2..m8.
+#   via  {via <viatype> {x y}}           - a stacked via at a point. Via type is
+#                                          one of via23..via78 (each joins two
+#                                          consecutive metal layers).
+# All path widths are the fixed constant 0.1 (stored once, not per shape). The
+# shapes are stored per scoped net key (same key as netdriver/netload), in the
+# global array _netshapes. They are the foundation for the Manhattan router.
+# Requires build_net_conn (P2) so the net key resolves the same way.
+set _shape_width 0.1
+set _shape_path_layers {m2 m3 m4 m5 m6 m7 m8}
+set _shape_via_types  {via23 via34 via45 via56 via67 via78}
+
+# Helper: resolve a net argument to its scoped net key, reusing the same scope
+# rule as report_net/get_nets. Returns the key or "".
+proc _shape_net_resolve { net } {
+ global _netshapes netdriver netload
+ if { [info exists _netshapes($net)] } { return $net }
+ if { [info exists netdriver($net)] || [info exists netload($net)] } { return $net }
+ return [_report_net_resolve $net]
+}
+
+# RT2 add_shape <net> path <layer> <x1> <y1> <x2> <y2>
+#      add_shape <net> via <viatype> <x> <y>
+# Append a shape to a net's ordered shape list. The net must exist (a declared
+# net or one created by create_net). Layer/via types are validated against the
+# fixed sets; coordinates are validated as numbers. Returns nothing; the shape
+# is appended in order.
+proc add_shape { net kind args } {
+ global _netshapes netdriver netload netconnbuilt
+ variable _shape_width
+ variable _shape_path_layers
+ variable _shape_via_types
+
+ _require 2
+ if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
+  puts "Error : build_net_conn must run before add_shape"
+  return
+ }
+ if { $net eq "" } {
+  puts "Error : add_shape requires a net name"
+  puts "Usage: add_shape <net> path <layer> <x1> <y1> <x2> <y2>"
+  puts "       add_shape <net> via <viatype> <x> <y>"
+  return
+ }
+ set key [_shape_net_resolve $net]
+ if { $key eq "" } {
+  puts "Error : net $net not found"
+  return
+ }
+ if { $kind eq "path" } {
+  if { [llength $args] != 5 } {
+   puts "Error : add_shape path needs <layer> <x1> <y1> <x2> <y2>"
+   puts "Usage: add_shape <net> path <layer> <x1> <y1> <x2> <y2>"
+   return
+  }
+  lassign $args layer x1 y1 x2 y2
+  if { [lsearch -exact $_shape_path_layers $layer] < 0 } {
+   puts "Error : unknown path layer '$layer' (valid: [join $_shape_path_layers { }])"
+   return
+  }
+  foreach c [list $x1 $y1 $x2 $y2] {
+   if { ! [string is double -strict $c] } {
+    puts "Error : path coordinates must be numbers (got '$c')"
+    return
+   }
+  }
+  set rec [list path $layer [list $x1 $y1] [list $x2 $y2]]
+ } elseif { $kind eq "via" } {
+  if { [llength $args] != 3 } {
+   puts "Error : add_shape via needs <viatype> <x> <y>"
+   puts "Usage: add_shape <net> via <viatype> <x> <y>"
+   return
+  }
+  lassign $args vtype x y
+  if { [lsearch -exact $_shape_via_types $vtype] < 0 } {
+   puts "Error : unknown via type '$vtype' (valid: [join $_shape_via_types { }])"
+   return
+  }
+  foreach c [list $x $y] {
+   if { ! [string is double -strict $c] } {
+    puts "Error : via coordinates must be numbers (got '$c')"
+    return
+   }
+  }
+  set rec [list via $vtype [list $x $y]]
+ } else {
+  puts "Error : add_shape kind must be 'path' or 'via' (got '$kind')"
+  puts "Usage: add_shape <net> path <layer> <x1> <y1> <x2> <y2>"
+  puts "       add_shape <net> via <viatype> <x> <y>"
+  return
+ }
+ if { ! [info exists _netshapes($key)] } { set _netshapes($key) [list] }
+ lappend _netshapes($key) $rec
+ puts "Info : added $kind shape to $key"
+}
+
+# RT2 report_shapes <net>
+# List a net's ordered shapes with type/layer/via and coordinates, plus a count.
+# Path widths are not printed (constant 0.1). Requires build_net_conn (P2).
+proc report_shapes { net } {
+ global _netshapes netconnbuilt
+
+ _require 2
+ if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
+  puts "Error : build_net_conn must run before report_shapes"
+  return
+ }
+ if { $net eq "" } {
+  puts "Error : report_shapes requires a net name"
+  puts "Usage: report_shapes <net>"
+  return
+ }
+ set key [_shape_net_resolve $net]
+ if { $key eq "" } {
+  puts "Error : net $net not found"
+  return
+ }
+ puts "************************************************************"
+ puts " report_shapes : $net"
+ puts "************************************************************"
+ set shapes {}
+ if { [info exists _netshapes($key)] } { set shapes $_netshapes($key) }
+ if { ! [llength $shapes] } {
+  puts "  (no shapes)"
+  puts ""
+  return
+ }
+ set idx 0
+ foreach s $shapes {
+  set k [lindex $s 0]
+  if { $k eq "path" } {
+   set layer [lindex $s 1]
+   lassign [lindex $s 2] x1 y1
+   lassign [lindex $s 3] x2 y2
+   puts "  \[$idx\] path $layer ($x1,$y1) ($x2,$y2)"
+  } else {
+   set vt [lindex $s 1]
+   lassign [lindex $s 2] x y
+   puts "  \[$idx\] via  $vt ($x,$y)"
+  }
+  incr idx
+ }
+ puts "  shapes: $idx"
+ puts ""
+}
+
+# RT2 clear_shapes <net>
+# Remove every shape attached to a net. The net itself is untouched. Requires
+# build_net_conn (P2).
+proc clear_shapes { net } {
+ global _netshapes netconnbuilt
+
+ _require 2
+ if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
+  puts "Error : build_net_conn must run before clear_shapes"
+  return
+ }
+ if { $net eq "" } {
+  puts "Error : clear_shapes requires a net name"
+  puts "Usage: clear_shapes <net>"
+  return
+ }
+ set key [_shape_net_resolve $net]
+ if { $key eq "" } {
+  puts "Error : net $net not found"
+  return
+ }
+ array unset _netshapes $key
+ puts "Info : cleared shapes on $key"
+}
+
+# RT2 delete_shape <net> <index>
+# Remove a single shape by 0-based index from a net's ordered list. Out-of-range
+# indices are rejected. Requires build_net_conn (P2).
+proc delete_shape { net index } {
+ global _netshapes netconnbuilt
+
+ _require 2
+ if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
+  puts "Error : build_net_conn must run before delete_shape"
+  return
+ }
+ if { $net eq "" } {
+  puts "Error : delete_shape requires a net name"
+  puts "Usage: delete_shape <net> <index>"
+  return
+ }
+ if { ! [string is integer -strict $index] } {
+  puts "Error : delete_shape index must be an integer"
+  return
+ }
+ set key [_shape_net_resolve $net]
+ if { $key eq "" } {
+  puts "Error : net $net not found"
+  return
+ }
+ if { ! [info exists _netshapes($key)] || [llength $_netshapes($key)] == 0 } {
+  puts "Error : net $key has no shapes"
+  return
+ }
+ set n [llength $_netshapes($key)]
+ if { $index < 0 || $index >= $n } {
+  puts "Error : index $index out of range (0..[expr {$n-1}])"
+  return
+ }
+ set _netshapes($key) [lreplace $_netshapes($key) $index $index]
+ if { [llength $_netshapes($key)] == 0 } { array unset _netshapes $key }
+ puts "Info : deleted shape $index from $key"
+}
+
 # E1 create_net <netname>
 # Create a new net inside a scope. The trailing token is the net name and the
 # prefix (the path before the last '/') is the containing hierarchical scope; a
@@ -6583,7 +6806,7 @@ proc delete_cell { inst_path } {
 # Requires build_net_conn (P2) to have run first. A net that still drives/loads
 # other logic should be disconnected first; this command does not re-route.
 proc delete_net { netname } {
- global netdriver netload netconnbuilt
+ global netdriver netload netconnbuilt _netshapes
  variable _instpinconn1
  variable _instpinconn2
  variable _instlist
@@ -6623,6 +6846,7 @@ proc delete_net { netname } {
  }
  array unset netdriver $key
  array unset netload $key
+ array unset _netshapes $key
  _invalidate_wirelen_cache
 
  puts "************************************************************"
@@ -6988,7 +7212,7 @@ proc write_db { filename } {
 
  set fo [open $filename w]
  puts $fo "# mylittleda db"
- puts $fo "# version 2"
+ puts $fo "# version 3"
  # A rolling checksum of the serialized body is appended as the final
  # "C <sum>" line so restore_db can detect truncation or hand-edits. It is
  # the sum of every body line's length (a cheap, deterministic integrity
@@ -7017,7 +7241,7 @@ proc write_db { filename } {
  # Arrays: emit each array as a flat list of {key value key value ...} so the
  # whole array is restored with array set. Iterate over a fixed name list so
  # the set is explicit and stable (no incidental globals leak in).
- foreach v {_libcell _libcellpindir _libsyncpin _instlist _hinstlist _blockagelist _regionlist _portlist _porttype _portmaster _wirelist _wiretype _wiremaster _wireinst _instpinconn1 _instpinconn2 _hinstpinconn1 _hinstpinconn2 _wirepinconn _bumplist wiresearch_map _wirelen_cache} {
+ foreach v {_libcell _libcellpindir _libsyncpin _instlist _hinstlist _blockagelist _regionlist _portlist _porttype _portmaster _wirelist _wiretype _wiremaster _wireinst _instpinconn1 _instpinconn2 _hinstpinconn1 _hinstpinconn2 _wirepinconn _bumplist wiresearch_map _wirelen_cache _netshapes} {
   variable $v
   set names [array names $v]
   set pairs {}
@@ -7073,14 +7297,16 @@ proc restore_db { filename } {
   return
  }
  if { ! [regexp {# version ([0-9]+)} $verline -> vdb] } { set vdb 0 }
- if { $vdb != 1 && $vdb != 2 } {
+ if { $vdb != 1 && $vdb != 2 && $vdb != 3 } {
   puts "Error : unsupported db version $vdb"
   close $fi
   return
  }
- # Version 2 appends a "C <sum>" integrity line (the sum of every body line's
+ # Version 2+ appends a "C <sum>" integrity line (the sum of every body line's
  # length). Version 1 has no checksum; we restore it but warn that integrity
  # is not checked. _db_sum accumulates the body checksum to compare at EOF.
+ # Version 3 also persists the per-net _netshapes routing geometry array; an
+ # older v1/v2 file omits it, so it stays empty after restore.
  set _db_sum 0
  set _db_chksum {}
 
@@ -7124,7 +7350,7 @@ proc restore_db { filename } {
  # Integrity check: if the db carried a checksum line, the accumulated body
  # sum must match it; a mismatch means the file was truncated or edited and
  # the restored state cannot be trusted. Version 1 has no checksum (warn).
- if { $vdb == 2 } {
+ if { $vdb == 2 || $vdb == 3 } {
   if { $_db_chksum eq "" } {
    puts "Error : db checksum missing (file truncated)"
    return
@@ -7133,7 +7359,7 @@ proc restore_db { filename } {
    puts "Error : db checksum mismatch (expected $_db_chksum, computed $_db_sum): file is truncated or corrupted"
    return
   }
-  puts "Info : db integrity verified (v2 checksum ok)"
+  puts "Info : db integrity verified (v[expr {$vdb}] checksum ok)"
  } else {
   puts "Warning : db version 1 has no integrity checksum; restore completed without verification"
  }
@@ -7519,6 +7745,7 @@ proc help { {pattern ""} } {
   "Connectivity" {get_cells get_nets get_lib_cells all_connected report_net report_pin report_net_wirelen}
   "ECO" {create_net create_cell connect_net disconnect_net delete_cell delete_net}
   "Optimization" {set_max_fanout fix_max_fanout}
+  "Routing" {add_shape report_shapes clear_shapes delete_shape}
   "Reporting" {report_design report_area_stats report_hierarchy_tree report_unplaced report_all_macro report_cell_properties}
   "Netlist I/O" {read_netlist write_verilog write_db restore_db}
   "Placement" {make_placement initial_placement hier_placement seed_placement placeOpt place_instance unplace_stdcell unplace_pad}
@@ -7549,6 +7776,10 @@ proc help { {pattern ""} } {
   delete_net "delete_net <netname>"
   set_max_fanout "set_max_fanout <n>"
   fix_max_fanout "fix_max_fanout -cell <buffer>"
+  add_shape "add_shape <net> path <layer> <x1> <y1> <x2> <y2> | via <viatype> <x> <y>"
+  report_shapes "report_shapes <net>"
+  clear_shapes "clear_shapes <net>"
+  delete_shape "delete_shape <net> <index>"
   report_design "report_design"
   report_area_stats "report_area_stats ?-wire?"
   report_hierarchy_tree "report_hierarchy_tree"

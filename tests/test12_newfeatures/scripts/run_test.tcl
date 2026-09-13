@@ -155,8 +155,8 @@ close $fp
 set hdr1 [lindex $lines 0]
 set hdr2 [lindex $lines 1]
 set last [lindex $lines [expr {[llength $lines] - 2}]]
-if {$hdr1 eq "# mylittleda db" && [regexp {# version 2} $hdr2]} {
-  puts "PASS: db has v2 header ($hdr2)"
+if {$hdr1 eq "# mylittleda db" && [regexp {# version 3} $hdr2]} {
+  puts "PASS: db has v3 header ($hdr2)"
 } else {
   puts "FAIL: db header unexpected: '$hdr1' / '$hdr2'"
 }
@@ -174,8 +174,8 @@ puts $s_r "puts \"CHK top=\$topname insts=\$instindex\""
 puts $s_r "exit"
 close $s_r
 set rout [exec tclsh8.6 /tmp/test12_restore.tcl 2>@1]
-if {[string first "db integrity verified (v2 checksum ok)" $rout] >= 0 && [string first "CHK top=feat_top insts=5" $rout] >= 0} {
-  puts "PASS: restore_db verifies v2 checksum and restores top=feat_top insts=5"
+if {[string first "db integrity verified (v3 checksum ok)" $rout] >= 0 && [string first "CHK top=feat_top insts=5" $rout] >= 0} {
+  puts "PASS: restore_db verifies v3 checksum and restores top=feat_top insts=5"
 } else {
   puts "FAIL: restore_db output unexpected: $rout"
 }

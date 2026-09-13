@@ -220,6 +220,22 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | instance counts, library cells, nets, top ports, assigns, placement %,    |            |
 |     |             | unplaced count, and high-fanout net count when `build_net_conn` ran).      |            |
 |     |             | Requires `build_design`.                                                   |            |
+| RT1 | Routing     | Per-net wire shape model: an ordered list of `path`/`via` shape records   | implemented |
+|     |             | attached to each net (stored in `_netshapes`), keyed by the same scoped     |            |
+|     |             | net key as `netdriver`/`netload`. A `path` is `{path <layer> {x1 y1} {x2    |            |
+|     |             | y2}}` on one of m2..m8 (width is the fixed constant 0.1); a `via` is        |            |
+|     |             | `{via <viatype> {x y}}` with type one of via23..via78. The foundation for   |            |
+|     |             | the Manhattan router.                                                        |            |
+| RT2 | Routing     | Manual shape commands: `add_shape <net> path <layer> ...` / `... via ...`,  | implemented |
+|     |             | `report_shapes <net>`, `clear_shapes <net>`, `delete_shape <net> <index>`. |            |
+|     |             | Layer/via types and coordinates are validated; requires `build_net_conn`. |            |
+| RT3 | Routing     | Persist the `_netshapes` map in `write_db`/`restore_db` (db version bumped  | implemented |
+|     |             | to 3 with the array line; v1/v2 files restore with empty shapes).           |            |
+|     |             | `delete_net` (E5) also drops a net's shapes; `report_design` reports a    |            |
+|     |             | `routed nets` line (nets with >=1 shape).                                   |            |
+| RT4 | Routing     | Manhattan router: `route_net <net>` / `route_all` build L-shaped paths     | proposal   |
+|     |             | (horizontal on m2, vertical on m3, `via23` at the bend, width 0.1) from a   |            |
+|     |             | placed driver pin to each placed receiver, emitting shapes into RT1.       |            |
 
 Notes:
 - P1 enables P2, which enables P3. S1 also produces the indexed net map P3
@@ -277,6 +293,12 @@ Notes:
   commands grouped by area (including the new ECO area with `delete_cell`/
   `delete_net`), and `help <glob>` lists matching commands with a one-line
   usage.
+- RT1-RT3 (wire shape model) are verified in test16_shapes: an L-shaped route
+  (m2 path + via23 + m3 path) is built with `add_shape`, `report_shapes` reports
+  the 3 shapes, `delete_shape`/`clear_shapes` mutate the list, `write_db`
+  (v3) persists `_netshapes` and `restore_db` recovers the shapes in a fresh
+  session, a v2 db (no `_netshapes`) restores with empty shapes, `delete_net`
+  drops a net's shapes, and `report_design` reports the `routed nets` count.
 
 ## Connectivity query commands
 
@@ -347,7 +369,42 @@ After `build_design`, `report_design` prints a one-screen summary of the loaded
   placement progress (placed / total + %), unplaced count, and (when
   `build_net_conn` has run) high-fanout net count above the `maxfanout`
   threshold. Requires `build_design`; the high-fanout line additionally
-  requires `build_net_conn`.
+  requires `build_net_conn`. `report_design` also prints a `routed nets` line
+  (RT1): the number of nets that carry at least one shape in the `_netshapes`
+  map.
+
+## Routing shape model
+
+After `build_net_conn` (P2), each net may carry an ordered list of physical
+shape records describing its geometry, stored in the `_netshapes` array keyed
+by the same scoped net key as `netdriver`/`netload`. Two shape kinds exist:
+
+- `path` — `{path <layer> {x1 y1} {x2 y2}}`: a single segment on one metal
+  layer. `<layer>` is one of `m2 m3 m4 m5 m6 m7 m8`. All path widths are the fixed
+  constant `0.1`.
+- `via` — `{via <viatype> {x y}}`: a stacked via at a point. `<viatype>` is one
+  of `via23 via34 via45 via56 via67 via78` (each joins two consecutive metal
+  layers, e.g. `via23` connects m2 and m3).
+
+Net and shape paths are scoped the same way as `get_nets`/`report_net`: the
+trailing token is the net name and the prefix is the containing hierarchical
+scope; a bare name targets the top level. These are the manual building blocks
+the future Manhattan router (RT4) will emit automatically.
+
+- `add_shape <net> path <layer> <x1> <y1> <x2> <y2>` — append a path shape; the
+  layer must be one of m2..m8 and the coordinates must be numbers.
+- `add_shape <net> via <viatype> <x> <y>` — append a via shape; the type must be
+  one of via23..via78.
+- `report_shapes <net>` — list the net's ordered shapes with type/layer (or
+  via type) and coordinates, plus a shape count.
+- `clear_shapes <net>` — remove every shape from a net (the net itself is
+  untouched; once empty its `_netshapes` entry is dropped).
+- `delete_shape <net> <index>` — remove a single shape by 0-based index;
+  out-of-range indices are rejected.
+
+The shapes are saved and restored by `write_db`/`restore_db` (db version 3,
+RT3); a v1/v2 db (no `_netshapes` line) restores with empty shapes.
+`delete_net` (E5) also drops a net's shapes.
 
 ## ECO commands
 
@@ -407,10 +464,12 @@ After `set_top_design`, the design's netlist can be dumped back out:
   (verified byte-identical in test7_roundtrip).
 - `write_db <file>` — dump the full in-memory database to a file: every scalar,
   list and array variable holding design state (instances, wires, placement,
-  the net connectivity map, the loaded LEF library, ports, assigns) so the
-  whole database can be reloaded faster than re-parsing the netlist. The file is
-  a versioned text Tcl-list database (`# version 2`) ending in a `C <sum>`
-  checksum line (N4); a truncated or hand-edited file is rejected by `restore_db`.
+  the net connectivity map, the loaded LEF library, ports, assigns, and the
+  per-net `_netshapes` routing geometry) so the whole database can be reloaded
+  faster than re-parsing the netlist. The file is a versioned text Tcl-list
+  database (`# version 3`; v2 omitted `_netshapes`, v1 had no checksum) ending in
+  a `C <sum>` checksum line (N4); a truncated or hand-edited file is rejected by
+  `restore_db`.
 - `restore_db <file>` — reload a database written by `write_db`. Restores all
   variables so the session is ready immediately: `get_cells` / `get_nets` /
   `all_connected` / `get_lib_cells` and the placement / library data are all
@@ -418,7 +477,8 @@ After `set_top_design`, the design's netlist can be dumped back out:
   `build_net_conn` (verified query-identical in test8_db). It validates the
   trailing checksum (N4): a missing checksum (truncated file) or a mismatch
   (corrupted/edited body) is reported as an `Error` and the restore aborts; a
-  v1 file (no checksum) still restores with a `Warning`.
+  v1 file (no checksum) still restores with a `Warning`. A v2 db (no
+  `_netshapes` line) restores with empty shapes (RT3).
 
 ## Help command
 
