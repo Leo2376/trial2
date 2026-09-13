@@ -193,6 +193,16 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | test14_seed_expand: a hierarchical design with a big module holding 34      |            |
 |     |             | direct-resident cells + submodules drops its top-residual from ~39 to the   |            |
 |     |             | 5 legitimate flat top-level cells.                                          |            |
+| W4  | Placement   | `seed_placement` area-weighted region budget: the basket->region allocation | implemented|
+|     |             | was uniform (cells-per-region from total cells / budget), so a basket landing|            |
+|     |             | in low-blockage regions hoarded capacity while a basket in the blocked core   |            |
+|     |             | starved and overflowed (~27k/31k cells on test1). The budget now credits each  |            |
+|     |             | region capacity from its free area (self-calibrated cells-per-area ratio), and|            |
+|     |             | the anchor-spreading accumulates capacity per basket (taking high-capacity     |            |
+|     |             | remaining regions when near-anchor ones are insufficient) so each basket gets  |            |
+|     |             | regions whose free area covers its cell count, cutting overflow. Verified in   |            |
+|     |             | test15_areabudget: a core with a SRAM blocking several regions places all std   |            |
+|     |             | cells into the open regions with 0 origin-dump leftover.                       |            |
 | P7  | Path tracing| `report_path ... -limit <n> ?-max_depth <n>?`: bound the trace. `-limit`     | implemented|
 |     |             | caps the number of sync endpoints reported (forward mode); `-max_depth`      |            |
 |     |             | bounds the BFS depth (net hops) so large/cyclic graphs stay bounded. Both   |            |

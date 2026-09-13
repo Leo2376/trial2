@@ -3445,16 +3445,37 @@ proc seed_placement { args } {
   set nbudget [expr {int(floor($nusable * 0.65))}]
   if { $nbudget < [llength $usedBaskets] } { set nbudget [llength $usedBaskets] }
   if { $nbudget > $nusable } { set nbudget $nusable }
-  # Per-region cell capacity based on the actual block-assigned cell count
-  # and the budget (not cell area, which overestimates how many cells a
-  # region packs because the row filler has pitch/site gaps).
+  # Per-region cell capacity: area-weighted so blocked regions (small free
+  # area) are credited fewer cells than open regions, instead of a uniform
+  # count that lets a low-blockage basket hoard regions while a high-blockage
+  # basket starves and overflows. The conversion free-area -> cells is self-
+  # calibrated from the total block-assigned cell count over the total usable
+  # free area, so it absorbs the row-filler pitch/site-gap inefficiency at
+  # the design's average packing density.
   set totalcells_b 0
   set bpairs {}
   foreach b $usedBaskets { lappend bpairs [list $basketcells($b) $b] }
   set bpairs [lsort -integer -decreasing -index 0 $bpairs]
   foreach p $bpairs { incr totalcells_b [lindex $p 0] }
-  set cpr 1
-  if { $nbudget > 0 } { set cpr [expr {int(ceil(double($totalcells_b) / $nbudget))}] }
+  set total_free_usable 0.0
+  foreach li $usablereg { set total_free_usable [expr {$total_free_usable + $regfree($li)}] }
+  array set regcap {}
+  set avg_cap 1.0
+  if { $total_free_usable > 0 && $nusable > 0 } {
+   set cpa [expr {double($totalcells_b) / $total_free_usable}]
+   set sumcap 0.0
+   foreach li $usablereg {
+    set c [expr {$regfree($li) * $cpa}]
+    if { $c < 1 } { set c 1 }
+    set regcap($li) $c
+    set sumcap [expr {$sumcap + $c}]
+   }
+   set avg_cap [expr {$sumcap / $nusable}]
+   if { $avg_cap < 1 } { set avg_cap 1 }
+  } else {
+   foreach li $usablereg { set regcap($li) $avg_cap }
+  }
+  set cpr [expr {int(ceil($avg_cap))}]
   if { $cpr < 1 } { set cpr 1 }
   # Each basket needs ceil(basketcells / cpr) regions within the budget.
   set totalneed 0
@@ -3530,12 +3551,33 @@ proc seed_placement { args } {
    set cands [lsort -integer -increasing -index 0 $cands]
    set locs {}
    set k 0
+   set acc_cap 0.0
+   set need_cap [expr {double($basketcells($b))}]
    foreach c $cands {
     if { $k >= $nr } { break }
     set li [lindex $c 1]
     lappend locs [lindex $usablereg $li]
     lset taken $li 1
+    set acc_cap [expr {$acc_cap + $regcap([lindex $usablereg $li])}]
     incr k
+    if { $acc_cap >= $need_cap && $k >= 1 } { break }
+   }
+   if { $acc_cap < $need_cap } {
+    set rem {}
+    for { set li 0 } { $li < $nusable } { incr li } {
+     if { [lindex $taken $li] } { continue }
+     set rli [lindex $usablereg $li]
+     lappend rem [list $regcap($rli) $li]
+    }
+    set rem [lsort -real -decreasing -index 0 $rem]
+    foreach r $rem {
+     if { $acc_cap >= $need_cap } { break }
+     set li [lindex $r 1]
+     lappend locs [lindex $usablereg $li]
+     lset taken $li 1
+     set acc_cap [expr {$acc_cap + $regcap([lindex $usablereg $li])}]
+     incr k
+    }
    }
    if { [llength $locs] == 0 && $nusable > 0 } {
     lappend locs [lindex $usablereg 0]
