@@ -5068,6 +5068,7 @@ proc _report_path_forward { from cur_net start_point opt_net opt_layout {opt_lim
  set endpoints [list]
  set limit_reached 0
  set depth_capped 0
+ set cycle_backedges 0
  while {[llength $q]} {
   set net [lindex $q 0]
   set q [lrange $q 1 end]
@@ -5081,7 +5082,18 @@ proc _report_path_forward { from cur_net start_point opt_net opt_layout {opt_lim
    if { $ln eq "<assign>" } {
     set out_net $lpin
    } elseif { [lsearch -exact $hpathlist $ln] >= 0 } {
-    set out_net [_hier_pin_inner_net $ln $lpin]
+    # P8: cross hierarchy only in the direction the port declaration
+    # allows. A hierarchical pin that is a load on this net is a sink; the
+    # signal flows into the submodule only if the pin is an input port. An
+    # output port pin as a load here means back-flow (the inner net is driven
+    # from inside), so the branch stops. inout is treated as pass-through
+    # (legacy behaviour) to avoid dropping bidirectional paths.
+    set hdir [_hier_pin_dir $ln $lpin]
+    if { $hdir eq "input" || $hdir eq "inout" || $hdir eq "" } {
+     set out_net [_hier_pin_inner_net $ln $lpin]
+    } else {
+     continue
+    }
    } elseif { [_is_sync_pin $ln $lpin] } {
     # First sync endpoint on this branch: record it and stop the branch.
     if { ! $limit_reached } { lappend endpoints [list $net $ln $lpin] }
@@ -5091,7 +5103,7 @@ proc _report_path_forward { from cur_net start_point opt_net opt_layout {opt_lim
     set out_net [_cell_out_net $ln $lpin]
    }
    if { $out_net eq "" } { continue }
-   if { [info exists seen_net($out_net)] } { continue }
+   if { [info exists seen_net($out_net)] } { incr cycle_backedges ; continue }
    set seen_net($out_net) 1
    set parent_net($out_net) $net
    set via_inst($out_net) $ln
@@ -5148,6 +5160,7 @@ proc _report_path_forward { from cur_net start_point opt_net opt_layout {opt_lim
   if { $opt_limit > 0 } { append msg " (limited to $opt_limit)" }
   puts $msg
  }
+ if { $cycle_backedges > 0 } { puts "Note : $cycle_backedges cyclic back-edge(s) pruned during trace." }
  puts ""
 }
 
@@ -5307,6 +5320,7 @@ proc report_path { args } {
  set net_depth($cur_net) 0
  set found 0
  set depth_capped 0
+ set cycle_backedges 0
  while {[llength $q]} {
   set net [lindex $q 0]
   set q [lrange $q 1 end]
@@ -5320,11 +5334,22 @@ proc report_path { args } {
    if { $ln eq "<port>" } { continue }
    if { $ln eq "<assign>" } {
     set out_net $lpin
+   } elseif { [lsearch -exact $hpathlist $ln] >= 0 } {
+    # P8: cross hierarchy only in the port-declared direction. A hier pin
+    # that is a load on this net flows into the submodule only if it is an
+    # input port; an output port as a load is back-flow (branch stops).
+    # inout / unknown direction pass through (legacy behaviour).
+    set hdir [_hier_pin_dir $ln $lpin]
+    if { $hdir eq "input" || $hdir eq "inout" || $hdir eq "" } {
+     set out_net [_hier_pin_inner_net $ln $lpin]
+    } else {
+     continue
+    }
    } else {
     set out_net [_cell_out_net $ln $lpin]
    }
    if { $out_net eq "" } { continue }
-   if { [info exists seen_net($out_net)] } { continue }
+   if { [info exists seen_net($out_net)] } { incr cycle_backedges ; continue }
    set seen_net($out_net) 1
    set parent_net($out_net) $net
    set via_inst($out_net) $ln
@@ -5375,6 +5400,7 @@ proc report_path { args } {
  } else {
   puts "No path found between $from and $to."
  }
+ if { $cycle_backedges > 0 } { puts "Note : $cycle_backedges cyclic back-edge(s) pruned during trace." }
  puts ""
 }
 
@@ -5431,6 +5457,40 @@ proc _hier_pin_inner_net { inst pin } {
  # The inner net is the pin name scoped by the instance's OWN full path
  # (e.g. core0/w0/clk), which is the $inst argument itself.
  return "$inst/$pin"
+}
+
+# P8 Helper: declared port direction of a hierarchical instance pin, looked
+# up from the module's port declaration (not a LEF entry, since a hier
+# instance has no refid). Returns "input", "output", "inout", or "" when the
+# instance/pin is not a hierarchical port. Mirrors the lookup used by
+# report_pin. Used by report_path to cross hierarchy only in the direction
+# the port declaration allows.
+proc _hier_pin_dir { inst pin } {
+ variable _hinstlist
+ variable _hinstpinconn1
+ variable hpathlist
+ variable _portlist
+ variable _porttype
+ variable hierlistdef
+ set hid [lsearch -exact $hpathlist $inst]
+ if { $hid < 0 } { return "" }
+ incr hid
+ if { ! [info exists _hinstpinconn1($hid)] } { return "" }
+ set k [lsearch -exact $_hinstpinconn1($hid) $pin]
+ if { $k < 0 } { return "" }
+ set modname [lindex $_hinstlist($hid) 1]
+ set mid [lsearch -exact $hierlistdef $modname]
+ if { $mid < 0 } { return "" }
+ set pid [expr {$mid + 1}]
+ set pnames [lindex [array get _portlist $pid] 1]
+ set ptypes [lindex [array get _porttype $pid] 1]
+ set pk [lsearch -exact $pnames $pin]
+ if { $pk < 0 } { return "" }
+ set pt [lindex $ptypes $pk]
+ if { [lindex $pt 0] eq "bus" } {
+  return [_port_kw [lindex $pt 1]]
+ }
+ return [_port_kw $pt]
 }
 
 # Helper: output net of a cell given one of its (input) pins.
@@ -5606,9 +5666,10 @@ proc get_cell { args } {
 
  set cells {}
  for { set i 1 } { $i <= $instindex } { incr i } {
+  set iname [lindex $_instlist($i) 0]
+  if { $iname eq "<deleted>" } { continue }
   set fullp [lindex $_instlist($i) 7]
   if { ! $hier && $fullp ne $scope } { continue }
-  set iname [lindex $_instlist($i) 0]
   if { $fullp eq "-1" } { set ipath $iname } else { set ipath "$fullp/$iname" }
   if { [string match $pattern $ipath] } {
    lappend cells $ipath
@@ -6379,6 +6440,143 @@ proc connect_net { net pin } {
  puts " connect_net : $net $pin"
  puts "************************************************************"
  puts "  connected pin $pin to net $key"
+ puts ""
+}
+
+# E5a delete_cell <inst_path>
+# Remove a leaf-cell instance created by create_cell (or any leaf instance).
+# Every pin of the cell is detached from the net it drives/loads (the
+# netdriver/netload map is updated), then the _instlist / pathlist /
+# _instpinconn1 / _instpinconn2 records for that instance are dropped. The
+# instance must be a leaf cell (pathlist), not a hierarchical instance. The
+# net keys are left in place even if they become empty (use delete_net to
+# remove a net). Requires build_net_conn (P2) to have run first.
+proc delete_cell { inst_path } {
+ global netdriver netload netconnbuilt
+ variable _instlist
+ variable _instpinconn1
+ variable _instpinconn2
+ variable pathlist
+ variable hpathlist
+ variable _libcellpindir
+
+ _require 2
+ if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
+  puts "Error : build_net_conn must run before delete_cell"
+  return
+ }
+ if { $inst_path eq "" } {
+  puts "Error : delete_cell requires an instance path"
+  puts "Usage: delete_cell <inst_path>"
+  return
+ }
+ set iid [lsearch -exact $pathlist $inst_path]
+ if { $iid < 0 } {
+  if { [lsearch -exact $hpathlist $inst_path] >= 0 } {
+   puts "Error : $inst_path is a hierarchical instance; delete_cell only handles leaf cells"
+  } else {
+   puts "Error : instance $inst_path not found"
+  }
+  return
+ }
+ incr iid
+ set refid [lindex $_instlist($iid) 8]
+ set dirs [lindex [array get _libcellpindir $refid] 1]
+ set pins $_instpinconn1($iid)
+ set nets $_instpinconn2($iid)
+ set removed 0
+ for {set j 0} {$j < [llength $pins]} {incr j} {
+  set pn [lindex $pins $j]
+  set rawn [lindex $nets $j]
+  if { $rawn eq "<unconnected>" } { continue }
+  set key [_pin_net $inst_path $pn]
+  if { $key eq "" } { continue }
+  set entry "$inst_path $pn"
+  set dr [lindex $dirs $j]
+  if { $dr eq "OUTPUT" } {
+   set d [_net_drivers $key]
+   set k [lsearch -exact $d $entry]
+   if { $k >= 0 } { set netdriver($key) [lreplace $d $k $k] }
+  } else {
+   set l [_net_loads $key]
+   set k [lsearch -exact $l $entry]
+   if { $k >= 0 } { set netload($key) [lreplace $l $k $k] }
+  }
+  incr removed
+ }
+ # Drop the instance records. pathlist is a list; remove the matching entry.
+ # The _instlist/_instpinconn arrays are iterated by index (1..instindex) all
+ # over the tool, so the slot is kept and marked <deleted> instead of unset;
+ # a gap would break those index loops. get_cell / get_net / all_connected
+ # skip <deleted> entries.
+ set pi [lsearch -exact $pathlist $inst_path]
+ if { $pi >= 0 } { set pathlist [lreplace $pathlist $pi $pi] }
+ lset _instlist($iid) 0 "<deleted>"
+ set _instpinconn1($iid) {}
+ set _instpinconn2($iid) {}
+ _invalidate_wirelen_cache
+
+ puts "************************************************************"
+ puts " delete_cell : $inst_path"
+ puts "************************************************************"
+ puts "  removed instance $inst_path ($removed pin connection(s) detached)"
+ puts ""
+}
+
+# E5b delete_net <netname>
+# Remove a net from the netdriver/netload map. Every pin connected to the net
+# (drivers and receivers) is marked <unconnected> in its instance's
+# _instpinconn2 record, then the net keys are unset. The net is scoped like
+# get_net (trailing token = net name, prefix = scope; bare name = top level).
+# Requires build_net_conn (P2) to have run first. A net that still drives/loads
+# other logic should be disconnected first; this command does not re-route.
+proc delete_net { netname } {
+ global netdriver netload netconnbuilt
+ variable _instpinconn1
+ variable _instpinconn2
+ variable _instlist
+ variable pathlist
+ variable _libcellpindir
+
+ _require 2
+ if { ! [info exists netconnbuilt] || ! $netconnbuilt } {
+  puts "Error : build_net_conn must run before delete_net"
+  return
+ }
+ if { $netname eq "" } {
+  puts "Error : delete_net requires a net name"
+  puts "Usage: delete_net <netname>"
+  return
+ }
+ set key $netname
+ if { ! [info exists netdriver($key)] && ! [info exists netload($key)] } {
+  puts "Error : net $netname not found"
+  return
+ }
+ # Detach every connected pin: mark it <unconnected> in its instance record.
+ set detached 0
+ foreach p [concat [_net_drivers $key] [_net_loads $key]] {
+  set inst [lindex $p 0]
+  set pinname [lindex $p 1]
+  if { $inst eq "<port>" || $inst eq "<assign>" } { continue }
+  set iid [lsearch -exact $pathlist $inst]
+  if { $iid < 0 } { continue }
+  incr iid
+  if { ! [info exists _instpinconn1($iid)] } { continue }
+  set pk [lsearch -exact $_instpinconn1($iid) $pinname]
+  if { $pk >= 0 } {
+   lset _instpinconn2($iid) $pk "<unconnected>"
+   incr detached
+  }
+ }
+ array unset netdriver $key
+ array unset netload $key
+ _invalidate_wirelen_cache
+
+ puts "************************************************************"
+ puts " delete_net : $netname"
+ puts "************************************************************"
+ puts "  removed net $key ($detached pin(s) detached)"
  puts ""
 }
 
@@ -7252,6 +7450,155 @@ proc export_dc_floorplan { filename } {
  }
 
  close $fo
+}
+
+# H2 help ?<pattern>?
+# With no argument, list every public command grouped by area (Path tracing,
+# Connectivity, ECO, Optimization, Reporting, Netlist I/O, Placement,
+# Floorplan, Library, GUI, Shell). With a glob pattern argument, list the
+# commands whose name matches and print a one-line usage for each
+# (e.g. `help report*`, `help *cell*`, `help get_net`). Private helpers
+# (names starting with '_') are never listed. The area map and one-liners are
+# kept here so the REPL is self-describing without the README.
+proc help { {pattern ""} } {
+ # Area -> command list. Only public commands (no leading '_') are listed.
+ array set _help_areas {
+  "Path tracing" {report_path trace_clock}
+  "Connectivity" {get_cell get_net get_lib_cell all_connected report_net report_pin report_net_wirelen}
+  "ECO" {create_net create_cell connect_net disconnect_net delete_cell delete_net}
+  "Optimization" {set_max_fanout fix_max_fanout}
+  "Reporting" {report_design report_area_stats report_hierarchy_tree report_unplaced report_all_macro report_cell_properties}
+  "Netlist I/O" {read_netlist write_verilog write_db restore_db}
+  "Placement" {make_placement initial_placement hier_placement seed_place placeOpt place_instance unplace_stdcell unplace_pad}
+  "Floorplan" {make_floorplan create_region remove_all_region list_region_instances add_halo remove_all_blockage add_bump set_site_height set_target_utilization}
+  "Library" {add_lef add_lib get_sync_pins get_cell_id}
+  "Design" {set_top_design build_design build_net_conn update_wire_db swap_refcell all_macro all_pad}
+  "GUI" {gui_start redraw set_font_size}
+  "Multithreading" {set_multithread_on set_multithread_off}
+  "Export" {make_lef make_lib export_def export_dc_floorplan}
+  "Shell" {ls ll lkj cd pwd help}
+ }
+ # One-line usage per command.
+ array set _help_usage {
+  report_path "report_path -from <pin|net> ?-to <pin|net>? ?-net? ?-layout? ?-limit <n>? ?-max_depth <n>?"
+  trace_clock "trace_clock <pin|net>"
+  get_cell "get_cell <pattern> ?-hier?"
+  get_net "get_net <pattern> ?-hier?"
+  get_lib_cell "get_lib_cell <refname>"
+  all_connected "all_connected <net or pin>"
+  report_net "report_net <net>"
+  report_pin "report_pin <inst>/<pin>"
+  report_net_wirelen "report_net_wirelen <net>"
+  create_net "create_net <netname>"
+  create_cell "create_cell <inst_path> <celltype>"
+  connect_net "connect_net <net> <inst>/<pin>"
+  disconnect_net "disconnect_net <net> <inst>/<pin>"
+  delete_cell "delete_cell <inst_path>"
+  delete_net "delete_net <netname>"
+  set_max_fanout "set_max_fanout <n>"
+  fix_max_fanout "fix_max_fanout -cell <buffer>"
+  report_design "report_design"
+  report_area_stats "report_area_stats ?-wire?"
+  report_hierarchy_tree "report_hierarchy_tree"
+  report_unplaced "report_unplaced"
+  report_all_macro "report_all_macro"
+  report_cell_properties "report_cell_properties <instname>"
+  read_netlist "read_netlist <filename>"
+  write_verilog "write_verilog <filename>"
+  write_db "write_db <file>"
+  restore_db "restore_db <file>"
+  make_placement "make_placement ?-full|-partial|-region_only?"
+  initial_placement "initial_placement ?-full|-partial|-region_only?"
+  hier_placement "hier_placement ?-full|-partial|-region_only?"
+  seed_place "seed_place ?-iter <n>? ?-seed <n>? ?-mt?"
+  placeOpt "placeOpt ?-iter <n>? ?-mt?"
+  place_instance "place_instance <inst> <x> <y> <orient>"
+  unplace_stdcell "unplace_stdcell"
+  unplace_pad "unplace_pad"
+  make_floorplan "make_floorplan <w> <h> <corex> <corey>"
+  create_region "create_region <module> <blx> <bly> <trx> <try>"
+  remove_all_region "remove_all_region"
+  list_region_instances "list_region_instances <region>"
+  add_halo "add_halo <mx> <my>"
+  remove_all_blockage "remove_all_blockage"
+  add_bump "add_bump <n> <bx> <by> ?<color>?"
+  set_site_height "set_site_height <h>"
+  set_target_utilization "set_target_utilization <utilz>"
+  add_lef "add_lef <filename>"
+  add_lib "add_lib <filename>"
+  get_sync_pins "get_sync_pins <cell>"
+  get_cell_id "get_cell_id <refname>"
+  set_top_design "set_top_design <name>"
+  build_design "build_design"
+  build_net_conn "build_net_conn"
+  update_wire_db "update_wire_db"
+  swap_refcell "swap_refcell <instname> <refname>"
+  all_macro "all_macro"
+  all_pad "all_pad"
+  gui_start "gui_start"
+  redraw "redraw"
+  set_font_size "set_font_size <sz>"
+  set_multithread_on "set_multithread_on ?<nworkers>?"
+  set_multithread_off "set_multithread_off"
+  make_lef "make_lef <filename>"
+  make_lib "make_lib <filename>"
+  export_def "export_def <filename>"
+  export_dc_floorplan "export_dc_floorplan <filename>"
+  ls "ls"
+  ll "ll"
+  lkj "lkj"
+  cd "cd <dir>"
+  pwd "pwd"
+  help "help ?<pattern>?"
+ }
+
+ if { $pattern eq "" } {
+  puts "************************************************************"
+  puts " My Little EDA - commands by area"
+  puts "************************************************************"
+  foreach area [lsort [array names _help_areas]] {
+   puts ""
+   puts "$area :"
+   foreach cmd $_help_areas($area) {
+    if { [info procs $cmd] eq "$cmd" } {
+     puts "  $cmd"
+    }
+  }
+  }
+  puts ""
+  puts "Use 'help <pattern>' for per-command usage (e.g. 'help report*', 'help *cell*')."
+  puts ""
+  return
+ }
+
+ # Glob match across all areas. Patterns are globs (*, ?, [..]).
+ set matches [list]
+ foreach area [array names _help_areas] {
+  foreach cmd $_help_areas($area) {
+   if { [string match $pattern $cmd] } { lappend matches $cmd }
+  }
+ }
+ set matches [lsort -unique $matches]
+ if { ! [llength $matches] } {
+  puts "No command matches '$pattern'."
+  return
+ }
+ puts "************************************************************"
+ if { [llength $matches] == 1 } {
+  puts " help : $pattern (1 match)"
+ } else {
+  puts " help : $pattern ([llength $matches] matches)"
+ }
+ puts "************************************************************"
+ foreach cmd $matches {
+  if { [info exists _help_usage($cmd)] } {
+   puts "  $cmd"
+   puts "    $_help_usage($cmd)"
+  } else {
+   puts "  $cmd"
+  }
+ }
+ puts ""
 }
 
 proc ls {} {

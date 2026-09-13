@@ -158,12 +158,22 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | argument is `<inst>/<pin>`. Updates the netload/netdriver map (P2).         |            |
 | E4  | ECO         | `connect_net <net> <pin>`: attach an instance pin to a net; the pin         | implemented|
 |     |             | argument is `<inst>/<pin>`. Updates the netload/netdriver map (P2).         |            |
+| E5  | ECO         | `delete_cell <inst_path>` / `delete_net <net>`: inverse of `create_cell`/   | implemented|
+|     |             | `create_net`. `delete_cell` removes a leaf instance, detaches every pin from|
+|     |             | its nets (netdriver/netload map), and removes it from `pathlist`. It refuses|
+|     |             | hierarchical instances. `delete_net` detaches every pin from the net then   |
+|     |             | removes the net from the driver/load map. Both invalidate the wirelength     |
+|     |             | cache. Deleted entries are tombstoned (`<deleted>`) rather than unset, so   |
+|     |             | the index-iterated loops (`for {set i 1} {$i <= $instindex}`) keep working   |
+|     |             | without gap crashes.                                                         |            |
 | G1  | GUI         | `gui_start`: bring up the Tk GUI after a session that was started in       | implemented |
 |     |             | batch mode (e.g. `tclsh ... -no-gui`), so a design can be loaded and         |            |
 |     |             | inspected interactively without relaunching the tool.                        |            |
-| H1  | Help        | `help <command>`: print the help/usage of a command; accepts wildcards, so  | proposal   |
-|     |             | `help report*` lists every `report_*` command's help and `help *cell*`      |            |
-|     |             | lists the help of all commands whose name matches the glob.                  |            |
+| H2  | Help        | `help ?<pattern>?`: with no argument, list every command grouped by area    | implemented|
+|     |             | (ECO, Netlist I/O, Path tracing, Reporting, etc.); with a glob pattern (e.g. |
+|     |             | `help report*`, `help *cell*`), print each matching command with a one-line  |            |
+|     |             | usage. Unknown matches report `No command matches`. The area/command list   |            |
+|             | is a static table, so commands must be registered there to appear.          |            |
 | N4  | Netlist I/O | `write_db`/`restore_db` integrity: the db is now a versioned text Tcl-list | implemented|
 |     |             | database carrying a `C <sum>` checksum line; `restore_db` validates the      |            |
 |     |             | checksum and refuses truncated/corrupted files with a clear `Error`.        |            |
@@ -177,6 +187,15 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 |     |             | caps the number of sync endpoints reported (forward mode); `-max_depth`      |            |
 |     |             | bounds the BFS depth (net hops) so large/cyclic graphs stay bounded. Both   |            |
 |     |             | default to 0 (unlimited). Non-integer values are rejected with an `Error`.  |            |
+|     |             | The BFS also carries a cycle guard: a net revisited as a back-edge is counted |
+|     |             | and pruned, and a `Note : <n> cyclic back-edge(s) pruned` line is printed     |            |
+|     |             | (both forward and `-to` modes), so combinational rings cannot hang the trace. |            |
+| P8  | Path tracing| Hierarchical-port direction awareness in `report_path`: crossing a hierarchical|
+|     |             | submodule boundary now consults the module port direction (input/output/   | implemented|
+|     |             | inout) via `_hier_pin_dir`, so an input port of a submodule is only entered   |            |
+|     |             | from its outer net and an output port only left outwards. Previously every   |            |
+|     |             | hier pin was treated as pass-through in both directions, which let a trace  |            |
+|     |             | leak backwards through a submodule.                                          |            |
 | G8  | Reporting   | `report_design`: one-screen design overview (top module, module/leaf/hier   | implemented|
 |     |             | instance counts, library cells, nets, top ports, assigns, placement %,    |            |
 |     |             | unplaced count, and high-fanout net count when `build_net_conn` ran).      |            |
@@ -223,6 +242,21 @@ Notes:
   U28571/ZN and gains the buffer input while the new net gains the buffer
   output and the moved receiver. A `write_verilog` (N1) dump after the ECO
   will confirm the structural change once N1 is implemented.
+- E5 (`delete_cell`/`delete_net`) is verified in test13_e5p8p7h2: a leaf cell
+  is deleted (its pins detach from the netdriver/netload map and `get_cell * -hier`
+  runs cleanly afterwards — no gap crash from the index-iterated loops) and a
+  net is deleted (every attached pin becomes `<unconnected>` and `all_connected`
+  reports no net). Deleted instances are tombstoned (`<deleted>`) rather than
+  unset, so the `for {set i 1} {$i <= $instindex}` loops keep working.
+- P7's cycle guard and P8's hierarchical-port direction awareness are verified
+  in test13_e5p8p7h2: an inverter ring reports a pruned cyclic back-edge and
+  does not hang the BFS, and `_hier_pin_dir` reports `input`/`output` for a
+  submodule's ports so `report_path` only enters a submodule input port and
+  only leaves an output port.
+- H2 (`help`) is verified in test13_e5p8p7h2: `help` with no argument lists
+  commands grouped by area (including the new ECO area with `delete_cell`/
+  `delete_net`), and `help <glob>` lists matching commands with a one-line
+  usage.
 
 ## Connectivity query commands
 
@@ -243,7 +277,13 @@ queries), the following report connectivity. Patterns are globs
   the first sync load pin (flop CP / SRAM CK via the `_libsyncpin` map); report
   the path(s) to every reached sync endpoint and the count of sync endpoints
   reached. `-limit <n>` caps the number of endpoints reported (P7); `-max_depth
-  <n>` bounds the BFS depth. Requires `build_net_conn` (P2) and `add_lib` (L2).
+  <n>` bounds the BFS depth. The BFS carries a cycle guard: a net revisited as a
+  back-edge is counted and pruned, and a `Note : <n> cyclic back-edge(s) pruned`
+  line is printed, so combinational rings cannot hang the trace. Crossing a
+  hierarchical submodule boundary is now direction-aware (P8): a submodule
+  input port is only entered from its outer net and an output port only left
+  outwards, via the module port direction. Requires `build_net_conn` (P2) and
+  `add_lib` (L2).
 - `trace_clock <pin|net>` — tree-like report tracing from a pin or net down
   through combinational logic and across hierarchy to all leaf sync load pins
   (flop CP / SRAM CK via the `_libsyncpin` map). Each branch is followed (not
@@ -308,6 +348,14 @@ containing hierarchical scope; a bare name targets the top level.
 - `connect_net <net> <pin>` — attach an instance pin (`<inst>/<pin>`) to a net;
   the pin's direction selects the driver or receiver list. The net must exist
   (`create_net` or an existing net).
+- `delete_cell <inst_path>` (E5) — remove a leaf instance: detach every pin from
+  its nets (driver/receiver map), remove it from `pathlist`, and invalidate the
+  wirelength cache. Hierarchical instances are rejected; only leaves can be
+  deleted. The instance index is tombstoned (`<deleted>`) rather than unset so
+  the index-iterated loops keep working without gaps.
+- `delete_net <net>` (E5) — remove a net: detach every pin still attached to it
+  (pins become `<unconnected>`), drop the net from the driver/receiver map, and
+  invalidate the wirelength cache.
 
 ## Optimization commands
 
@@ -351,3 +399,13 @@ After `set_top_design`, the design's netlist can be dumped back out:
   trailing checksum (N4): a missing checksum (truncated file) or a mismatch
   (corrupted/edited body) is reported as an `Error` and the restore aborts; a
   v1 file (no checksum) still restores with a `Warning`.
+
+## Help command
+
+- `help ?<pattern>?` (H2) — with no argument, list every command grouped by area
+  (Netlist I/O, ECO, Path tracing, Reporting, Placement, etc.). With a glob
+  pattern (e.g. `help report*`, `help *cell*`), print each matching command with
+  a one-line usage. A pattern that matches nothing reports `No command matches`.
+  The area/command grouping and the one-line usages are a static table, so a
+  command only appears if it is registered there; commands that are not yet
+  listed can still be called but `help` will not describe them.
