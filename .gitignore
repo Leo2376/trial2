@@ -3,3 +3,4 @@ tests/*/outputs/*.lef
 tests/*/outputs/*.def
 tests/*/outputs/*.lib
 tests/*/outputs/*.dc_floorplan.tcl
+tests/*/outputs/*.db

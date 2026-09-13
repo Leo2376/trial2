@@ -920,7 +920,7 @@ proc place_instance { cellinst posx posy orientation } {
  lset _instlist($instid) 6 $posy
  lset _instlist($instid) 4 1
  lset _instlist($instid) 9 $orientation
-   
+ _invalidate_wirelen_cache
 }
 
 proc remove_all_blockage { } {
@@ -1089,6 +1089,7 @@ proc unplace_stdcell { } {
       
     }
    }
+ _invalidate_wirelen_cache
 }
 
 
@@ -1128,6 +1129,7 @@ r variable hierlist
       
     }
    }
+ _invalidate_wirelen_cache
 }
 
 
@@ -1592,6 +1594,7 @@ if { $pregion == 0 } {
     puts "Info : make_placement, Placed $localinst cells on placement site $psite " 
  }
  puts "Info : make_placement, Total after Pass $npass , Placed $currentinst / $instindex cells "
+ _invalidate_wirelen_cache
  puts ""
  }
  #partial pregion 0/1
@@ -1919,6 +1922,7 @@ proc initial_placement { {opt "-full"} } {
   }
  }
  puts "Info : initial_placement, placed $placed / $nfree cells (multithread, $nw workers)"
+ _invalidate_wirelen_cache
 }
 
 # Hierarchical placement engine: hier_placement.
@@ -2661,6 +2665,7 @@ proc hier_placement { {opt "-full"} } {
  # clean up the trial proc so a subsequent hier_placement call can redefine it
  catch { rename _hp_place_trial {} }
  puts "Info : hier_placement, placed $committed / $nfree cells"
+ _invalidate_wirelen_cache
 }
 
 # Iterative wire-length optimizer: placeOpt ?-iter n?
@@ -3005,6 +3010,7 @@ proc placeOpt { args } {
  catch { rename _po_total {} }
  catch { rename _po_netlen {} }
  puts "Info : placeOpt, done: total [format %.2f $total0] -> [format %.2f $total] ([expr {$total0>0?int(($total0-$total)*100/$total0):0}]% reduction)"
+ _invalidate_wirelen_cache
 }
 
 # Seed-driven hierarchy-coherent placement: seed_place ?-seed n? ?-iter n? ?-verbose?
@@ -4064,6 +4070,7 @@ proc seed_place { args } {
   }
  }
  puts "Info : seed_place, placed $committed / $nfree cells"
+ _invalidate_wirelen_cache
 }
 
 proc create_region { hmodule blx bly trx try } {
@@ -4620,6 +4627,87 @@ proc report_area_stats { args } {
  puts "" 
 }
 
+# G8 report_design
+# One-screen design overview aggregating the counts that today require running
+# several separate commands (report_hierarchy_tree, get_cell, get_net,
+# report_area_stats, report_unplaced). It summarizes the loaded design:
+# top module, module/leaf/hier instance counts, library cells, nets, top ports,
+# assigns, placement progress, unplaced count, and (when build_net_conn ran)
+# high-fanout nets above the maxfanout threshold. Requires build_design (level 2).
+proc report_design { } {
+ _require 2
+ variable topname
+ variable topnameid
+ variable hierindex
+ variable instindex
+ variable cellindex
+ variable hinstindex
+ variable cataloglist
+ variable _libcell
+ variable _instlist
+ variable _hinstlist
+ variable _assignlist
+ variable wireindex
+ variable portindex
+ variable _portlist
+ variable _portmaster
+ variable maxfanout
+
+ puts "************************************************************"
+ puts " report_design : $topname"
+ puts "************************************************************"
+ puts ""
+ puts "  top module            : $topname"
+ puts "  modules (hierarchy)   : $hierindex"
+ puts "  leaf instances        : $instindex"
+ puts "  hier instances        : $hinstindex"
+ puts "  library cells (LEF)   : $cellindex"
+ puts "  nets (declared)        : $wireindex"
+ puts "  assigns               : [llength $_assignlist]"
+
+ # Top-module port count: sum ports of the portindex rows whose master is the
+ # top module. Each _portlist row is a list of port names for one module.
+ set nports 0
+ for {set p 1} {$p <= $portindex} {incr p} {
+  if { [lindex $_portmaster($p) 0] ne $topname } { continue }
+  set ports [lindex [array get _portlist $p] 1]
+  if { $ports ne "" } { incr nports [llength $ports] }
+ }
+ puts "  top ports              : $nports"
+
+ # Placement progress over leaf instances (placed flag = index 4).
+ set nplaced 0
+ set nunplaced 0
+ for {set i 1} {$i <= $instindex} {incr i} {
+  if { [lindex $_instlist($i) 4] == 1 } { incr nplaced } else { incr nunplaced }
+ }
+ if { $instindex > 0 } {
+  set pct [expr {int(100.0 * $nplaced / $instindex)}]
+ } else {
+  set pct 0
+ }
+ puts "  placement             : $nplaced / $instindex placed ($pct%)"
+ puts "  unplaced               : $nunplaced"
+
+ # High-fanout nets: only meaningful once the net connectivity map is built.
+ # Counts nets whose receiver count exceeds the global maxfanout threshold.
+ global netconnbuilt
+ if { [info exists netconnbuilt] && $netconnbuilt } {
+  global netload
+  set hi 0
+  if { $maxfanout > 0 } {
+   foreach k [array names netload] {
+    set rcv [llength $netload($k)]
+    if { [string match "<*>" $k] } { continue }
+    if { $rcv > $maxfanout } { incr hi }
+   }
+  }
+  puts "  high-fanout nets       : $hi (threshold maxfanout=$maxfanout)"
+ } else {
+  puts "  high-fanout nets       : (run build_net_conn to enable)"
+ }
+ puts ""
+}
 
 proc update_wire_db { } {
  _require 2
@@ -4927,7 +5015,7 @@ proc _report_path_pin_line { pin opt_layout } {
 # (flop CP / SRAM CK via _libsyncpin). Reports every reached sync endpoint's
 # path and the count of sync endpoints reached. Requires build_net_conn (P2)
 # and add_lib (L2).
-proc _report_path_forward { from cur_net start_point opt_net opt_layout } {
+proc _report_path_forward { from cur_net start_point opt_net opt_layout {opt_limit 0} {opt_maxdepth 0} } {
  global netdriver netload netconnbuilt
  variable pathlist
  variable hpathlist
@@ -4967,16 +5055,24 @@ proc _report_path_forward { from cur_net start_point opt_net opt_layout } {
  # BFS across all branches. Each reached sync load pin becomes a discovered
  # endpoint; the parent map records how each net was reached so the path can
  # be reconstructed. A net is visited once (combinational loops cannot recurse).
+ # P7: -max_depth bounds the BFS depth (net hops from the start); -limit caps
+ # the number of sync endpoints discovered (stops collecting once reached).
  array set seen_net {}
  array set parent_net {}
  array set via_inst {}
  array set via_pin {}
+ array set net_depth {}
  set q [list $cur_net]
  set seen_net($cur_net) 1
+ set net_depth($cur_net) 0
  set endpoints [list]
+ set limit_reached 0
+ set depth_capped 0
  while {[llength $q]} {
   set net [lindex $q 0]
   set q [lrange $q 1 end]
+  set cur_depth $net_depth($net)
+  if { $opt_maxdepth > 0 && $cur_depth >= $opt_maxdepth } { set depth_capped 1 ; continue }
   set loads [_net_loads $net]
   foreach lp $loads {
    set ln [lindex $lp 0]
@@ -4988,7 +5084,8 @@ proc _report_path_forward { from cur_net start_point opt_net opt_layout } {
     set out_net [_hier_pin_inner_net $ln $lpin]
    } elseif { [_is_sync_pin $ln $lpin] } {
     # First sync endpoint on this branch: record it and stop the branch.
-    lappend endpoints [list $net $ln $lpin]
+    if { ! $limit_reached } { lappend endpoints [list $net $ln $lpin] }
+    if { $opt_limit > 0 && [llength $endpoints] >= $opt_limit } { set limit_reached 1 }
     continue
    } else {
     set out_net [_cell_out_net $ln $lpin]
@@ -4999,6 +5096,7 @@ proc _report_path_forward { from cur_net start_point opt_net opt_layout } {
    set parent_net($out_net) $net
    set via_inst($out_net) $ln
    set via_pin($out_net) $lpin
+   set net_depth($out_net) [expr {$cur_depth + 1}]
    lappend q $out_net
   }
  }
@@ -5040,9 +5138,15 @@ proc _report_path_forward { from cur_net start_point opt_net opt_layout } {
   }
  }
  if { ! $nendp } {
-  puts "No sync endpoint reached from $from."
+  if { $depth_capped } {
+   puts "No sync endpoint reached from $from (search capped at -max_depth $opt_maxdepth)."
+  } else {
+   puts "No sync endpoint reached from $from."
+  }
  } else {
-  puts "$nendp sync endpoint(s) reached."
+  set msg "$nendp sync endpoint(s) reached."
+  if { $opt_limit > 0 } { append msg " (limited to $opt_limit)" }
+  puts $msg
  }
  puts ""
 }
@@ -5071,21 +5175,37 @@ proc report_path { args } {
  set to ""
  set opt_net 0
  set opt_layout 0
+ set opt_limit 0
+ set opt_maxdepth 0
  for {set i 0} {$i < [llength $args]} {incr i} {
   set a [lindex $args $i]
-  if { $a eq "-from" }   { set from [lindex $args [incr i]] ; continue }
-  if { $a eq "-to" }     { set to [lindex $args [incr i]] ; continue }
-  if { $a eq "-net" }    { set opt_net 1 ; continue }
-  if { $a eq "-layout" } { set opt_layout 1 ; continue }
+  if { $a eq "-from" }     { set from [lindex $args [incr i]] ; continue }
+  if { $a eq "-to" }       { set to [lindex $args [incr i]] ; continue }
+  if { $a eq "-net" }      { set opt_net 1 ; continue }
+  if { $a eq "-layout" }   { set opt_layout 1 ; continue }
+  if { $a eq "-limit" }    { set opt_limit [lindex $args [incr i]] ; continue }
+  if { $a eq "-max_depth" } { set opt_maxdepth [lindex $args [incr i]] ; continue }
   puts "Error : unknown option '$a'"
-  puts "Usage: report_path -from <pin|net> -to <pin|net> ?-net? ?-layout?"
-  puts "       report_path -from <pin|net> ?-net? ?-layout?"
+  puts "Usage: report_path -from <pin|net> -to <pin|net> ?-net? ?-layout? ?-limit <n>? ?-max_depth <n>?"
+  puts "       report_path -from <pin|net> ?-net? ?-layout? ?-limit <n>? ?-max_depth <n>?"
+  return
+ }
+ # P7: -limit caps how many paths (sync endpoints) are reported in the
+ # forward (-from only) mode; -max_depth bounds the BFS depth (net hops) so a
+ # large or cyclic connectivity graph cannot make the trace unbounded. Both
+ # are optional and default to 0 (unlimited). Validate the integer forms.
+ if { $opt_limit ne "0" && ! [string is integer -strict $opt_limit] } {
+  puts "Error : -limit requires a positive integer (got '$opt_limit')"
+  return
+ }
+ if { $opt_maxdepth ne "0" && ! [string is integer -strict $opt_maxdepth] } {
+  puts "Error : -max_depth requires a positive integer (got '$opt_maxdepth')"
   return
  }
  if { $from eq "" } {
   puts "Error : report_path requires -from"
-  puts "Usage: report_path -from <pin|net> -to <pin|net> ?-net? ?-layout?"
-  puts "       report_path -from <pin|net> ?-net? ?-layout?"
+  puts "Usage: report_path -from <pin|net> -to <pin|net> ?-net? ?-layout? ?-limit <n>? ?-max_depth <n>?"
+  puts "       report_path -from <pin|net> ?-net? ?-layout? ?-limit <n>? ?-max_depth <n>?"
   return
  }
  # Both modes trace the net connectivity map, so build_net_conn must have run.
@@ -5120,7 +5240,7 @@ proc report_path { args } {
  # sync endpoint found on each branch, and report the path(s) reached plus the
  # count of sync endpoints. Requires build_net_conn (P2) and add_lib (L2).
  if { $to eq "" } {
-  _report_path_forward $from $cur_net $start_point $opt_net $opt_layout
+  _report_path_forward $from $cur_net $start_point $opt_net $opt_layout $opt_limit $opt_maxdepth
   return
  }
 
@@ -5181,13 +5301,18 @@ proc report_path { args } {
  array set parent_net {}
  array set via_inst {}
  array set via_pin {}
+ array set net_depth {}
  set q [list $cur_net]
  set seen_net($cur_net) 1
+ set net_depth($cur_net) 0
  set found 0
+ set depth_capped 0
  while {[llength $q]} {
   set net [lindex $q 0]
   set q [lrange $q 1 end]
   if { $net eq $end_net } { set found 1 ; break }
+  set cur_depth $net_depth($net)
+  if { $opt_maxdepth > 0 && $cur_depth >= $opt_maxdepth } { set depth_capped 1 ; continue }
   set loads [_net_loads $net]
   foreach lp $loads {
    set ln [lindex $lp 0]
@@ -5204,6 +5329,7 @@ proc report_path { args } {
    set parent_net($out_net) $net
    set via_inst($out_net) $ln
    set via_pin($out_net) $lpin
+   set net_depth($out_net) [expr {$cur_depth + 1}]
    lappend q $out_net
   }
  }
@@ -5244,6 +5370,8 @@ proc report_path { args } {
  }
  if { $found } {
   puts "1 path found."
+ } elseif { $depth_capped } {
+  puts "No path found between $from and $to (search capped at -max_depth $opt_maxdepth)."
  } else {
   puts "No path found between $from and $to."
  }
@@ -5883,6 +6011,19 @@ proc _report_net_detail { n } {
 # box can be formed). Used by report_net (_report_net_detail) and the
 # report_net_wirelen getter. Unplaced pins, hierarchical pins, ports and
 # assigns have no coordinate and are skipped.
+#
+# W2: any placement change invalidates the per-net wire-length cache, since a
+# cached length is computed from pin coordinates and goes stale as soon as a
+# driver/receiver moves. build_net_conn already unsets the cache; this helper
+# lets the placement procs (place_instance, make_placement, initial_placement,
+# hier_placement, seed_place, placeOpt, unplace_stdcell, unplace_pad) drop it
+# too without each one re-implementing the unset. It is cheap when the cache
+# is empty (no design / no query yet) and a no-op when nothing was cached.
+proc _invalidate_wirelen_cache { } {
+ global _wirelen_cache
+ if { [info exists _wirelen_cache] } { array unset _wirelen_cache }
+}
+
 proc _net_wirelen { n } {
  global netdriver netload _wirelen_cache
  set d [_net_drivers $n]
@@ -6597,21 +6738,30 @@ proc write_db { filename } {
 
  set fo [open $filename w]
  puts $fo "# mylittleda db"
- puts $fo "# version 1"
-
- # Scalars that hold scalar design state.
+ puts $fo "# version 2"
+ # A rolling checksum of the serialized body is appended as the final
+ # "C <sum>" line so restore_db can detect truncation or hand-edits. It is
+ # the sum of every body line's length (a cheap, deterministic integrity
+ # marker that does not depend on Tcl's list quoting).
+ set _db_sum 0
  foreach v {topname topnameid bumpindex cellindex hierindex instindex hinstindex portindex wireindex blockageindex regionindex scale_f siteh fontsize targetutilz netconnbuilt} {
   variable $v
-  puts $fo "S $v [list [set $v]]"
+  set s "S $v [list [set $v]]"
+  puts $fo $s
+  incr _db_sum [string length $s]
  }
  # maxfanout is a global threshold (set via `set`, not `variable`).
  global maxfanout
- puts $fo "S maxfanout [list $maxfanout]"
+ set s "S maxfanout [list $maxfanout]"
+ puts $fo $s
+ incr _db_sum [string length $s]
 
  # Lists that hold design state.
  foreach v {cataloglist hierlistdef hierlist pathlist hpathlist corebox topbox instrefsearch hinstrefsearch wiresearch _assignlist _libcellsync gridutil utlzmap hier_dontshow} {
   variable $v
-  puts $fo "L $v [list [set $v]]"
+  set s "L $v [list [set $v]]"
+  puts $fo $s
+  incr _db_sum [string length $s]
  }
 
  # Arrays: emit each array as a flat list of {key value key value ...} so the
@@ -6624,18 +6774,25 @@ proc write_db { filename } {
   foreach k $names {
    lappend pairs $k [set ${v}($k)]
   }
-  puts $fo "A $v [list $pairs]"
+  set s "A $v [list $pairs]"
+  puts $fo $s
+  incr _db_sum [string length $s]
  }
 
  # The net connectivity map is global (not a variable) in this script.
  global netdriver netload
  set pairs {}
  foreach k [array names netdriver] { lappend pairs $k $netdriver($k) }
- puts $fo "G netdriver [list $pairs]"
+ set s "G netdriver [list $pairs]"
+ puts $fo $s
+ incr _db_sum [string length $s]
  set pairs {}
  foreach k [array names netload] { lappend pairs $k $netload($k) }
- puts $fo "G netload [list $pairs]"
+ set s "G netload [list $pairs]"
+ puts $fo $s
+ incr _db_sum [string length $s]
 
+ puts $fo "C $_db_sum"
  close $fo
  puts "Info : wrote database to $filename"
 }
@@ -6666,11 +6823,16 @@ proc restore_db { filename } {
   return
  }
  if { ! [regexp {# version ([0-9]+)} $verline -> vdb] } { set vdb 0 }
- if { $vdb != 1 } {
+ if { $vdb != 1 && $vdb != 2 } {
   puts "Error : unsupported db version $vdb"
   close $fi
   return
  }
+ # Version 2 appends a "C <sum>" integrity line (the sum of every body line's
+ # length). Version 1 has no checksum; we restore it but warn that integrity
+ # is not checked. _db_sum accumulates the body checksum to compare at EOF.
+ set _db_sum 0
+ set _db_chksum {}
 
  global netdriver netload
  array unset netdriver
@@ -6679,6 +6841,11 @@ proc restore_db { filename } {
  while {[gets $fi line] >= 0} {
   if { $line eq "" } { continue }
   set tag [lindex $line 0]
+  if { $tag eq "C" } {
+   set _db_chksum [lindex $line 1]
+   continue
+  }
+  incr _db_sum [string length $line]
   set name [lindex $line 1]
   set val [lrange $line 2 end]
   if { $tag eq "S" } {
@@ -6703,6 +6870,23 @@ proc restore_db { filename } {
   }
  }
  close $fi
+
+ # Integrity check: if the db carried a checksum line, the accumulated body
+ # sum must match it; a mismatch means the file was truncated or edited and
+ # the restored state cannot be trusted. Version 1 has no checksum (warn).
+ if { $vdb == 2 } {
+  if { $_db_chksum eq "" } {
+   puts "Error : db checksum missing (file truncated)"
+   return
+  }
+  if { $_db_sum != $_db_chksum } {
+   puts "Error : db checksum mismatch (expected $_db_chksum, computed $_db_sum): file is truncated or corrupted"
+   return
+  }
+  puts "Info : db integrity verified (v2 checksum ok)"
+ } else {
+  puts "Warning : db version 1 has no integrity checksum; restore completed without verification"
+ }
 
  # The scalar/array values were restored via `variable $name` in the loop
  # above, so they are linked into this namespace; declare the ones used in the

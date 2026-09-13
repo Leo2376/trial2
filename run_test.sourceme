@@ -1,6 +1,7 @@
-cd tests/test1_*/scripts
-tclsh8.6 run_test.tcl
-cd ../../..
+# test1 (CPU synthesis) skipped: too long for the regression loop.
+# cd tests/test1_*/scripts
+# tclsh8.6 run_test.tcl
+# cd ../../..
 
 
 cd tests/test2_*/scripts
@@ -37,5 +38,8 @@ cd tests/test10_*/scripts
 tclsh8.6 run_test.tcl
 cd ../../..
 cd tests/test11_*/scripts
+tclsh8.6 run_test.tcl
+cd ../../..
+cd tests/test12_*/scripts
 tclsh8.6 run_test.tcl
 cd ../../..

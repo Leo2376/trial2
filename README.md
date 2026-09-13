@@ -164,6 +164,23 @@ Proposed upgrades for the tool. Status starts at `proposal` and moves to
 | H1  | Help        | `help <command>`: print the help/usage of a command; accepts wildcards, so  | proposal   |
 |     |             | `help report*` lists every `report_*` command's help and `help *cell*`      |            |
 |     |             | lists the help of all commands whose name matches the glob.                  |            |
+| N4  | Netlist I/O | `write_db`/`restore_db` integrity: the db is now a versioned text Tcl-list | implemented|
+|     |             | database carrying a `C <sum>` checksum line; `restore_db` validates the      |            |
+|     |             | checksum and refuses truncated/corrupted files with a clear `Error`.        |            |
+|     |             | v1 (no checksum) still restores, with a `Warning`.                          |            |
+| W2  | Wirelength  | Invalidate the per-net `_wirelen_cache` on every placement change           | implemented|
+|     |             | (`place_instance`, `make_placement`, `initial_placement`, `hier_placement`,|            |
+|     |             | `seed_place`, `placeOpt`, `unplace_stdcell`, `unplace_pad`), not only on    |            |
+|     |             | `build_net_conn`, so `report_net_wirelen` / `report_area_stats -wire` cannot|            |
+|     |             | serve stale lengths after a move.                                          |            |
+| P7  | Path tracing| `report_path ... -limit <n> ?-max_depth <n>?`: bound the trace. `-limit`     | implemented|
+|     |             | caps the number of sync endpoints reported (forward mode); `-max_depth`      |            |
+|     |             | bounds the BFS depth (net hops) so large/cyclic graphs stay bounded. Both   |            |
+|     |             | default to 0 (unlimited). Non-integer values are rejected with an `Error`.  |            |
+| G8  | Reporting   | `report_design`: one-screen design overview (top module, module/leaf/hier   | implemented|
+|     |             | instance counts, library cells, nets, top ports, assigns, placement %,    |            |
+|     |             | unplaced count, and high-fanout net count when `build_net_conn` ran).      |            |
+|     |             | Requires `build_design`.                                                   |            |
 
 Notes:
 - P1 enables P2, which enables P3. S1 also produces the indexed net map P3
@@ -213,17 +230,20 @@ After `build_design` (and `update_wire_db` / `build_net_conn` for the net
 queries), the following report connectivity. Patterns are globs
 (`*`, `?`, `[..]`); a hierarchical prefix scopes the match to one module.
 
-- `report_path -from <pin|net> -to <pin|net> ?-net? ?-layout?` — text-only
+- `report_path -from <pin|net> -to <pin|net> ?-net? ?-layout? ?-limit <n>? ?-max_depth <n>?` — text-only
   connectivity report (report_timing-style, no timing) across the net
   driver/receiver map. By default only the crossed pins are listed; `-net`
   also prints the logical nets crossed, and `-layout` adds an `(x, y)`
   coordinate column for placed crossed cells/pins (nets/ports/unplaced cells
-  stay blank).
-- `report_path -from <pin|net> ?-net? ?-layout?` (no `-to`, P4) — trace
+  stay blank). `-max_depth <n>` bounds the BFS depth (net hops); a search that
+  hits the cap reports "No path found ... (search capped at -max_depth N)"
+  (P7). Both options default to 0 (unlimited).
+- `report_path -from <pin|net> ?-net? ?-layout? ?-limit <n>? ?-max_depth <n>?` (no `-to`, P4) — trace
   forward from the start point across all branches and stop each branch at
   the first sync load pin (flop CP / SRAM CK via the `_libsyncpin` map); report
   the path(s) to every reached sync endpoint and the count of sync endpoints
-  reached. Requires `build_net_conn` (P2) and `add_lib` (L2).
+  reached. `-limit <n>` caps the number of endpoints reported (P7); `-max_depth
+  <n>` bounds the BFS depth. Requires `build_net_conn` (P2) and `add_lib` (L2).
 - `trace_clock <pin|net>` — tree-like report tracing from a pin or net down
   through combinational logic and across hierarchy to all leaf sync load pins
   (flop CP / SRAM CK via the `_libsyncpin` map). Each branch is followed (not
@@ -255,6 +275,19 @@ queries), the following report connectivity. Patterns are globs
   Reports each cell's class, LEF width x height and pin list with directions.
   Unlike the commands above this queries the loaded library, not the netlist,
   so it works as soon as a LEF is imported and needs no `build_design`.
+
+## Design overview command
+
+After `build_design`, `report_design` prints a one-screen summary of the loaded
+ design (G8), aggregating the counts that would otherwise require several
+ commands:
+
+- `report_design` — top module, modules (hierarchy), leaf instances, hier
+  instances, library cells (LEF), nets (declared), assigns, top ports,
+  placement progress (placed / total + %), unplaced count, and (when
+  `build_net_conn` has run) high-fanout net count above the `maxfanout`
+  threshold. Requires `build_design`; the high-fanout line additionally
+  requires `build_net_conn`.
 
 ## ECO commands
 
@@ -307,9 +340,14 @@ After `set_top_design`, the design's netlist can be dumped back out:
 - `write_db <file>` — dump the full in-memory database to a file: every scalar,
   list and array variable holding design state (instances, wires, placement,
   the net connectivity map, the loaded LEF library, ports, assigns) so the
-  whole database can be reloaded faster than re-parsing the netlist.
+  whole database can be reloaded faster than re-parsing the netlist. The file is
+  a versioned text Tcl-list database (`# version 2`) ending in a `C <sum>`
+  checksum line (N4); a truncated or hand-edited file is rejected by `restore_db`.
 - `restore_db <file>` — reload a database written by `write_db`. Restores all
   variables so the session is ready immediately: `get_cell` / `get_net` /
   `all_connected` / `get_lib_cell` and the placement / library data are all
   available without `read_netlist`, `set_top_design`, `build_design` or
-  `build_net_conn` (verified query-identical in test8_db).
+  `build_net_conn` (verified query-identical in test8_db). It validates the
+  trailing checksum (N4): a missing checksum (truncated file) or a mismatch
+  (corrupted/edited body) is reported as an `Error` and the restore aborts; a
+  v1 file (no checksum) still restores with a `Warning`.
